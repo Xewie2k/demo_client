@@ -16,6 +16,11 @@
                     <input type="tel" class="form-control rounded-1" v-model="form.soDienThoai" required placeholder="0123456789">
                   </div>
                   <div class="col-12">
+                    <label class="form-label fw-bold text-secondary small">Email <span class="text-danger">*</span></label>
+                    <input type="email" class="form-control rounded-1" v-model="form.email" required placeholder="email@example.com">
+                    <div class="form-text text-muted small">Hóa đơn và link theo dõi đơn hàng sẽ được gửi qua email này.</div>
+                  </div>
+                  <div class="col-12">
                     <label class="form-label fw-bold text-secondary small">Địa chỉ cụ thể <span class="text-danger">*</span></label>
                     <div class="input-group">
                        <input type="text" class="form-control rounded-1" v-model="form.diaChi" required placeholder="Số nhà, ngõ, đường...">
@@ -75,7 +80,7 @@
                    <input class="form-check-input" type="radio" name="paymentMethod" id="vnpay" value="VNPAY" v-model="paymentMethod">
                    <label class="form-check-label w-100 fw-bold d-flex justify-content-between align-items-center" for="vnpay">
                       <span>Thanh toán ngay (VNPAY)</span>
-                      <img src="https://vnpay.vn/s1/statics.vnpay.vn/2023/6/0oxhzjmxbksr1686814746087_1566974273523.png" height="24" alt="VNPAY">
+                      <img src="@/assets/images/logo/vnpay-logo-vinadesign-25-12-59-16.jpg" height="24" alt="VNPAY">
                    </label>
                 </div>
              </div>
@@ -335,7 +340,7 @@ onMounted(() => {
 });
 
 const submitOrder = async () => {
-    if (!form.tenKhachHang || !form.soDienThoai || !form.diaChi || !address.city) {
+    if (!form.tenKhachHang || !form.soDienThoai || !form.email || !form.diaChi || !address.city) {
         Swal.fire('Lỗi', 'Vui lòng điền đầy đủ thông tin giao hàng.', 'error');
         return;
     }
@@ -365,23 +370,17 @@ const submitOrder = async () => {
         const orderData = res.data;
 
         if (paymentMethod.value === 'VNPAY') {
-            // Call PaymentController to get URL
-            // Pass the Order ID (for updating later) and Amount
-            // Assuming orderData has id and tongTien (or finalPrice from frontend)
-            // Ideally backend calculates amount.
-            
             const paymentPayload = {
-                amount: Math.round(finalPrice.value), // VNPAY requires integer
+                amount: Math.round(finalPrice.value),
                 orderInfo: `Thanh toan don hang ${orderData.id}`,
-                returnUrl: `${window.location.origin}/client/order-success` 
+                returnUrl: null // Dùng URL mặc định từ backend config
             };
-            
+
             const payRes = await apiClient.post('/api/payment/create_payment', paymentPayload);
             if (payRes.data && payRes.data.paymentUrl) {
-                // Clear cart (selected items) before redirecting?
-                // Maybe wait for success? But if we redirect, we lose state.
-                // Usually we clear cart after successful order creation.
                 removeOrderedItems();
+                // Lưu maHoaDon vào sessionStorage để hiển thị ở trang thành công
+                sessionStorage.setItem('order_maHoaDon', orderData.maHoaDon || '');
                 window.location.href = payRes.data.paymentUrl;
             } else {
                  throw new Error("Không lấy được link thanh toán");
@@ -390,7 +389,7 @@ const submitOrder = async () => {
         } else {
             // COD
             removeOrderedItems();
-            router.push({ name: 'client-order-success', query: { id: orderData.id } });
+            router.push({ name: 'client-order-success', query: { id: orderData.id, maHoaDon: orderData.maHoaDon, tongTien: Math.round(finalPrice.value) } });
         }
         
     } catch (err) {

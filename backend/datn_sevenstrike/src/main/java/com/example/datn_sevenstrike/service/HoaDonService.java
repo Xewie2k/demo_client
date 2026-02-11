@@ -28,6 +28,7 @@ public class HoaDonService {
     private final HoaDonRepository repo;
     private final LichSuHoaDonRepository lichSuRepo;
     private final ModelMapper mapper;
+    private final EmailService emailService;
 
     public List<HoaDonResponse> all() {
         return repo.findAllByXoaMemFalseOrderByIdDesc()
@@ -77,6 +78,11 @@ public class HoaDonService {
         // ghi lịch sử theo trạng thái hiện tại
         pushHistory(saved.getId(), saved.getTrangThaiHienTai(),
                 taiQuay ? "Tạo đơn tại quầy (đã thu tiền mặt)" : "Tạo đơn (chờ xác nhận)");
+
+        // Gửi email xác nhận nếu là đơn online và có email
+        if (!taiQuay && saved.getEmailKhachHang() != null && !saved.getEmailKhachHang().isBlank()) {
+            emailService.sendOrderConfirmation(saved);
+        }
 
         return toResponse(saved);
     }

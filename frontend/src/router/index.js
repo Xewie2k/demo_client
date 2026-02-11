@@ -41,6 +41,8 @@ import OrderSuccessPage from "@/pages/client/OrderSuccessPage.vue";
 import AccountLayout from "@/pages/client/account/AccountLayout.vue";
 import OrderHistoryPage from "@/pages/client/account/OrderHistoryPage.vue";
 import OrderTrackingPage from "@/pages/client/account/OrderTrackingPage.vue";
+import GuestOrderTrackingPage from "@/pages/client/GuestOrderTrackingPage.vue";
+import ProductsPage from "@/pages/client/ProductsPage.vue";
 
 const SimplePage = (title) => ({
   template: `<div class="p-4"><h3 style="font-weight:800">${title}</h3><div class="text-muted">Demo page</div></div>`,
@@ -54,10 +56,12 @@ const routes = [
     component: ClientLayout,
     children: [
       { path: "", name: "client-home", component: HomePage },
+      { path: "products", name: "client-products", component: ProductsPage },
       { path: "products/:id", name: "client-product-detail", component: ProductDetailPage, props: true },
       { path: "cart", name: "client-cart", component: CartPage },
       { path: "checkout", name: "client-checkout", component: CheckoutPage },
       { path: "success", name: "client-order-success", component: OrderSuccessPage },
+      { path: "tracking", name: "client-guest-tracking", component: GuestOrderTrackingPage },
       { 
         path: "account",
         component: AccountLayout,

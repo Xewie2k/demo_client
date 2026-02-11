@@ -21,6 +21,9 @@ public class PaymentController {
     private final VNPayService vnPayService;
     private final VNPayConfig vnPayConfig;
 
+    @org.springframework.beans.factory.annotation.Value("${app.frontend.url:http://localhost:5173}")
+    private String frontendUrl;
+
     @PostMapping("/create_payment")
     public ResponseEntity<?> createPayment(@RequestBody Map<String, Object> req) {
         try {
@@ -41,17 +44,16 @@ public class PaymentController {
     public void vnpayReturn(HttpServletRequest request, HttpServletResponse response) throws IOException {
         int paymentStatus = vnPayService.orderReturn(request);
 
-// Test thử không dấu cách xem có chạy được không
-        String orderInfo = "ThanhToanDonHangTest";
-        String paymentTime = request.getParameter("vnp_PayDate");
+        String orderInfo = request.getParameter("vnp_OrderInfo");
+        if (orderInfo == null || orderInfo.isBlank()) orderInfo = "Khong co thong tin";
         String transactionId = request.getParameter("vnp_TransactionNo");
-        String totalPrice = request.getParameter("vnp_Amount");
+        // vnp_Amount luôn nhân 100, chia lại để lấy giá trị thực (VND)
+        long vnpAmount = Long.parseLong(request.getParameter("vnp_Amount"));
+        long totalPrice = vnpAmount / 100;
 
-        // Redirect to Frontend
-        // We can append params to the success URL so the frontend can display them
-        String baseUrl = vnPayConfig.getVnp_ReturnUrl(); // e.g., http://localhost:5173/client/success
-        String redirectUrl = baseUrl + "?status=" + (paymentStatus == 1 ? "success" : "failed") +
-                "&orderInfo=" + orderInfo +
+        // Redirect to Frontend success page
+        String redirectUrl = frontendUrl + "/client/success?status=" + (paymentStatus == 1 ? "success" : "failed") +
+                "&orderInfo=" + java.net.URLEncoder.encode(orderInfo, "UTF-8") +
                 "&totalPrice=" + totalPrice +
                 "&transactionId=" + transactionId;
 

@@ -6,6 +6,7 @@ import com.example.datn_sevenstrike.constants.TrangThaiHoaDon;
 import com.example.datn_sevenstrike.exception.BadRequestEx;
 import com.example.datn_sevenstrike.exception.NotFoundEx;
 import com.example.datn_sevenstrike.repository.*;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,8 @@ public class BanHangOnlineService {
     private final HoaDonRepository hoaDonRepo;
     private final HoaDonChiTietRepository hdctRepo;
     private final LichSuHoaDonRepository lsHdRepo;
+    private final EmailService emailService;
+    private final EntityManager entityManager;
 
     // List all products for client
     @Transactional(readOnly = true)
@@ -284,6 +287,15 @@ public class BanHangOnlineService {
                 .xoaMem(false)
                 .build();
         lsHdRepo.save(ls);
+
+        // Flush + refresh để lấy maHoaDon (auto-generated bởi DB computed column)
+        entityManager.flush();
+        entityManager.refresh(hd);
+
+        // Gửi email xác nhận đơn hàng cho khách
+        if (hd.getEmailKhachHang() != null && !hd.getEmailKhachHang().isBlank()) {
+            emailService.sendOrderConfirmation(hd);
+        }
 
         return OrderResponse.builder()
                 .id(hd.getId())
