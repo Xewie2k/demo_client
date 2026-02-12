@@ -1,5 +1,5 @@
 <template>
-  <div class="update_page">
+  <div class="update_page ss-page ss-font">
     <!-- HEADER: Back + Title -->
     <div class="page-head">
       <button type="button" class="ss-btn ss-btn-back" @click="back">
@@ -7,7 +7,7 @@
         Quay lại
       </button>
 
-      <h3 class="page-title">CẬP NHẬT KHÁCH HÀNG</h3>
+      <h3 class="page-title">Cập nhật khách hàng</h3>
 
       <div class="head-spacer"></div>
     </div>
@@ -70,10 +70,11 @@
         <!-- ===== ĐỊA CHỈ ===== -->
         <div class="addr-section">
           <div class="addr-head">
-            <div class="addr-title">ĐỊA CHỈ (có thể thêm nhiều)</div>
+            <div class="addr-title">Địa chỉ (có thể thêm nhiều)</div>
 
+            <!-- ✅ FIX: dùng Bootstrap Icons -->
             <button type="button" class="ss-btn ss-btn-outline" @click="addAddress" :disabled="loadingAddr">
-              <span class="material-icons-outlined">add</span>
+              <i class="bi bi-plus-lg"></i>
               Thêm địa chỉ
             </button>
           </div>
@@ -92,13 +93,14 @@
                   <span>Đặt làm mặc định</span>
                 </label>
 
+                <!-- ✅ FIX: dùng Bootstrap Icons -->
                 <button
                   class="ss-btn ss-btn-outline danger"
                   type="button"
                   :disabled="addresses.length === 1"
                   @click="removeAddress(idx)"
                 >
-                  <span class="material-icons-outlined">delete</span>
+                  <i class="bi bi-trash3"></i>
                   Xóa
                 </button>
               </div>
@@ -177,7 +179,6 @@ import { useRoute, useRouter } from "vue-router";
 
 import { detailKhachHang, removeKhachHang, updateKhachHang } from "@/services/tai_khoan/khach_hang/khach_hangService.js";
 
-// ✅ đúng đường dẫn bạn nói
 import {
   getAllDiaChiKhachHang,
   createDiaChiKhachHang,
@@ -193,7 +194,6 @@ const id = route.params.id;
 
 const saving = ref(false);
 
-// ===== KH =====
 const kh = ref({
   tenKhachHang: "",
   tenTaiKhoan: "",
@@ -204,12 +204,11 @@ const kh = ref({
   soDienThoai: "",
 });
 
-// ===== ĐỊA CHỈ =====
 const provinces = ref([]);
 const loadingAddr = ref(false);
 const addrError = ref("");
 
-const removedAddrIds = ref([]); // lưu các id địa chỉ bị xóa để call BE
+const removedAddrIds = ref([]);
 
 const newAddr = () => ({
   key: crypto?.randomUUID?.() ?? String(Date.now() + Math.random()),
@@ -221,7 +220,6 @@ const newAddr = () => ({
   phuong: null,
   diaChiCuThe: null,
   macDinh: false,
-  // dropdown state
   tinhCode: "",
   huyenCode: "",
   xaCode: "",
@@ -233,7 +231,6 @@ const addresses = ref([]);
 
 const normalize = (v) => (v ?? "").toString().trim().toLowerCase();
 
-// tìm code theo name (để auto set dropdown khi load từ DB: đang lưu name)
 const findCodeByName = (list, name) => {
   const n = normalize(name);
   if (!n) return "";
@@ -272,7 +269,6 @@ const setDefault = (idx) => {
 
 const addAddress = () => {
   const a = newAddr();
-  // nếu chưa có default nào, set cái mới là default
   if (!addresses.value.some((x) => x.macDinh)) a.macDinh = true;
   addresses.value.push(a);
 };
@@ -292,7 +288,6 @@ const removeAddress = (idx) => {
   }
 };
 
-// ===== LOAD DATA =====
 const loadKhachHang = async () => {
   const data = await detailKhachHang(id);
   if (data) {
@@ -309,15 +304,12 @@ const loadProvinces = async () => {
 };
 
 const hydrateDropdownForAddr = async (a) => {
-  // set tỉnh theo name DB
   a.tinhCode = findCodeByName(provinces.value, a.thanhPho);
   a.districts = a.tinhCode ? await vnAddressService.getDistricts(a.tinhCode) : [];
 
-  // set huyện theo name DB
   a.huyenCode = findCodeByName(a.districts, a.quan);
   a.wards = a.huyenCode ? await vnAddressService.getWards(a.huyenCode) : [];
 
-  // set xã theo name DB
   a.xaCode = findCodeByName(a.wards, a.phuong);
 };
 
@@ -332,7 +324,6 @@ const loadDiaChi = async () => {
 
     const mine = arr.filter((x) => Number(x?.idKhachHang) === Number(id));
 
-    // sort: default trước, rồi mới nhất
     mine.sort((a, b) => {
       const da = a?.macDinh ? 1 : 0;
       const db = b?.macDinh ? 1 : 0;
@@ -357,19 +348,16 @@ const loadDiaChi = async () => {
       wards: [],
     }));
 
-    // nếu BE chưa có địa chỉ => tạo 1 dòng trống mặc định
     if (addresses.value.length === 0) {
       const a = newAddr();
       a.macDinh = true;
       addresses.value = [a];
     }
 
-    // đảm bảo luôn có 1 default
     if (!addresses.value.some((x) => x.macDinh) && addresses.value.length) {
       addresses.value[0].macDinh = true;
     }
 
-    // hydrate dropdown theo name đã lưu trong DB
     for (const a of addresses.value) {
       await hydrateDropdownForAddr(a);
     }
@@ -381,9 +369,7 @@ const loadDiaChi = async () => {
   }
 };
 
-// ===== VALIDATE =====
 const validateAll = () => {
-  // địa chỉ: DB bắt buộc ten_dia_chi
   if (!addresses.value.length) return "Vui lòng có ít nhất 1 địa chỉ";
   if (!addresses.value.some((x) => x.macDinh)) return "Vui lòng chọn 1 địa chỉ mặc định";
   for (const a of addresses.value) {
@@ -392,14 +378,11 @@ const validateAll = () => {
   return "";
 };
 
-// ===== SAVE =====
 const saveAddresses = async () => {
-  // 1) xóa các địa chỉ đã remove
   for (const addrId of removedAddrIds.value) {
     await removeDiaChiKhachHang(addrId);
   }
 
-  // 2) chuẩn bị payload theo DB (name fields có thể null)
   const toPayload = (a, macDinh) => {
     const tinhName = findNameByCode(provinces.value, a.tinhCode) || null;
     const huyenName = findNameByCode(a.districts, a.huyenCode) || null;
@@ -413,14 +396,12 @@ const saveAddresses = async () => {
       phuong: xaName,
       diaChiCuThe: a.diaChiCuThe?.trim() || null,
       macDinh: !!macDinh,
-      // xoaMem: null => BE default false
     };
   };
 
   const defaultIdx = addresses.value.findIndex((x) => x.macDinh);
   const defaultAddr = defaultIdx >= 0 ? addresses.value[defaultIdx] : null;
 
-  // 3) update/create các địa chỉ KHÔNG default trước (để tránh unique default)
   for (let i = 0; i < addresses.value.length; i++) {
     const a = addresses.value[i];
     if (a === defaultAddr) continue;
@@ -433,7 +414,6 @@ const saveAddresses = async () => {
     }
   }
 
-  // 4) lưu địa chỉ DEFAULT cuối cùng
   if (defaultAddr) {
     const payload = toPayload(defaultAddr, true);
     if (defaultAddr.id) await updateDiaChiKhachHang(defaultAddr.id, payload);
@@ -456,7 +436,6 @@ const submit = async () => {
   try {
     saving.value = true;
 
-    // 1) update khách hàng
     await updateKhachHang(id, {
       tenKhachHang: kh.value.tenKhachHang,
       tenTaiKhoan: kh.value.tenTaiKhoan,
@@ -467,7 +446,6 @@ const submit = async () => {
       soDienThoai: kh.value.soDienThoai || null,
     });
 
-    // 2) update địa chỉ
     await saveAddresses();
 
     alert("Cập nhật thành công!");
@@ -508,8 +486,51 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+/* ✅ ÉP FONT + SIZE + KHÔNG IN ĐẬM */
 .update_page {
   margin: 20px;
+  font-family: inherit !important;
+  color: rgba(17, 24, 39, 0.82) !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+}
+
+.update_page :deep(*) {
+  font-family: inherit !important;
+  font-weight: 400 !important;
+  color: inherit;
+}
+
+.update_page :deep(b),
+.update_page :deep(strong) {
+  font-weight: 400 !important;
+}
+
+.update_page :deep(.fw-bold),
+.update_page :deep(.fw-semibold),
+.update_page :deep(.fw-medium) {
+  font-weight: 400 !important;
+}
+
+.update_page :deep(h1),
+.update_page :deep(h2),
+.update_page :deep(h3),
+.update_page :deep(h4),
+.update_page :deep(h5),
+.update_page :deep(h6) {
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  margin: 0;
+}
+
+/* Title trang: 20px fw 500 */
+.page-title {
+  text-align: left;
+  font-size: 20px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.2px;
+  color: rgba(17, 24, 39, 0.88) !important;
+  margin: 0;
 }
 
 .page-head {
@@ -520,20 +541,11 @@ onMounted(async () => {
   margin-bottom: 16px;
 }
 
-.page-title {
-  text-align: left;
-  font-weight: 800;
-  letter-spacing: 0.3px;
-  margin: 0;
-  color: rgba(17, 24, 39, 0.88);
-  font-size: 20px;
-}
-
 .head-spacer {
   height: 1px;
 }
 
-/* Card + border đỏ nhạt */
+/* Card */
 .ss-card {
   background: #fff;
   padding: 22px;
@@ -542,7 +554,23 @@ onMounted(async () => {
   box-shadow: 0 18px 50px rgba(17, 24, 39, 0.08);
 }
 
-/* Inputs */
+/* Label / input */
+.form-label,
+.form-check-label,
+.ss-btn,
+.ss-input,
+select.form-control,
+option,
+.addr-loading,
+.addr-empty,
+.addr-preview,
+.radio,
+.addr-error {
+  font-size: 13px !important;
+  font-weight: 400 !important;
+  color: rgba(17, 24, 39, 0.82) !important;
+}
+
 .ss-input {
   border-radius: 10px !important;
   border: 1px solid rgba(17, 24, 39, 0.14) !important;
@@ -558,13 +586,13 @@ onMounted(async () => {
   border-color: #ff4d4f !important;
 }
 
-/* ===== Buttons ===== */
+/* Buttons */
 .ss-btn {
   border-radius: 10px;
   height: 36px;
   padding: 0 14px;
-  font-weight: 800;
-  font-size: 13px;
+  font-size: 13px !important;
+  font-weight: 400 !important;
 
   display: inline-flex;
   align-items: center;
@@ -573,11 +601,19 @@ onMounted(async () => {
   border: none;
   cursor: pointer;
   user-select: none;
+
+  gap: 8px; /* ✅ để icon + chữ cân */
+}
+
+/* ✅ icon size chuẩn */
+.ss-btn i {
+  font-size: 18px;
+  line-height: 1;
 }
 
 .ss-btn-back {
   background: rgba(255, 77, 79, 0.08);
-  color: rgba(17, 24, 39, 0.88);
+  color: rgba(17, 24, 39, 0.88) !important;
   border: 1px solid rgba(255, 77, 79, 0.22);
 }
 .ss-btn-back:hover {
@@ -607,7 +643,7 @@ onMounted(async () => {
   padding-top: 16px;
 }
 
-/* ===== Address UI (giữ tone đỏ/đen/trắng) ===== */
+/* Address */
 .addr-section {
   margin-top: 18px;
   padding-top: 16px;
@@ -622,40 +658,28 @@ onMounted(async () => {
   margin-bottom: 10px;
 }
 
+/* title khu địa chỉ: 14px fw 500 */
 .addr-title {
-  font-weight: 900;
-  font-size: 13px;
-  color: rgba(17, 24, 39, 0.88);
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: rgba(17, 24, 39, 0.88) !important;
   letter-spacing: 0.2px;
 }
 
 .ss-btn-outline {
   background: #fff;
   border: 1px solid rgba(17, 24, 39, 0.14);
-  color: rgba(17, 24, 39, 0.88);
-  gap: 8px;
+  color: rgba(17, 24, 39, 0.88) !important;
 }
 .ss-btn-outline:hover {
   background: rgba(17, 24, 39, 0.04);
 }
 .ss-btn-outline.danger {
   border-color: rgba(239, 68, 68, 0.35);
-  color: #b42324;
+  color: #b42324 !important;
 }
 .ss-btn-outline.danger:hover {
   background: rgba(239, 68, 68, 0.06);
-}
-
-.addr-loading {
-  font-size: 13px;
-  color: rgba(17, 24, 39, 0.65);
-  padding: 8px 0;
-}
-
-.addr-empty {
-  font-size: 13px;
-  color: rgba(17, 24, 39, 0.65);
-  padding: 10px 0;
 }
 
 .addr-card {
@@ -678,9 +702,6 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 800;
-  color: rgba(17, 24, 39, 0.78);
-  font-size: 13px;
 }
 .radio input {
   transform: translateY(1px);
@@ -695,28 +716,19 @@ onMounted(async () => {
   color: #ef4444;
 }
 
-.addr-preview {
-  margin-top: 8px;
-  font-size: 13px;
-}
 .addr-preview .muted {
-  color: rgba(17, 24, 39, 0.55);
-  font-weight: 700;
-  margin-right: 6px;
+  color: rgba(17, 24, 39, 0.55) !important;
 }
 .addr-preview .text {
-  color: rgba(17, 24, 39, 0.88);
-  font-weight: 700;
+  color: rgba(17, 24, 39, 0.88) !important;
 }
 
 .addr-error {
   margin-top: 10px;
   border-radius: 12px;
   padding: 10px 12px;
-  font-weight: 800;
-  font-size: 13px;
   background: rgba(239, 68, 68, 0.10);
   border: 1px solid rgba(239, 68, 68, 0.20);
-  color: #991b1b;
+  color: #991b1b !important;
 }
 </style>

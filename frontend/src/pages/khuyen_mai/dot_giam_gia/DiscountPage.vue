@@ -1,40 +1,37 @@
+<!-- File: src/pages/khuyen_mai/dot_giam_gia/DiscountPage.vue -->
 <template>
   <div class="discount-page">
-    <h2 class="page-title">QUẢN LÝ ĐỢT GIẢM GIÁ</h2>
+    <h2 class="page-title">Quản lý giảm giá/ Đợt giảm giá</h2>
 
     <div class="card filter-section">
-      <div class="filter-row">
-        <div class="filter-item search-item">
+      <div class="filter-header">
+        <div class="filter-title">
+          <i class="fa-solid fa-filter"></i> Bộ lọc tìm kiếm
+        </div>
+      </div>
+
+      <div class="filter-grid">
+        <div class="filter-item search-col">
           <label class="label">Từ khóa</label>
           <div class="input-wrapper">
             <i class="fa-solid fa-magnifying-glass search-icon"></i>
             <input
               v-model="filters.keyword"
               type="text"
+              class="form-control"
               placeholder="Tìm theo tên hoặc mã đợt..."
             />
           </div>
         </div>
 
         <div class="filter-item">
-          <label class="label">Từ ngày</label>
-          <input v-model="filters.startDate" type="date" class="form-control" />
+          <label class="label">Ngày bắt đầu</label>
+          <input v-model="filters.startDate" type="date" class="form-control" @click="$event.target.showPicker()" />
         </div>
 
         <div class="filter-item">
-          <label class="label">Đến ngày</label>
-          <input v-model="filters.endDate" type="date" class="form-control" />
-        </div>
-      </div>
-
-      <div class="filter-row mt-3">
-        <div class="filter-item">
-          <label class="label">Loại giảm giá</label>
-          <select v-model="filters.type" class="form-control">
-            <option value="">-- Tất cả --</option>
-            <option value="percent">Theo Phần trăm (%)</option>
-            <option value="money">Theo Số tiền (VND)</option>
-          </select>
+          <label class="label">Ngày kết thúc</label>
+          <input v-model="filters.endDate" type="date" class="form-control" @click="$event.target.showPicker()" />
         </div>
 
         <div class="filter-item">
@@ -47,16 +44,14 @@
           </select>
         </div>
 
-        <div class="filter-item action-item">
-          <label class="label d-none-mobile">&nbsp;</label>
-          <div class="btn-group">
-            <button class="btn-filter reset" @click="resetFilters">
-              <i class="fa-solid fa-rotate-left"></i>
-              <span class="btn-text">Làm mới</span>
-            </button>
+        <div class="filter-item action-col">
+          <div class="btn-group-filter">
             <button class="btn-filter search" @click="fetchDiscounts">
-              <i class="fa-solid fa-filter"></i>
-              <span class="btn-text">Lọc</span>
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <span>Tìm kiếm</span>
+            </button>
+            <button class="btn-filter reset" @click="resetFilters" title="Làm mới bộ lọc">
+              <i class="fa-solid fa-rotate-left"></i>
             </button>
           </div>
         </div>
@@ -67,7 +62,6 @@
       <div class="table-header">
         <div class="header-left">
           <h3>Danh sách đợt giảm giá</h3>
-          <span class="count-badge">{{ filteredList.length }} bản ghi</span>
         </div>
 
         <button class="btn-add" @click="goToAddPage">
@@ -82,10 +76,10 @@
               <th class="text-center" width="50px">STT</th>
               <th>Mã đợt</th>
               <th>Tên đợt</th>
-              <th>Loại giảm</th>
-              <th class="text-right">Giá trị</th>
-              <th>Ngày bắt đầu</th>
-              <th>Ngày kết thúc</th>
+              <th class="text-center">Giá trị</th>
+              <th class="text-center">Loại giảm</th>
+              <th class="text-center">Ngày bắt đầu</th>
+              <th class="text-center">Ngày kết thúc</th>
               <th class="text-center">Trạng thái</th>
               <th class="text-center">Hành động</th>
             </tr>
@@ -108,50 +102,52 @@
                 {{ (currentPage - 1) * itemsPerPage + index + 1 }}
               </td>
 
-              <td>
-                <strong>{{ item.maDotGiamGia }}</strong>
-              </td>
+              <td>{{ item.maDotGiamGia }}</td>
 
               <td>{{ item.tenDotGiamGia }}</td>
 
-              <td>
-                <!-- ✅ đổi tag theo palette đỏ/đen -->
-                <span
-                  class="ss-tag"
-                  :class="item.loaiGiamGia ? 'ss-tag-money' : 'ss-tag-percent'"
-                >
-                  {{ item.loaiGiamGia ? "VND" : "%" }}
-                </span>
+              <td class="text-center highlight-text">
+                {{ item.giaTriGiamGia + "%" }}
               </td>
-
-              <td class="text-right highlight-text">
-                {{
-                  item.loaiGiamGia
-                    ? formatCurrency(item.giaTriGiamGia)
-                    : item.giaTriGiamGia + "%"
-                }}
-              </td>
-
-              <td>{{ formatDate(item.ngayBatDau) }}</td>
-              <td>{{ formatDate(item.ngayKetThuc) }}</td>
 
               <td class="text-center">
-                <!-- ✅ badge theo palette chủ đạo -->
+                <span class="ss-tag ss-tag-percent">%</span>
+              </td>
+
+              <td class="text-center">{{ formatDate(item.ngayBatDau) }}</td>
+              <td class="text-center">{{ formatDate(item.ngayKetThuc) }}</td>
+
+              <td class="text-center">
                 <span class="ss-badge" :class="item.statusClass">
                   {{ item.statusText }}
                 </span>
               </td>
 
               <td class="text-center action-cell">
-                <!-- ✅ SS ONLY -->
-                <button
-                  class="ss-icon-btn-view"
-                  type="button"
-                  @click="viewDetail(item.id)"
-                  title="Xem chi tiết"
-                >
-                  <span class="material-icons-outlined">visibility</span>
-                </button>
+                <div class="d-flex align-items-center justify-content-center gap-2">
+                  <div
+                    class="form-check form-switch mb-0"
+                    title="Dừng đợt giảm giá"
+                    v-if="item.statusKey !== 'ended'"
+                  >
+                    <input
+                      class="form-check-input"
+                      type="checkbox"
+                      :checked="item.trangThai"
+                      @click.prevent="toggleStatus(item)"
+                      style="cursor: pointer;"
+                    />
+                  </div>
+
+                  <button
+                    class="ss-icon-btn-view"
+                    type="button"
+                    @click="viewDetail(item.id)"
+                    title="Xem chi tiết"
+                  >
+                    <span class="material-icons-outlined">visibility</span>
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -185,6 +181,7 @@
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { discountService } from "@/services/khuyen_mai/dot_giam_gia/discountService";
+import { sortDotGiamGia } from "@/services/khuyen_mai/dot_giam_gia/dotGiamGiaSort";
 
 const router = useRouter();
 const rawDiscounts = ref([]);
@@ -193,19 +190,11 @@ const filters = reactive({
   keyword: "",
   startDate: "",
   endDate: "",
-  type: "",
   status: "",
 });
 
 const currentPage = ref(1);
 const itemsPerPage = 5;
-
-const formatCurrency = (value) => {
-  return new Intl.NumberFormat("vi-VN", {
-    style: "currency",
-    currency: "VND",
-  }).format(value ?? 0);
-};
 
 const parseDateAny = (input) => {
   if (!input) return null;
@@ -251,7 +240,11 @@ const fetchDiscounts = async () => {
       const start = parseDateBoundary(item.ngayBatDau, false);
       const end = parseDateBoundary(item.ngayKetThuc, true);
 
-      if (now < start) {
+      if (!item.trangThai) {
+        statusKey = "ended";
+        statusText = "Đã kết thúc";
+        statusClass = "status-ended";
+      } else if (now < start) {
         statusKey = "upcoming";
         statusText = "Sắp diễn ra";
         statusClass = "status-upcoming";
@@ -273,7 +266,7 @@ const fetchDiscounts = async () => {
 };
 
 const filteredList = computed(() => {
-  return rawDiscounts.value.filter((item) => {
+  const filtered = rawDiscounts.value.filter((item) => {
     const kw = (filters.keyword || "").toLowerCase().trim();
 
     const keywordMatch =
@@ -290,14 +283,13 @@ const filteredList = computed(() => {
     const startMatch = !startDate || (itemStart && itemStart >= startDate);
     const endMatch = !endDate || (itemEnd && itemEnd <= endDate);
 
-    let typeMatch = true;
-    if (filters.type === "percent") typeMatch = item.loaiGiamGia === false;
-    if (filters.type === "money") typeMatch = item.loaiGiamGia === true;
-
     const statusMatch = !filters.status || item.statusKey === filters.status;
 
-    return keywordMatch && startMatch && endMatch && typeMatch && statusMatch;
+    return keywordMatch && startMatch && endMatch && statusMatch;
   });
+
+  // ✅ SORT theo rule mới (ưu tiên trong cùng khoảng thời gian)
+  return sortDotGiamGia(filtered);
 });
 
 const totalPages = computed(() =>
@@ -326,7 +318,6 @@ const resetFilters = () => {
   filters.keyword = "";
   filters.startDate = "";
   filters.endDate = "";
-  filters.type = "";
   filters.status = "";
   fetchDiscounts();
 };
@@ -337,6 +328,36 @@ const goToAddPage = () => {
 
 const viewDetail = (id) => {
   router.push(`/admin/giam-gia/dot/${id}`);
+};
+
+const toggleStatus = async (item) => {
+  const newStatus = !item.trangThai;
+  const action = newStatus ? "kích hoạt" : "ngừng kích hoạt";
+
+  if (!confirm(`Bạn có chắc muốn ${action} đợt giảm giá "${item.tenDotGiamGia}"?`)) {
+    return;
+  }
+
+  try {
+    const [fullInfo, details] = await Promise.all([
+      discountService.getOne(item.id),
+      discountService.getDiscountDetails(item.id),
+    ]);
+
+    const payload = {
+      ...fullInfo,
+      trangThai: newStatus,
+      idChiTietSanPhams: (details || [])
+        .map((d) => d.idChiTietSanPham || d.id_chi_tiet_san_pham)
+        .filter((id) => id),
+    };
+
+    await discountService.update(item.id, payload);
+    await fetchDiscounts();
+  } catch (e) {
+    console.error(e);
+    alert("Lỗi cập nhật trạng thái: " + (e.response?.data?.message || e.message));
+  }
 };
 
 onMounted(() => {
@@ -351,7 +372,7 @@ onMounted(() => {
 
 .page-title {
   font-size: 22px;
-  font-weight: 900;
+  font-weight: 600;
   margin-bottom: 30px;
   margin-top: 10px;
   color: rgba(17, 24, 39, 0.92);
@@ -364,31 +385,64 @@ onMounted(() => {
   margin-bottom: 24px;
   border: 1px solid var(--ss-border);
   box-shadow: var(--ss-shadow-soft);
+  padding-bottom: 30px;
 }
 
-.filter-row {
+.filter-header {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 12px;
+}
+
+.filter-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #334155;
   display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) auto;
   gap: 20px;
-  flex-wrap: wrap;
+  align-items: end;
 }
-.mt-3 { margin-top: 20px; }
 
-.filter-item {
-  flex: 1;
-  min-width: 200px;
-  display: flex;
-  flex-direction: column;
+@media (max-width: 1200px) {
+  .filter-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .search-col {
+    grid-column: span 2;
+  }
+  .action-col {
+    grid-column: span 2;
+    justify-self: end;
+    margin-top: 10px;
+  }
 }
-.search-item { flex: 2; min-width: 250px; }
-.action-item {
-  flex: 0.8;
-  min-width: 180px;
-  justify-content: flex-end;
+
+@media (max-width: 768px) {
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+  .search-col, .action-col {
+    grid-column: span 1;
+    justify-self: stretch;
+  }
+  .btn-group-filter {
+    width: 100%;
+  }
+  .btn-filter {
+    flex: 1;
+  }
 }
 
 .label {
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
   color: rgba(17, 24, 39, 0.65);
   margin-bottom: 8px;
   display: block;
@@ -396,21 +450,21 @@ onMounted(() => {
 
 .form-control,
 .input-wrapper input {
-  height: 40px;
+  height: 42px;
   width: 100%;
-  border: 1px solid rgba(17, 24, 39, 0.12);
-  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
   padding: 0 12px;
   font-size: 14px;
   outline: none;
   transition: all 0.2s;
   background-color: #fff;
-  color: rgba(17, 24, 39, 0.82);
+  color: #334155;
 }
 .form-control:focus,
 .input-wrapper input:focus {
-  border-color: rgba(255, 77, 79, 0.55);
-  box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.10);
+  border-color: #ff4d4f;
+  box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.15);
 }
 
 .input-wrapper { position: relative; width: 100%; }
@@ -426,46 +480,43 @@ onMounted(() => {
   pointer-events: none;
 }
 
-.btn-group { display: flex; gap: 10px; }
+.btn-group-filter { display: flex; gap: 10px; }
 
 .btn-filter {
-  height: 40px;
-  flex: 1;
+  height: 42px;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 12px;
-  font-weight: 800;
+  border-radius: 10px;
+  font-weight: 500;
   font-size: 14px;
   cursor: pointer;
   border: 1px solid transparent;
   white-space: nowrap;
-  padding: 0 15px;
+  padding: 0 20px;
   transition: 0.2s;
 }
 
 .btn-filter.reset {
-  background: #fff;
-  color: rgba(17, 24, 39, 0.92);
-  border-color: rgba(17, 24, 39, 0.18);
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 0 14px;
 }
 .btn-filter.reset:hover {
-  border-color: rgba(255, 77, 79, 0.55);
-  background: rgba(255, 77, 79, 0.06);
+  background: #e2e8f0;
+  color: #ef4444;
 }
 
 .btn-filter.search {
-  background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%);
+  background: #111827;
   color: #fff;
+  box-shadow: 0 4px 12px rgba(17, 24, 39, 0.15);
   border: none;
 }
-.btn-filter.search:hover { filter: brightness(0.98); }
-
-@media (max-width: 768px) {
-  .filter-row { gap: 15px; }
-  .filter-item { flex: 100%; min-width: 100%; }
-  .d-none-mobile { display: none; }
+.btn-filter.search:hover {
+  background: #000;
+  transform: translateY(-1px);
 }
 
 .table-header {
@@ -477,17 +528,9 @@ onMounted(() => {
 .header-left { display: flex; align-items: center; gap: 10px; }
 .header-left h3 {
   margin: 0;
-  font-weight: 900;
+  font-size: 16px;
+  font-weight: 600;
   color: rgba(17, 24, 39, 0.92);
-}
-
-.count-badge {
-  background: rgba(17, 24, 39, 0.06);
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 800;
-  color: rgba(17, 24, 39, 0.70);
 }
 
 .btn-add {
@@ -497,7 +540,7 @@ onMounted(() => {
   padding: 0 18px;
   height: 40px;
   border-radius: 12px;
-  font-weight: 800;
+  font-weight: 500;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -523,7 +566,7 @@ onMounted(() => {
 .custom-table th {
   background: #f9fafb;
   color: rgba(17, 24, 39, 0.82);
-  font-weight: 900;
+  font-weight: 600;
   font-size: 13.5px;
   padding: 14px 12px;
   border-bottom: 1px solid rgba(17, 24, 39, 0.10);
@@ -536,7 +579,6 @@ onMounted(() => {
   color: rgba(17, 24, 39, 0.82);
 }
 
-/* ✅ Tag loại giảm (palette đỏ/đen) */
 .ss-tag {
   display: inline-flex;
   align-items: center;
@@ -545,14 +587,9 @@ onMounted(() => {
   padding: 0 10px;
   border-radius: 999px;
   font-size: 11.5px;
-  font-weight: 900;
+  font-weight: 400;
   letter-spacing: 0.2px;
   border: 1px solid transparent;
-}
-.ss-tag-money {
-  background: rgba(255, 77, 79, 0.10);
-  color: #b42324;
-  border-color: rgba(255, 77, 79, 0.28);
 }
 .ss-tag-percent {
   background: rgba(17, 24, 39, 0.06);
@@ -560,12 +597,8 @@ onMounted(() => {
   border-color: rgba(17, 24, 39, 0.14);
 }
 
-.highlight-text {
-  font-weight: 900;
-  color: rgba(17, 24, 39, 0.92);
-}
+.highlight-text { font-weight: 400; color: rgba(17, 24, 39, 0.92); }
 
-/* ✅ Badge trạng thái (palette chủ đạo, vừa mắt) */
 .ss-badge {
   display: inline-flex;
   align-items: center;
@@ -574,27 +607,22 @@ onMounted(() => {
   padding: 5px 12px;
   border-radius: 999px;
   font-size: 11.5px;
-  font-weight: 900;
+  font-weight: 600;
   white-space: nowrap;
   border: 1px solid transparent;
   letter-spacing: 0.1px;
 }
 
-/* Đang diễn ra: đỏ dịu */
 .status-active {
   background: rgba(255, 77, 79, 0.10);
   color: #b42324;
   border-color: rgba(255, 77, 79, 0.28);
 }
-
-/* Sắp diễn ra: nền trắng + viền đỏ (nhẹ, chủ đạo) */
 .status-upcoming {
   background: #fff;
   color: rgba(17, 24, 39, 0.86);
   border-color: rgba(255, 77, 79, 0.28);
 }
-
-/* Đã kết thúc: tone đen dịu */
 .status-ended {
   background: rgba(17, 24, 39, 0.06);
   color: rgba(17, 24, 39, 0.72);
@@ -609,7 +637,6 @@ onMounted(() => {
 .empty-row img { margin-bottom: 10px; opacity: 0.5; }
 
 .text-center { text-align: center; }
-.text-right { text-align: right; }
 .action-cell { white-space: nowrap; }
 
 .pagination {
@@ -643,5 +670,10 @@ onMounted(() => {
 .page-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.form-check-input:checked {
+  background-color: #ff4d4f;
+  border-color: #ff4d4f;
 }
 </style>

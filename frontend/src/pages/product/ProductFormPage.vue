@@ -51,11 +51,7 @@
           <div class="ss-image-preview mt-2" v-if="imagePreviewUrl">
             <img :src="imagePreviewUrl" alt="preview" />
           </div>
-
-          <div class="small text-muted mt-2">
-            * Ảnh “sản phẩm” thực tế sẽ lấy từ <b>ảnh đại diện</b> của <b>chi tiết sản phẩm</b>. <br />
-            * Nếu bạn chọn ảnh ở đây: hệ thống sẽ upload và set làm ảnh đại diện cho <b>CTSP mới nhất</b> của sản phẩm (nếu có).
-          </div>
+          <div v-else class="small text-muted mt-2">Chưa có ảnh đại diện (CTSP).</div>
         </div>
 
         <!-- Mô tả ngắn -->
@@ -75,8 +71,51 @@
           <button class="btn btn-outline-secondary ss-btn" :disabled="loading" @click="resetForm">
             Hủy
           </button>
-          <button class="btn btn-dark ss-btn" :disabled="loading" @click="submit">
+
+          <!-- ✅ đổi submit -> openConfirm -->
+          <button class="btn btn-dark ss-btn" :disabled="loading" @click="openConfirm">
             Lưu
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ CONFIRM POPUP -->
+    <div v-if="confirm.open" class="ss-overlay" @click.self="closeConfirm">
+      <div class="ss-confirm">
+        <div class="ss-confirm-header">
+          <div class="fw-bold ss-confirm-title">Xác nhận</div>
+          <button class="btn btn-sm btn-outline-secondary" @click="closeConfirm" type="button">X</button>
+        </div>
+
+        <div class="ss-confirm-body">
+          <div class="ss-confirm-text">
+            Bạn có chắc chắn muốn
+            <b class="ss-confirm-strong">{{ isEdit ? "cập nhật" : "thêm mới" }}</b>
+            sản phẩm
+            <b class="ss-confirm-strong">"{{ confirmProductName }}"</b>
+            không?
+          </div>
+
+          <!-- ✅ đổi thành tên sản phẩm -->
+          <div class="ss-confirm-sub">
+            <template v-if="isEdit">
+              Sản phẩm <b class="ss-confirm-strong">"{{ confirmProductName }}"</b> sẽ được cập nhật theo dữ liệu bạn vừa chỉnh sửa.
+            </template>
+            <template v-else>
+              Sản phẩm <b class="ss-confirm-strong">"{{ confirmProductName }}"</b> sẽ được tạo mới trong hệ thống.
+            </template>
+          </div>
+        </div>
+
+        <div class="ss-confirm-footer">
+          <button class="btn btn-outline-secondary ss-btn" type="button" :disabled="loading" @click="closeConfirm">
+            Hủy
+          </button>
+
+          <!-- ✅ nút xác nhận theo màu chủ đạo -->
+          <button class="btn btn-primary ss-btn" type="button" :disabled="loading" @click="confirmSubmit">
+            {{ loading ? "Đang lưu..." : "Xác nhận" }}
           </button>
         </div>
       </div>
@@ -102,6 +141,9 @@ const loading = ref(false);
 const id = computed(() => route.params?.id);
 const isEdit = computed(() => !!id.value && String(id.value).toLowerCase() !== "new");
 
+// ✅ confirm state
+const confirm = reactive({ open: false });
+
 // ===== FORM =====
 const form = reactive({
   maSanPham: "",
@@ -125,6 +167,24 @@ let lastObjectUrl = null;
 // CTSP mới nhất của SP để gắn ảnh đại diện (nếu có)
 const latestCtspId = ref(null);
 
+// ✅ base URL để ghép ảnh
+const apiBase = String(
+  import.meta?.env?.VITE_API_URL || import.meta?.env?.VITE_API_BASE_URL || "http://localhost:8080"
+).replace(/\/+$/, "");
+
+function toAbsoluteImageUrl(p) {
+  const path = String(p || "").trim();
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+  if (!path.startsWith("/")) return `${apiBase}/${path}`;
+  return `${apiBase}${path}`;
+}
+
+const confirmProductName = computed(() => {
+  const ten = String(form.tenSanPham || "").trim();
+  return ten || "(chưa đặt tên)";
+});
+
 // helper toast
 function toastSuccess(detail) {
   toast.add({ severity: "success", summary: "Thành công", detail, life: 3000 });
@@ -135,6 +195,24 @@ function toastError(detail) {
 
 function back() {
   router.push("/admin/san-pham");
+}
+
+// ✅ mở confirm thay vì lưu luôn
+function openConfirm() {
+  if (loading.value) return;
+
+  const ten = String(form.tenSanPham || "").trim();
+  if (!ten) return toastError("Vui lòng nhập Tên sản phẩm.");
+
+  confirm.open = true;
+}
+function closeConfirm() {
+  confirm.open = false;
+}
+async function confirmSubmit() {
+  // đóng popup trước để tránh double click
+  confirm.open = false;
+  await submitReal();
 }
 
 function resetForm() {
@@ -150,14 +228,12 @@ function resetForm() {
   imageFile.value = null;
   imageFileName.value = "";
 
-  // revoke preview hiện tại nếu là objectUrl
   if (lastObjectUrl) {
     URL.revokeObjectURL(lastObjectUrl);
     lastObjectUrl = null;
   }
   imagePreviewUrl.value = initialSnapshot.imagePreviewUrl || "";
 
-  // reset input file để chọn lại cùng 1 file vẫn trigger change
   const el = document.getElementById("product-image-file");
   if (el) el.value = "";
 }
@@ -174,18 +250,15 @@ function onImageChange(e) {
   imageFile.value = f;
   imageFileName.value = f.name;
 
-  // revoke preview cũ
   if (lastObjectUrl) {
     URL.revokeObjectURL(lastObjectUrl);
     lastObjectUrl = null;
   }
 
-  // preview local
   const url = URL.createObjectURL(f);
   lastObjectUrl = url;
   imagePreviewUrl.value = url;
 
-  // reset input để chọn lại cùng file vẫn gọi onChange
   input.value = "";
 }
 
@@ -211,7 +284,6 @@ function pickNgayTao(d) {
 async function loadProductRepresentativeImage(productId) {
   latestCtspId.value = null;
 
-  // lấy danh sách CTSP để tìm CTSP “mới nhất”
   let ctspList = [];
   try {
     const ctspRes = await productDetailService.getAll();
@@ -230,27 +302,32 @@ async function loadProductRepresentativeImage(productId) {
     const ta = new Date(pickNgayTao(a) || 0).getTime();
     const tb = new Date(pickNgayTao(b) || 0).getTime();
     if (ta !== tb) return tb - ta;
-    const ida = Number(a?.id ?? 0);
-    const idb = Number(b?.id ?? 0);
-    return idb - ida;
+    return Number(b?.id ?? 0) - Number(a?.id ?? 0);
   });
 
   const ctspId = ctspList[0]?.id;
   latestCtspId.value = ctspId ?? null;
   if (!ctspId) return "";
 
-  // lấy ảnh của CTSP đó
   try {
-    const imgsRes = await anhChiTietSanPhamService.getByChiTietSanPham(ctspId); // ✅ alias
-    const imgs = unwrapList(imgsRes);
+    // hỗ trợ cả 2 tên hàm (getByChiTietSanPham / byChiTietSanPham)
+    const svc = anhChiTietSanPhamService;
+    const imgsRes =
+      typeof svc.getByChiTietSanPham === "function"
+        ? await svc.getByChiTietSanPham(ctspId)
+        : typeof svc.byChiTietSanPham === "function"
+        ? await svc.byChiTietSanPham(ctspId)
+        : await svc.byChiTietSanPham?.(ctspId);
 
+    const imgs = unwrapList(imgsRes);
     if (!imgs || !imgs.length) return "";
 
     // ưu tiên ảnh đại diện
-    const daiDien = imgs.find((x) => x?.laAnhDaiDien === true || x?.la_anh_dai_dien === true) || imgs[0];
+    const daiDien =
+      imgs.find((x) => x?.laAnhDaiDien === true || x?.la_anh_dai_dien === true) || imgs[0];
 
-    // linh hoạt key đường dẫn
-    return daiDien?.duongDanAnh ?? daiDien?.url ?? daiDien?.path ?? "";
+    const rawPath = daiDien?.duongDanAnh ?? daiDien?.duong_dan_anh ?? daiDien?.url ?? daiDien?.path ?? "";
+    return toAbsoluteImageUrl(rawPath);
   } catch (e) {
     return "";
   }
@@ -317,9 +394,10 @@ async function loadOne() {
   }
 }
 
-// ✅ upload ảnh “sản phẩm” = upload vào anh_chi_tiet_san_pham (set đại diện) của CTSP mới nhất
+// ✅ upload ảnh vào CTSP mới nhất
 async function uploadProductImageToLatestCtspIfAny() {
   if (!imageFile.value) return;
+
   if (!isEdit.value) {
     toastError("Sản phẩm mới chưa có chi tiết sản phẩm. Hãy tạo CTSP trước rồi mới gắn ảnh.");
     return;
@@ -346,8 +424,8 @@ async function uploadProductImageToLatestCtspIfAny() {
   }
 }
 
-// ===== SUBMIT =====
-async function submit() {
+// ===== SUBMIT THẬT (chỉ gọi sau confirm) =====
+async function submitReal() {
   try {
     const ten = String(form.tenSanPham || "").trim();
     if (!ten) return toastError("Vui lòng nhập Tên sản phẩm.");
@@ -369,11 +447,12 @@ async function submit() {
 
       await updateFn(id.value, payload);
 
-      // ✅ nếu chọn ảnh => upload vào CTSP mới nhất
+      // nếu chọn ảnh => upload vào CTSP mới nhất
       await uploadProductImageToLatestCtspIfAny();
 
-      toastSuccess("Lưu sản phẩm thành công");
-      await loadOne();
+      toastSuccess("Cập nhật sản phẩm thành công");
+      // ✅ sau khi confirm cập nhật -> quay về màn quản lý sản phẩm
+      back();
       return;
     }
 
@@ -434,5 +513,93 @@ onBeforeUnmount(() => {
   height: 220px;
   object-fit: cover;
   display: block;
+}
+
+/* ✅ confirm popup */
+.ss-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+.ss-confirm {
+  width: 520px;
+  background: #fff;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+}
+.ss-confirm-header {
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+.ss-confirm-title {
+  color: rgba(17, 24, 39, 0.92);
+}
+.ss-confirm-body {
+  padding: 16px;
+}
+.ss-confirm-text {
+  color: rgba(17, 24, 39, 0.86);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.ss-confirm-strong {
+  color: rgba(17, 24, 39, 0.92);
+}
+.ss-confirm-sub {
+  margin-top: 6px;
+  color: rgba(17, 24, 39, 0.6);
+  font-size: 12.5px;
+}
+.ss-confirm-footer {
+  padding: 14px 16px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* ✅ BUTTON THEO MÀU CHỦ ĐẠO (đỏ/đen/trắng) */
+.btn-primary {
+  border: none !important;
+  background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%) !important;
+  color: #fff !important;
+  box-shadow: 0 10px 22px rgba(255, 77, 79, 0.16);
+}
+.btn-primary:hover {
+  filter: brightness(0.98);
+  box-shadow: 0 12px 26px rgba(17, 24, 39, 0.18), 0 10px 22px rgba(255, 77, 79, 0.14);
+}
+.btn-primary:active {
+  transform: translateY(0.5px);
+}
+.btn-primary:disabled,
+.btn-primary.disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-outline-secondary {
+  background: #fff !important;
+  color: rgba(17, 24, 39, 0.92) !important;
+  border: 1px solid rgba(17, 24, 39, 0.22) !important;
+}
+.btn-outline-secondary:hover {
+  border-color: rgba(255, 77, 79, 0.55) !important;
+  background: rgba(255, 77, 79, 0.06) !important;
+  color: rgba(17, 24, 39, 0.92) !important;
+}
+.btn-outline-secondary:disabled,
+.btn-outline-secondary.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 </style>

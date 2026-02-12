@@ -1,78 +1,67 @@
+<!-- File: src/components/voucher/VoucherTable.vue -->
 <template>
   <div class="table-responsive">
-    <table class="table align-middle mb-0 ss-table">
+    <table class="table align-middle small">
       <thead>
-        <tr>
-          <th style="width: 70px">STT</th>
-          <th style="width: 140px">Mã</th>
+        <tr class="text-secondary border-bottom">
+          <th>STT</th>
+          <th>Mã</th>
           <th>Tên</th>
-          <th style="width: 140px">Loại</th>
-          <th style="width: 120px">Số lượng</th>
-          <th style="width: 140px">Ngày bắt đầu</th>
-          <th style="width: 140px">Ngày kết thúc</th>
-          <th style="width: 160px">Trạng thái</th>
-          <th class="text-center" style="width: 140px">Hành động</th>
+          <th>Loại</th>
+          <th>Số lượng</th>
+          <th>Ngày Bắt đầu</th>
+          <th>Ngày Kết thúc</th>
+          <th>Trạng thái</th>
+          <th class="text-center">Hành động</th>
         </tr>
       </thead>
 
-      <tbody v-if="!vouchers?.length">
-        <tr>
-          <td colspan="9" class="text-center text-muted py-4">Không có dữ liệu</td>
-        </tr>
-      </tbody>
+      <tbody>
+        <tr v-for="(p, i) in vouchers" :key="p.id" class="voucher-row">
+          <td>{{ (currentPage - 1) * pageSize + i + 1 }}</td>
 
-      <tbody v-else>
-        <tr v-for="(p, i) in vouchers" :key="p.id">
-          <td class="ss-td-index">{{ (currentPage - 1) * pageSize + i + 1 }}</td>
-
-          <td class="ss-td-code">{{ p.maPhieuGiamGia }}</td>
-
-          <td class="ss-td-name">
-            {{ p.tenPhieuGiamGia }}
-          </td>
+          <td class="text-dark fw-bold">{{ p.maPhieuGiamGia }}</td>
+          <td>{{ p.tenPhieuGiamGia }}</td>
 
           <td>
             <span
-              class="ss-pill ss-pill-type"
-              :class="p.loaiPhieuGiamGia ? 'ss-pill-personal' : 'ss-pill-public'"
-              :style="getLoaiStyle(p.loaiPhieuGiamGia)"
+              class="badge rounded-pill px-3 py-2 shadow-sm border-0"
+              :style="getInternalLoaiStyle(p.loaiPhieuGiamGia)"
+              style="font-size: 11px; min-width: 90px; font-weight: 700"
             >
               {{ p.loaiPhieuGiamGia ? "Cá nhân" : "Công khai" }}
             </span>
           </td>
 
-          <td class="ss-td-qty">
-            {{ p.soLuongSuDung >= 999999 ? "∞ Vô hạn" : p.soLuongSuDung }}
-          </td>
-
-          <td class="ss-td-date">{{ formatDate(p.ngayBatDau) }}</td>
-          <td class="ss-td-date">{{ formatDate(p.ngayKetThuc) }}</td>
+          <td class="fw-bold">{{ p.soLuongSuDung >= 999999 ? "∞ Vô hạn" : p.soLuongSuDung }}</td>
+          <td>{{ formatDate(p.ngayBatDau) }}</td>
+          <td>{{ formatDate(p.ngayKetThuc) }}</td>
 
           <td>
-            <span class="ss-pill ss-pill-status" :style="getStatusStyle(p)">
+            <span
+              class="badge rounded-pill px-3 py-2 shadow-sm border-0"
+              :style="getStatusStyle(p)"
+              style="min-width: 110px; font-size: 11px; font-weight: 700"
+            >
               {{ getStatusText(p) }}
             </span>
           </td>
 
           <td class="text-center">
-            <div class="d-inline-flex align-items-center gap-2">
-              <button
-                v-if="getStatusText(p) !== 'Đã kết thúc'"
-                @click="$emit('toggle', p)"
-                class="btn ss-icon-btn"
-                type="button"
-                title="Đổi trạng thái"
-              >
-                <span class="material-icons-outlined">sync</span>
-              </button>
+            <div class="d-flex align-items-center justify-content-center gap-2">
+              <!-- ✅ chỉ cho gạt khi đang hoạt động (yêu cầu của bạn) -->
+              <div v-if="getStatusText(p) === 'Đang hoạt động'" class="form-check form-switch m-0 p-0">
+                <input
+                  class="form-check-input ss-toggle-red"
+                  type="checkbox"
+                  role="switch"
+                  :checked="normalizeTrangThai(p.trangThai)"
+                  @change="(e) => onToggle(p, e)"
+                />
+              </div>
 
-              <button
-                @click="$emit('view', p)"
-                class="btn ss-icon-btn"
-                type="button"
-                title="Xem"
-              >
-                <span class="material-icons-outlined">visibility</span>
+              <button @click="$emit('view', p)" class="btn btn-sm btn-link p-0 text-secondary ss-btn-view">
+                <span class="material-icons">visibility</span>
               </button>
             </div>
           </td>
@@ -83,136 +72,61 @@
 </template>
 
 <script setup>
-defineProps([
-  "vouchers",
-  "currentPage",
-  "pageSize",
-  "formatDate",
-  "getStatusStyle",
-  "getStatusText",
-]);
-defineEmits(["toggle", "view"]);
+const props = defineProps(["vouchers", "currentPage", "pageSize", "formatDate", "getStatusStyle", "getStatusText"]);
+const emit = defineEmits(["toggle", "view"]);
 
-/**
- * ✅ Loại phiếu theo palette SS (đỏ/đen/trắng)
- * - Cá nhân: đỏ dịu
- * - Công khai: đen dịu
- */
-const getLoaiStyle = (isPersonal) => {
-  return isPersonal
-    ? {
-        background: "rgba(255, 77, 79, 0.10)",
-        color: "#b42324",
-        border: "1px solid rgba(255, 77, 79, 0.28)",
-      }
-    : {
-        background: "rgba(17, 24, 39, 0.06)",
-        color: "rgba(17, 24, 39, 0.88)",
-        border: "1px solid rgba(17, 24, 39, 0.14)",
-      };
+const normalizeTrangThai = (v) => v === true || Number(v) === 1;
+
+const onToggle = (p, e) => {
+  const checked = !!e?.target?.checked;
+  // ✅ truyền checked lên cha để cha update đúng DB
+  emit("toggle", p, checked);
+};
+
+const getInternalLoaiStyle = (isPersonal) => {
+  if (!isPersonal) {
+    return {
+      background: "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)",
+      color: "#e11d48",
+      border: "1px solid #fecdd3",
+    };
+  }
+  return {
+    background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
+    color: "#475569",
+    border: "1px solid #e2e8f0",
+  };
 };
 </script>
 
 <style scoped>
-/* ===== TABLE chung: chữ vừa mắt, không nhạt ===== */
-.ss-table {
-  font-size: 14px;
-  color: rgba(17, 24, 39, 0.88);
+.voucher-row {
+  transition: all 0.2s ease;
+}
+.voucher-row:hover {
+  background-color: rgba(0, 0, 0, 0.015);
 }
 
-.ss-table thead th {
-  background: #f9fafb;
-  color: rgba(17, 24, 39, 0.78);
-  font-weight: 800;
-  font-size: 13.5px;
-  border-bottom: 1px solid rgba(17, 24, 39, 0.08);
-  padding: 14px 14px;
-  white-space: nowrap;
+/* Tùy chỉnh nút gạt màu đỏ cam */
+.ss-toggle-red {
+  cursor: pointer;
+  width: 2.2em !important;
+  height: 1.1em !important;
+  border-color: rgba(0, 0, 0, 0.1);
 }
 
-/* body: line rõ */
-.ss-table td {
-  padding: 14px 14px;
-  border-bottom: 1px solid rgba(17, 24, 39, 0.06);
-  vertical-align: middle;
+.ss-toggle-red:checked {
+  background-color: #ff4d4f !important;
+  border-color: #ff4d4f !important;
 }
 
-.ss-table tbody tr:hover {
-  background: rgba(17, 24, 39, 0.03);
+.ss-toggle-red:focus {
+  box-shadow: 0 0 0 0.2rem rgba(255, 77, 79, 0.15) !important;
 }
 
-.ss-td-index {
-  color: rgba(17, 24, 39, 0.72);
-  font-weight: 600;
-}
-
-.ss-td-code {
-  color: rgba(17, 24, 39, 0.92);
-  font-weight: 800;
-}
-
-.ss-td-name {
-  color: rgba(17, 24, 39, 0.88);
-  font-weight: 600;
-}
-
-.ss-td-date {
-  color: rgba(17, 24, 39, 0.70);
-  font-weight: 600;
-}
-
-.ss-td-qty {
-  color: rgba(17, 24, 39, 0.92);
-  font-weight: 800;
-}
-
-/* ===== PILL (Loại + Trạng thái) ===== */
-.ss-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 28px;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 900;
-  letter-spacing: 0.1px;
-  white-space: nowrap;
-}
-
-.ss-pill-type {
-  min-width: 92px;
-}
-
-.ss-pill-status {
-  min-width: 116px;
-}
-
-/* ===== ICON BUTTON chuẩn SS (mắt + sync) ===== */
-.ss-icon-btn {
-  width: var(--ss-icon-size, 36px);
-  height: var(--ss-icon-size, 36px);
-  border-radius: var(--ss-icon-radius, 10px);
-  border: 1px solid var(--ss-icon-border, rgba(17, 24, 39, 0.14));
-  background: #fff;
-  padding: 0;
-
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-
-  color: var(--ss-icon, rgba(17, 24, 39, 0.88)) !important;
-  transition: 0.2s;
-}
-
-.ss-icon-btn .material-icons-outlined {
-  font-size: 18px;
-  line-height: 1;
-  color: inherit !important;
-}
-
-.ss-icon-btn:hover {
-  background: var(--ss-icon-bg-hover, rgba(17, 24, 39, 0.04));
-  border-color: var(--ss-icon-border-hover, rgba(17, 24, 39, 0.18));
+/* Hiệu ứng cho nút xem */
+.ss-btn-view:hover {
+  color: #ff4d4f !important;
+  transform: scale(1.1);
 }
 </style>

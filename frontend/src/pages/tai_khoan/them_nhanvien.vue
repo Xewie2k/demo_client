@@ -1,187 +1,154 @@
 <!-- File: src/pages/tai_khoan/nhan_vien/them_nhanvien.vue -->
 <template>
-  <div class="taikhoan-form">
-    <div class="toolbar">
-      <div class="toolbar-left">
-        <div class="page-title">THÊM TÀI KHOẢN NHÂN VIÊN</div>
-      </div>
+  <div class="taikhoan-form ss-page ss-font">
+    <div class="header-section">
+      <h2 class="page-title">Thêm nhân viên</h2>
 
       <div class="toolbar-right">
-        <button class="btn btn-outline" @click="back">
+        <button class="btn btn-outline" type="button" @click="back">
           <i class="fa-solid fa-arrow-left"></i> Quay lại
         </button>
-        <button class="btn btn-primary" :disabled="saving" @click="submit">
+
+        <button class="btn btn-primary" type="button" :disabled="saving" @click="submit">
           <i class="fa-solid fa-floppy-disk"></i>
           {{ saving ? "Đang lưu..." : "Lưu" }}
         </button>
       </div>
     </div>
 
-    <div class="card">
-      <!-- ẢNH -->
-      <div class="block">
-        <div class="block-title">Ảnh nhân viên <span class="req">*</span></div>
+    <div class="form-card">
+      <div>
+        <div class="right-col-header">
+          <button class="btn btn-outline btn-sm" type="button" @click="toggleScanner">
+            <i class="fa-solid fa-qrcode"></i> Quét QR
+          </button>
+        </div>
 
-        <div class="avatar-row">
-          <div class="avatar-preview">
-            <img v-if="form.anhNhanVien" :src="form.anhNhanVien" alt="preview" />
-            <div v-else class="avatar-placeholder">
-              <span class="material-icons-outlined">person</span>
+        <div v-if="showScanner" class="scanner-overlay">
+          <div class="scanner-box">
+            <div class="scanner-header">
+              <span>Quét mã QR CCCD</span>
+              <button class="btn-close" type="button" @click="stopScanner">✕</button>
             </div>
-          </div>
-
-          <div class="avatar-actions">
-            <input ref="fileRef" type="file" accept="image/*" class="d-none" @change="onPickFile" />
-            <button class="btn btn-outline" type="button" @click="fileRef?.click()">
-              <span class="material-icons-outlined">upload</span> Chọn ảnh
-            </button>
-            <button class="btn btn-outline" type="button" :disabled="!form.anhNhanVien" @click="clearImage">
-              <span class="material-icons-outlined">close</span> Xóa ảnh
-            </button>
-            <div class="hint">Ảnh sẽ gửi vào field <b>anhNhanVien</b> dạng base64.</div>
+            <div id="reader" width="600px"></div>
+            <div class="scanner-hint">Đưa mã QR CCCD vào khung hình</div>
           </div>
         </div>
       </div>
 
-      <!-- THÔNG TIN -->
-      <div class="row">
-        <div class="col">
-          <label class="label">Họ và tên <span class="req">*</span></label>
+      <div class="avatar-section">
+        <div class="avatar-wrapper" @click="fileRef?.click()">
+          <img v-if="form.anhNhanVien" :src="form.anhNhanVien" class="avatar-img" />
+          <div v-else class="avatar-placeholder">
+            <i class="fa-solid fa-camera"></i>
+            <span>Chọn ảnh</span>
+          </div>
+          <input ref="fileRef" type="file" accept="image/*" class="d-none" @change="onPickFile" />
+        </div>
+
+        <div class="avatar-hint">PNG, JPG, JPEG - Tối đa 5MB</div>
+
+        <button v-if="form.anhNhanVien" class="btn-text-red" type="button" @click.stop="clearImage">
+          Xóa ảnh
+        </button>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="label">Tên nhân viên</label>
           <input v-model.trim="form.tenNhanVien" class="input" placeholder="Nhập họ và tên" />
         </div>
 
-        <div class="col">
-          <label class="label">Tên tài khoản <span class="req">*</span></label>
-          <input v-model.trim="form.tenTaiKhoan" class="input" placeholder="Ví dụ: nv_admin" />
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col">
-          <label class="label">Mật khẩu <span class="req">*</span></label>
-          <input v-model="form.matKhau" type="password" class="input" placeholder="Nhập mật khẩu" />
+        <div class="form-group">
+          <label class="label">Số điện thoại</label>
+          <input v-model.trim="form.soDienThoai" class="input" placeholder="Nhập số điện thoại" />
         </div>
 
-        <div class="col">
-          <label class="label">Email <span class="req">*</span></label>
-          <input v-model.trim="form.email" type="email" class="input" placeholder="example@gmail.com" />
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col">
-          <label class="label">Số điện thoại <span class="req">*</span></label>
-          <input v-model.trim="form.soDienThoai" class="input" placeholder="0xxx..." />
+        <div class="form-group">
+          <label class="label">Email</label>
+          <input v-model.trim="form.email" type="email" class="input" placeholder="Nhập địa chỉ email" />
         </div>
 
-        <div class="col">
+        <div class="form-group">
+          <label class="label">Tỉnh/Thành phố</label>
+          <select class="input select" v-model="addr.tinhCode" @change="timTinh">
+            <option value="">-- Chọn Tỉnh/Thành phố --</option>
+            <option v-for="p in provinces" :key="p.code" :value="p.code">{{ p.name }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="label">Quận/Huyện</label>
+          <select class="input select" v-model="addr.huyenCode" @change="timHuyen" :disabled="!addr.tinhCode">
+            <option value="">-- Chọn Quận/Huyện --</option>
+            <option v-for="d in districts" :key="d.code" :value="d.code">{{ d.name }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="label">Xã/Phường</label>
+          <select class="input select" v-model="addr.xaCode" :disabled="!addr.huyenCode">
+            <option value="">-- Chọn Xã/Phường --</option>
+            <option v-for="w in wards" :key="w.code" :value="w.code">{{ w.name }}</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="label">Địa chỉ cụ thể</label>
+          <input v-model.trim="form.diaChiCuThe" class="input" placeholder="Số nhà, tên đường..." />
+        </div>
+
+        <div class="form-group">
           <label class="label">Ngày sinh</label>
           <input v-model="form.ngaySinh" type="date" class="input" />
         </div>
-      </div>
 
-      <div class="row">
-        <div class="col">
-          <label class="label">CCCD <span class="req">*</span></label>
-          <input v-model.trim="form.cccd" class="input" placeholder="012345678901" />
-        </div>
-
-        <div class="col">
-          <label class="label">Trạng thái <span class="req">*</span></label>
-          <select v-model="form.trangThai" class="input">
-            <option :value="true">Hoạt động</option>
-            <option :value="false">Ngừng hoạt động</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- QUYỀN HẠN -->
-      <div class="row">
-        <div class="col">
+        <div class="form-group">
           <label class="label">Quyền hạn <span class="req">*</span></label>
-          <select v-model="form.idQuyenHan" class="input">
+          <select v-model="form.idQuyenHan" class="input select">
             <option value="">-- Chọn quyền hạn --</option>
             <option v-for="q in quyenHanOptions" :key="q.id" :value="q.id">
-              {{ q.ten ?? q.tenQuyenHan ?? q.ma ?? ("Quyền " + q.id) }}
+              {{ mapTenQuyenHan(q.ten ?? q.tenQuyenHan ?? q.ma ?? ("Quyền " + q.id)) }}
             </option>
           </select>
         </div>
 
-        <div class="col">
+        <div class="form-group">
           <label class="label">Ghi chú</label>
-          <input v-model.trim="form.ghiChu" class="input" placeholder="(tuỳ chọn)" />
+          <input v-model="form.ghiChu" class="input" placeholder="Ghi chú thêm..." />
         </div>
-      </div>
-
-      <!-- ĐỊA CHỈ VN -->
-      <div class="block">
-        <div class="block-title">Địa chỉ <span class="req">*</span></div>
-
-        <div class="row">
-          <div class="col">
-            <label class="label">Tỉnh/Thành <span class="req">*</span></label>
-            <select class="input" v-model="addr.tinhCode" @change="onTinhChange">
-              <option value="">-- Chọn tỉnh/thành --</option>
-              <option v-for="p in provinces" :key="p.code" :value="p.code">{{ p.name }}</option>
-            </select>
-          </div>
-
-          <div class="col">
-            <label class="label">Quận/Huyện <span class="req">*</span></label>
-            <select class="input" v-model="addr.huyenCode" @change="onHuyenChange" :disabled="!addr.tinhCode">
-              <option value="">-- Chọn quận/huyện --</option>
-              <option v-for="d in districts" :key="d.code" :value="d.code">{{ d.name }}</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="row">
-          <div class="col">
-            <label class="label">Phường/Xã <span class="req">*</span></label>
-            <select class="input" v-model="addr.xaCode" :disabled="!addr.huyenCode">
-              <option value="">-- Chọn phường/xã --</option>
-              <option v-for="w in wards" :key="w.code" :value="w.code">{{ w.name }}</option>
-            </select>
-          </div>
-
-          <div class="col">
-            <label class="label">Địa chỉ cụ thể <span class="req">*</span></label>
-            <input class="input" v-model.trim="form.diaChiCuThe" placeholder="Ví dụ: 12A Nguyễn Trãi" />
-          </div>
-        </div>
-
-        <div class="addr-preview">
-          <span class="muted">Hiển thị:</span>
-          <span class="text">{{ previewAddress }}</span>
-        </div>
-      </div>
-
-      <div v-if="errorMsg" class="alert error">
-        <i class="fa-solid fa-circle-exclamation"></i>
-        <span>{{ errorMsg }}</span>
-      </div>
-
-      <div v-if="successMsg" class="alert success">
-        <i class="fa-solid fa-circle-check"></i>
-        <span>{{ successMsg }}</span>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, nextTick, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
+import { Html5QrcodeScanner } from "html5-qrcode";
 import { addNhanVien } from "@/services/tai_khoan/nhan_vien/nhan_vienService";
 import vnAddressService from "@/services/vnAddressService";
+import emailjs from "@emailjs/browser";
 
 const router = useRouter();
-
 const saving = ref(false);
-const errorMsg = ref("");
-const successMsg = ref("");
-
 const fileRef = ref(null);
+
+const EMAILJS_PUBLIC_KEY = "D-LHcLlAo_N5Vc5Kc";
+emailjs.init(EMAILJS_PUBLIC_KEY);
+
+/** ✅ Map mã quyền -> text hiển thị */
+const mapTenQuyenHan = (raw) => {
+  const v = String(raw ?? "").trim();
+  if (!v) return v;
+
+  const k = v.toUpperCase().replace(/\s+/g, "");
+
+  if (k === "NHAN_VIEN" || k === "NHANVIEN" || k === "ROLE_NHAN_VIEN" || k === "ROLENHAN_VIEN") return "Nhân viên";
+  if (k === "ADMIN" || k === "ROLE_ADMIN" || k === "ROLEADMIN") return "Admin";
+
+  return v;
+};
 
 const form = ref({
   idQuyenHan: "",
@@ -193,11 +160,7 @@ const form = ref({
   anhNhanVien: "",
   ngaySinh: "",
   ghiChu: "",
-  thanhPho: "",
-  quan: "",
-  phuong: "",
   diaChiCuThe: "",
-  cccd: "",
   trangThai: true,
 });
 
@@ -228,28 +191,14 @@ const loadQuyenHan = async () => {
 
 const findName = (list, code) => list.find((x) => String(x.code) === String(code))?.name || "";
 
-const previewAddress = computed(() => {
-  const tinhName = findName(provinces.value, addr.value.tinhCode);
-  const huyenName = findName(districts.value, addr.value.huyenCode);
-  const xaName = findName(wards.value, addr.value.xaCode);
-  return (
-    vnAddressService.buildAddressText({
-      detail: form.value.diaChiCuThe,
-      wardName: xaName,
-      districtName: huyenName,
-      provinceName: tinhName,
-    }) || "---"
-  );
-});
-
-const onTinhChange = async () => {
+const timTinh = async () => {
   addr.value.huyenCode = "";
   addr.value.xaCode = "";
   wards.value = [];
   districts.value = addr.value.tinhCode ? await vnAddressService.getDistricts(addr.value.tinhCode) : [];
 };
 
-const onHuyenChange = async () => {
+const timHuyen = async () => {
   addr.value.xaCode = "";
   wards.value = addr.value.huyenCode ? await vnAddressService.getWards(addr.value.huyenCode) : [];
 };
@@ -259,17 +208,13 @@ const onPickFile = (e) => {
   if (!file) return;
 
   if (!file.type.startsWith("image/")) {
-    errorMsg.value = "Vui lòng chọn file ảnh.";
-    return;
-  }
-  if (file.size > 2 * 1024 * 1024) {
-    errorMsg.value = "Ảnh quá lớn (tối đa 2MB).";
+    alert("Vui lòng chọn file ảnh.");
     return;
   }
 
   const reader = new FileReader();
   reader.onload = () => {
-    form.value.anhNhanVien = reader.result; // base64 -> đúng field DTO
+    form.value.anhNhanVien = reader.result;
   };
   reader.readAsDataURL(file);
 };
@@ -279,70 +224,239 @@ const clearImage = () => {
   if (fileRef.value) fileRef.value.value = "";
 };
 
-const validate = () => {
-  if (!form.value.tenNhanVien) return "Vui lòng nhập Họ và tên";
-  if (!form.value.tenTaiKhoan) return "Vui lòng nhập Tên tài khoản";
-  if (!form.value.matKhau) return "Vui lòng nhập Mật khẩu";
-  if (!form.value.email) return "Vui lòng nhập Email";
-  if (!form.value.soDienThoai) return "Vui lòng nhập Số điện thoại";
-  if (!form.value.cccd) return "Vui lòng nhập CCCD";
-  if (!form.value.idQuyenHan) return "Vui lòng chọn Quyền hạn";
-  if (!form.value.anhNhanVien) return "Vui lòng chọn Ảnh nhân viên";
+const removeVietnameseTones = (str) => {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D");
+};
 
-  if (!addr.value.tinhCode || !addr.value.huyenCode || !addr.value.xaCode) {
-    return "Vui lòng chọn đầy đủ Tỉnh/Huyện/Xã";
+const buildUsername = (fullName) => {
+  if (!fullName) return "";
+  const noTone = removeVietnameseTones(fullName.trim().toLowerCase());
+  const parts = noTone.split(/\s+/);
+  const lastName = parts[parts.length - 1];
+  const initials = parts.slice(0, parts.length - 1).map((x) => x[0]).join("");
+  return lastName + initials;
+};
+
+const generatePassword = (length = 8) => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$";
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+};
+
+/* ===== QR SCAN ===== */
+const showScanner = ref(false);
+let scanner = null;
+
+const normalizeString = (str) => {
+  if (!str) return "";
+  let s = removeVietnameseTones(String(str).trim().toLowerCase());
+  s = s.replace(/(tinh|thanh pho|tp|huyen|quan|thi xa|xa|phuong|thi tran)\s+/g, "").trim();
+  s = s.replace(/\s+/g, " ");
+  return s;
+};
+
+const diachicccd = (list, nameToFind) => {
+  if (!nameToFind || !Array.isArray(list) || list.length === 0) return null;
+  const target = normalizeString(nameToFind);
+
+  let found = list.find((item) => normalizeString(item.name) === target);
+  if (!found) {
+    found = list.find(
+      (item) =>
+        normalizeString(item.name).includes(target) || target.includes(normalizeString(item.name))
+    );
   }
-  if (!form.value.diaChiCuThe) return "Vui lòng nhập Địa chỉ cụ thể";
+  return found ? found.code : null;
+};
 
+const CCCDScan = async (text) => {
+  const parts = text.split("|");
+  if (parts.length < 6) throw new Error("Format CCCD không đúng");
+
+  // parts[2]: Họ tên, parts[3]: DOB ddMMyyyy, parts[5]: địa chỉ
+  form.value.tenNhanVien = parts[2] || form.value.tenNhanVien;
+  form.value.tenTaiKhoan = buildUsername(form.value.tenNhanVien);
+
+  const rawDob = parts[3];
+  if (rawDob && rawDob.length === 8) {
+    form.value.ngaySinh = `${rawDob.slice(4)}-${rawDob.slice(2, 4)}-${rawDob.slice(0, 2)}`;
+  }
+
+  const fullAddress = parts[5] || "";
+  const addrParts = fullAddress.split(",").map((s) => s.trim()).filter(Boolean);
+
+  const tinhName = addrParts.length > 0 ? addrParts[addrParts.length - 1] : "";
+  const huyenName = addrParts.length > 1 ? addrParts[addrParts.length - 2] : "";
+  const xaName = addrParts.length > 2 ? addrParts[addrParts.length - 3] : "";
+
+  const specificAddr = addrParts.slice(0, Math.max(addrParts.length - 3, 0)).join(", ");
+  form.value.diaChiCuThe = specificAddr || fullAddress;
+
+  if (tinhName) {
+    const tinhCode = diachicccd(provinces.value, tinhName);
+    if (tinhCode) {
+      addr.value.tinhCode = tinhCode;
+      await timTinh();
+
+      if (huyenName) {
+        const huyenCode = diachicccd(districts.value, huyenName);
+        if (huyenCode) {
+          addr.value.huyenCode = huyenCode;
+          await timHuyen();
+
+          if (xaName) {
+            const xaCode = diachicccd(wards.value, xaName);
+            if (xaCode) addr.value.xaCode = xaCode;
+          }
+        }
+      }
+    }
+  }
+};
+
+const jsonScan = async (data) => {
+  if (!data || typeof data !== "object") throw new Error("JSON không hợp lệ");
+
+  if (data.tenNhanVien) form.value.tenNhanVien = data.tenNhanVien;
+  if (data.email) form.value.email = data.email;
+  if (data.soDienThoai) form.value.soDienThoai = data.soDienThoai;
+  if (data.ngaySinh) form.value.ngaySinh = data.ngaySinh;
+  if (data.ghiChu) form.value.ghiChu = data.ghiChu;
+  if (data.diaChiCuThe) form.value.diaChiCuThe = data.diaChiCuThe;
+
+  if (form.value.tenNhanVien) {
+    form.value.tenTaiKhoan = buildUsername(form.value.tenNhanVien);
+  }
+
+  if (data.thanhPho) {
+    const tinhCode = diachicccd(provinces.value, data.thanhPho);
+    if (tinhCode) {
+      addr.value.tinhCode = tinhCode;
+      await timTinh();
+
+      if (data.quan) {
+        const huyenCode = diachicccd(districts.value, data.quan);
+        if (huyenCode) {
+          addr.value.huyenCode = huyenCode;
+          await timHuyen();
+
+          if (data.phuong) {
+            const xaCode = diachicccd(wards.value, data.phuong);
+            if (xaCode) addr.value.xaCode = xaCode;
+          }
+        }
+      }
+    }
+  }
+};
+
+const onScanSuccess = async (decodedText) => {
+  try {
+    if (String(decodedText).includes("|")) {
+      await CCCDScan(decodedText);
+    } else {
+      const data = JSON.parse(decodedText);
+      await jsonScan(data);
+    }
+
+    alert("Quét dữ liệu thành công!");
+    stopScanner();
+  } catch (e) {
+    console.error("Lỗi xử lý dữ liệu:", e);
+    alert("Dữ liệu không hợp lệ hoặc lỗi hệ thống địa chỉ.");
+  }
+};
+
+const toggleScanner = async () => {
+  showScanner.value = !showScanner.value;
+
+  if (showScanner.value) {
+    await nextTick();
+    scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+    scanner.render(onScanSuccess, () => {});
+  } else {
+    stopScanner();
+  }
+};
+
+const stopScanner = () => {
+  if (scanner) {
+    scanner.clear().catch(console.error);
+    scanner = null;
+  }
+  showScanner.value = false;
+};
+
+onBeforeUnmount(() => {
+  stopScanner();
+});
+
+/* ===== EMAIL ===== */
+const sendEmail = async ({ tenNhanVien, tenTaiKhoan, matKhau, email }) => {
+  try {
+    const serviceID = "service_n03lqrf";
+    const templateID = "template_1gy88ic";
+
+    const templateParams = {
+      to_email: email,
+      to_name: tenNhanVien,
+      username: tenTaiKhoan,
+      password: matKhau,
+    };
+
+    const response = await emailjs.send(serviceID, templateID, templateParams);
+    console.log("Email gửi thành công!", response.status, response.text);
+  } catch (error) {
+    console.error("Lỗi gửi email:", error);
+  }
+};
+
+const validate = () => {
+  if (!form.value.tenNhanVien) return "Chưa nhập tên nhân viên";
+  if (!form.value.email) return "Chưa nhập email";
+  if (!form.value.soDienThoai) return "Chưa nhập số điện thoại";
+  if (!form.value.idQuyenHan) return "Chưa chọn quyền hạn";
+  if (!addr.value.tinhCode || !addr.value.huyenCode || !addr.value.xaCode) return "Chưa chọn địa chỉ đầy đủ";
   return "";
 };
 
 const submit = async () => {
-  errorMsg.value = "";
-  successMsg.value = "";
+  form.value.tenTaiKhoan = buildUsername(form.value.tenNhanVien);
+  form.value.matKhau = generatePassword();
 
   const msg = validate();
   if (msg) {
-    errorMsg.value = msg;
+    alert(msg);
     return;
   }
-
-  const ok = confirm(`Xác nhận tạo nhân viên: "${form.value.tenNhanVien}" ?`);
-  if (!ok) return;
 
   try {
     saving.value = true;
 
-    // map name tỉnh/huyện/xã -> đúng field DTO: thanhPho/quan/phuong
-    const thanhPho = findName(provinces.value, addr.value.tinhCode);
-    const quan = findName(districts.value, addr.value.huyenCode);
-    const phuong = findName(wards.value, addr.value.xaCode);
-
     const payload = {
+      ...form.value,
       idQuyenHan: Number(form.value.idQuyenHan),
-      tenNhanVien: form.value.tenNhanVien,
-      tenTaiKhoan: form.value.tenTaiKhoan,
-      matKhau: form.value.matKhau,
-      email: form.value.email,
-      soDienThoai: form.value.soDienThoai,
-      anhNhanVien: form.value.anhNhanVien,
-      ngaySinh: form.value.ngaySinh || null,
-      ghiChu: form.value.ghiChu || null,
-      thanhPho,
-      quan,
-      phuong,
-      diaChiCuThe: form.value.diaChiCuThe,
-      cccd: form.value.cccd,
-      trangThai: form.value.trangThai,
+      thanhPho: findName(provinces.value, addr.value.tinhCode),
+      quan: findName(districts.value, addr.value.huyenCode),
+      phuong: findName(wards.value, addr.value.xaCode),
     };
 
     await addNhanVien(payload);
 
-    successMsg.value = "Tạo nhân viên thành công!";
-    setTimeout(() => back(), 300);
+    await sendEmail({
+      tenNhanVien: form.value.tenNhanVien,
+      tenTaiKhoan: form.value.tenTaiKhoan,
+      matKhau: form.value.matKhau,
+      email: form.value.email,
+    });
+
+    alert("Thêm nhân viên thành công!");
+    back();
   } catch (e) {
-    console.log(e);
-    errorMsg.value = e?.message || "Tạo nhân viên thất bại";
+    alert(e?.message || "Lỗi hệ thống");
   } finally {
     saving.value = false;
   }
@@ -355,69 +469,252 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
-@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css");
-
+/* ✅ Không import font ngoài – dùng font chung của dự án */
 .taikhoan-form{
-  font-family:"Inter",sans-serif;
+  font-family: inherit;
+  max-width: 1000px;
+  margin: 20px auto;
+  color: rgba(17,24,39,0.82);
+}
+
+/* ===== Header ===== */
+.header-section{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.page-title{
+  font-size: 20px;
+  font-weight: 500;
+  color: rgba(17,24,39,0.88);
+  margin: 0;
+}
+
+.toolbar-right{
+  display:flex;
+  gap: 10px;
+  align-items:center;
+}
+
+/* ===== Card ===== */
+.form-card{
   background:#fff;
-  border-radius:12px;
-  padding:24px;
-  border:1px solid #E5E7EB;
-  box-shadow:0 2px 16px rgba(0,0,0,0.04);
-  margin:20px;
+  border-radius: 14px;
+  padding: 22px;
+  border: 1px solid rgba(255,77,79,0.18);
+  box-shadow: 0 18px 50px rgba(17,24,39,0.08);
 }
-.toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:15px;margin-bottom:16px;}
-.page-title{font-weight:900;font-size:16px;color:#111827;letter-spacing:.3px;}
-.toolbar-right{display:flex;gap:10px;}
 
+/* ===== QR header ===== */
+.right-col-header{
+  display:flex;
+  justify-content: flex-end;
+  margin-bottom: 10px;
+}
+
+/* ===== Buttons ===== */
 .btn{
-  height:36px;padding:0 14px;border:none;cursor:pointer;
-  font-weight:800;font-size:13px;border-radius:10px;
-  display:inline-flex;align-items:center;gap:8px;transition:.2s;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(17,24,39,0.14);
+  background:#fff;
+  color: rgba(17,24,39,0.88);
+  font-size: 13px;
+  font-weight: 400;
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  cursor:pointer;
+  transition: 0.15s ease;
 }
-.btn:disabled{opacity:.6;cursor:not-allowed;}
-.btn-outline{background:#fff;border:1px solid rgba(17,24,39,0.14);color:rgba(17,24,39,0.88);}
-.btn-outline:hover{background:rgba(17,24,39,0.04);}
+.btn:hover{ background: rgba(17,24,39,0.04); }
+.btn:disabled{ opacity:.6; cursor:not-allowed; }
+
 .btn-primary{
-  color:#fff;
-  background:linear-gradient(90deg,#ff4d4f 0%,#111827 100%);
-  box-shadow:0 10px 18px rgba(255,77,79,0.16);
+  border: none;
+  color:#fff !important;
+  background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%) !important;
+  box-shadow: 0 10px 18px rgba(255,77,79,0.16);
+}
+.btn-primary:hover{ filter: brightness(0.98); }
+
+.btn-outline{
+  background:#fff;
+  border:1px solid rgba(17,24,39,0.14);
+  color: rgba(17,24,39,0.88);
 }
 
-.card{border:1px solid rgba(255,77,79,0.22);border-radius:14px;padding:16px;background:#fff;}
-.row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
-.col{display:flex;flex-direction:column;gap:6px;}
-.label{font-size:13px;font-weight:800;color:rgba(17,24,39,0.85);}
-.req{color:#ef4444;}
+.btn.btn-sm{
+  padding: 0 12px;
+}
+
+.btn-text-red{
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  margin-top: 6px;
+}
+
+/* ===== Avatar ===== */
+.avatar-section{
+  display:flex;
+  flex-direction: column;
+  align-items:center;
+  margin: 10px 0 18px;
+}
+
+.avatar-wrapper{
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(17,24,39,0.03);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  overflow:hidden;
+  position: relative;
+  transition: 0.15s ease;
+  border: 1px solid rgba(17,24,39,0.14);
+}
+.avatar-wrapper:hover{
+  background: rgba(17,24,39,0.04);
+}
+
+.avatar-img{ width:100%; height:100%; object-fit: cover; }
+
+.avatar-placeholder{
+  display:flex;
+  flex-direction: column;
+  align-items:center;
+  gap: 6px;
+  color: rgba(17,24,39,0.45);
+}
+.avatar-placeholder i{ font-size: 20px; }
+.avatar-placeholder span{ font-size: 12px; font-weight: 400; }
+
+.avatar-hint{
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(17,24,39,0.55);
+}
+
+/* ===== Form grid ===== */
+.form-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 18px;
+  row-gap: 14px;
+}
+
+.form-group{
+  display:flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label{
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(17,24,39,0.82);
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+}
+
+.req{ color:#ef4444; }
+
 .input{
-  height:40px;border-radius:12px;border:1px solid rgba(17,24,39,0.14);
-  padding:0 12px;outline:none;background:#F9FAFB;color:rgba(17,24,39,0.88);
+  height: 40px;
+  border-radius: 10px;
+  border: 1px solid rgba(17,24,39,0.14);
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(17,24,39,0.82);
+  background: #fff !important;
+  outline: none;
+  transition: 0.15s ease;
 }
-.input:focus{background:#fff;border-color:rgba(255,77,79,0.65);box-shadow:0 0 0 3px rgba(255,77,79,0.12);}
-
-.alert{margin-top:10px;border-radius:12px;padding:10px 12px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;}
-.alert.error{background:#fee2e2;color:#991b1b;}
-.alert.success{background:#dcfce7;color:#166534;}
-
-.block{margin-top:12px;padding-top:12px;border-top:1px dashed rgba(17,24,39,0.12);}
-.block-title{font-weight:900;font-size:13px;color:rgba(17,24,39,0.88);margin-bottom:10px;}
-
-.avatar-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;}
-.avatar-preview{
-  width:84px;height:84px;border-radius:16px;border:1px solid rgba(17,24,39,0.14);
-  background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;
+.input:focus{
+  border-color: rgba(255,77,79,0.45);
+  box-shadow: 0 0 0 0.18rem rgba(255,77,79,0.14);
 }
-.avatar-preview img{width:100%;height:100%;object-fit:cover;}
-.avatar-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,0.04);}
-.avatar-placeholder span{font-size:36px;color:rgba(17,24,39,0.55);}
-.avatar-actions{display:flex;flex-direction:column;gap:8px;}
-.hint{font-size:12px;color:rgba(17,24,39,0.55);max-width:520px;}
-.d-none{display:none;}
 
-.addr-preview{margin-top:8px;font-size:13px;}
-.addr-preview .muted{color:rgba(17,24,39,0.55);font-weight:700;margin-right:6px;}
-.addr-preview .text{color:rgba(17,24,39,0.88);font-weight:800;}
+.select{
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239CA3AF' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 1em;
+  padding-right: 34px;
+}
 
-@media (max-width: 900px){ .row{grid-template-columns:1fr;} }
+/* ===== Scanner overlay ===== */
+.scanner-overlay{
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+  background: rgba(17,24,39,0.45);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.scanner-box{
+  background:#fff;
+  border-radius: 14px;
+  width: 92%;
+  max-width: 420px;
+  border: 1px solid rgba(17,24,39,0.14);
+  box-shadow: 0 18px 50px rgba(17,24,39,0.18);
+  padding: 14px;
+}
+
+.scanner-header{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(17,24,39,0.88);
+}
+
+.btn-close{
+  border: 1px solid rgba(17,24,39,0.14);
+  background:#fff;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color: rgba(17,24,39,0.88);
+  transition: 0.15s ease;
+}
+.btn-close:hover{ background: rgba(17,24,39,0.04); }
+
+.scanner-hint{
+  text-align:center;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(17,24,39,0.55);
+}
+
+.d-none{ display:none; }
+
+@media (max-width: 768px){
+  .form-grid{ grid-template-columns: 1fr; }
+}
 </style>

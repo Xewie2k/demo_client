@@ -17,11 +17,8 @@
           <p class="mb-1 text-secondary">
             Mã đơn hàng: <strong class="text-dark">#{{ maHoaDon || orderId }}</strong>
           </p>
-          <p class="mb-1 text-secondary">
+          <p class="mb-3 text-secondary">
             Trạng thái: <strong class="text-dark">chờ xác nhận</strong>
-          </p>
-          <p class="mb-3" v-if="tongTienDisplay">
-            <strong>Số tiền đã thanh toán: {{ formatPrice(tongTienDisplay) }}</strong>
           </p>
 
           <p class="text-muted mb-5" style="font-size: 14px;">

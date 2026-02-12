@@ -1,16 +1,16 @@
 <!-- File: src/pages/tai_khoan/khach_hang/them_khachhang.vue -->
 <template>
-  <div class="taikhoan-form">
+  <div class="taikhoan-form ss-page ss-font">
     <div class="toolbar">
       <div class="toolbar-left">
         <div class="page-title">THÊM KHÁCH HÀNG</div>
       </div>
 
       <div class="toolbar-right">
-        <button class="btn btn-outline" @click="back">
+        <button class="btn btn-outline" @click="back" type="button">
           <i class="fa-solid fa-arrow-left"></i> Quay lại
         </button>
-        <button class="btn btn-primary" :disabled="saving" @click="submit">
+        <button class="btn btn-primary" :disabled="saving" @click="submit" type="button">
           <i class="fa-solid fa-floppy-disk"></i>
           {{ saving ? "Đang lưu..." : "Lưu" }}
         </button>
@@ -18,23 +18,10 @@
     </div>
 
     <div class="card">
-      <!-- THÔNG TIN -->
       <div class="row">
         <div class="col">
           <label class="label">Tên khách hàng <span class="req">*</span></label>
           <input v-model.trim="form.tenKhachHang" class="input" placeholder="Nhập tên khách hàng" />
-        </div>
-
-        <div class="col">
-          <label class="label">Tên tài khoản <span class="req">*</span></label>
-          <input v-model.trim="form.tenTaiKhoan" class="input" placeholder="Ví dụ: kh_nguyenvana" />
-        </div>
-      </div>
-
-      <div class="row">
-        <div class="col">
-          <label class="label">Mật khẩu <span class="req">*</span></label>
-          <input v-model="form.matKhau" type="password" class="input" placeholder="Nhập mật khẩu" />
         </div>
 
         <div class="col">
@@ -64,19 +51,15 @@
           <label class="label">Ngày sinh</label>
           <input v-model="form.ngaySinh" type="date" class="input" />
         </div>
-
-        <div class="col">
-          <label class="label">Ghi chú</label>
-          <input v-model.trim="form.ghiChu" class="input" placeholder="(tuỳ chọn)" />
-        </div>
       </div>
 
       <!-- ĐỊA CHỈ -->
       <div class="block">
         <div class="block-head">
           <div class="block-title">Địa chỉ (có thể thêm nhiều) <span class="req">*</span></div>
+
           <button class="btn btn-outline" type="button" @click="addAddress">
-            <span class="material-icons-outlined">add</span> Thêm địa chỉ
+            <i class="fa-solid fa-plus"></i> Thêm địa chỉ
           </button>
         </div>
 
@@ -93,7 +76,7 @@
               :disabled="addresses.length === 1"
               @click="removeAddress(idx)"
             >
-              <span class="material-icons-outlined">delete</span> Xóa
+              <i class="fa-solid fa-trash"></i> Xóa
             </button>
           </div>
 
@@ -144,7 +127,7 @@
         </div>
 
         <div class="hint mt">
-          * Theo DB: chỉ bắt buộc <b>Tên địa chỉ</b>. Các phần Tỉnh/Huyện/Xã/Số nhà có thể để trống (null).
+          * Theo DB: chỉ bắt buộc <span class="hint-plain">Tên địa chỉ</span>. Các phần Tỉnh/Huyện/Xã/Số nhà có thể để trống (null).
         </div>
       </div>
 
@@ -167,12 +150,16 @@ import { useRouter } from "vue-router";
 import { addKhachHang } from "@/services/tai_khoan/khach_hang/khach_hangService";
 import { addDiaChiKhachHang } from "@/services/tai_khoan/khach_hang/diaChiKhachHangService";
 import vnAddressService from "@/services/vnAddressService";
+import emailjs from "@emailjs/browser";
 
 const router = useRouter();
 
 const saving = ref(false);
 const errorMsg = ref("");
 const successMsg = ref("");
+
+const EMAILJS_PUBLIC_KEY = "D-LHcLlAo_N5Vc5Kc";
+emailjs.init(EMAILJS_PUBLIC_KEY);
 
 const form = ref({
   tenKhachHang: "",
@@ -182,7 +169,7 @@ const form = ref({
   soDienThoai: "",
   gioiTinh: null,
   ngaySinh: "",
-  ghiChu: "",
+  trangThai: true,
 });
 
 const provinces = ref([]);
@@ -199,11 +186,13 @@ const newAddr = () => ({
   wards: [],
 });
 
-const addresses = ref([(() => {
-  const a = newAddr();
-  a.macDinh = true;
-  return a;
-})()]);
+const addresses = ref([
+  (() => {
+    const a = newAddr();
+    a.macDinh = true;
+    return a;
+  })(),
+]);
 
 const back = () => router.push({ name: "tai-khoan-khach-hang" });
 
@@ -235,6 +224,43 @@ const removeAddress = (idx) => {
 
 const findName = (list, code) => list.find((x) => x.code === code)?.name || "";
 
+const removeVietnameseTones = (str) => {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D");
+};
+
+const buildUsername = (fullName) => {
+  if (!fullName) return "";
+  const noTone = removeVietnameseTones(fullName.trim().toLowerCase());
+  const parts = noTone.split(/\s+/);
+  const lastName = parts[parts.length - 1];
+  const initials = parts.slice(0, parts.length - 1).map((x) => x[0]).join("");
+  return lastName + initials;
+};
+
+const generatePassword = (length = 8) => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#$";
+  return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+};
+
+const sendEmail = async ({ tenKhachHang, tenTaiKhoan, matKhau, email }) => {
+  try {
+    const serviceID = "service_n03lqrf";
+    const templateID = "template_1gy88ic";
+
+    const templateParams = {
+      to_email: email,
+      to_name: tenKhachHang,
+      username: tenTaiKhoan,
+      password: matKhau,
+    };
+
+    const response = await emailjs.send(serviceID, templateID, templateParams);
+    console.log("Email gửi thành công!", response.status, response.text);
+  } catch (error) {
+    console.error("Lỗi gửi email:", error);
+  }
+};
+
 const previewAddress = (a) => {
   const tinhName = findName(provinces.value, a.tinhCode);
   const huyenName = findName(a.districts, a.huyenCode);
@@ -265,6 +291,9 @@ const submit = async () => {
   errorMsg.value = "";
   successMsg.value = "";
 
+  form.value.tenTaiKhoan = buildUsername(form.value.tenKhachHang);
+  form.value.matKhau = generatePassword();
+
   const msg = validate();
   if (msg) return (errorMsg.value = msg);
 
@@ -274,7 +303,6 @@ const submit = async () => {
   try {
     saving.value = true;
 
-    // 1) tạo KH
     const payloadKh = {
       tenKhachHang: form.value.tenKhachHang,
       tenTaiKhoan: form.value.tenTaiKhoan,
@@ -283,13 +311,20 @@ const submit = async () => {
       soDienThoai: form.value.soDienThoai || null,
       gioiTinh: form.value.gioiTinh,
       ngaySinh: form.value.ngaySinh || null,
+      trangThai: form.value.trangThai === true,
     };
+
+    await sendEmail({
+      tenKhachHang: form.value.tenKhachHang,
+      tenTaiKhoan: form.value.tenTaiKhoan,
+      matKhau: form.value.matKhau,
+      email: form.value.email,
+    });
 
     const created = await addKhachHang(payloadKh);
     const idKhachHang = created?.id;
     if (!idKhachHang) throw new Error("BE không trả về id khách hàng");
 
-    // 2) tạo nhiều địa chỉ
     const tasks = addresses.value.map(async (a) => {
       const tinhName = findName(provinces.value, a.tinhCode) || null;
       const huyenName = findName(a.districts, a.huyenCode) || null;
@@ -324,128 +359,249 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap");
+/* ✅ Không import font ngoài – dùng font chung của dự án */
 @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css");
 
-.taikhoan-form{
-  font-family: "Inter", sans-serif;
-  background:#fff;
+/* ✅ Ép chuẩn ss-font: 13px, không in đậm */
+.taikhoan-form {
+  background: #fff;
   border-radius: 14px;
   padding: 22px;
-  border: 1px solid rgba(255,77,79,0.18);
-  box-shadow: 0 18px 50px rgba(17,24,39,0.08);
+  border: 1px solid rgba(255, 77, 79, 0.18);
+  box-shadow: 0 18px 50px rgba(17, 24, 39, 0.08);
   margin: 20px;
+
+  font-family: inherit !important;
+  color: rgba(17, 24, 39, 0.82) !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
 }
 
-.toolbar{ display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px; }
-.page-title{ font-weight: 900; font-size: 16px; color: rgba(17,24,39,0.88); letter-spacing:.3px; }
+/* ép tất cả về 400 */
+.taikhoan-form :deep(*) {
+  font-family: inherit !important;
+  font-weight: 400 !important;
+  color: inherit;
+}
 
-.toolbar-right{ display:flex; gap:10px; }
+.taikhoan-form :deep(b),
+.taikhoan-form :deep(strong),
+.taikhoan-form :deep(.fw-bold),
+.taikhoan-form :deep(.fw-semibold),
+.taikhoan-form :deep(.fw-medium) {
+  font-weight: 400 !important;
+}
 
-.btn{
+/* ===== toolbar ===== */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+/* Title: 20px fw 500 */
+.page-title {
+  font-size: 20px;
+  font-weight: 500;
+  color: rgba(17, 24, 39, 0.88);
+  letter-spacing: 0.2px;
+}
+
+/* ===== buttons ===== */
+.toolbar-right {
+  display: flex;
+  gap: 10px;
+}
+
+.btn {
   height: 36px;
   padding: 0 14px;
   border: none;
   cursor: pointer;
-  font-weight: 800;
   font-size: 13px;
+  font-weight: 400;
   border-radius: 10px;
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  transition: .2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: 0.2s;
 }
-.btn:disabled{ opacity:.6; cursor:not-allowed; }
-
-.btn-outline{
-  background:#fff;
-  border:1px solid rgba(17,24,39,0.14);
-  color: rgba(17,24,39,0.88);
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
-.btn-outline:hover{ background: rgba(17,24,39,0.04); }
 
-.btn-outline.danger{ border-color: rgba(239,68,68,0.35); color:#b42324; }
-.btn-outline.danger:hover{ background: rgba(239,68,68,0.06); }
+.btn-outline {
+  background: #fff;
+  border: 1px solid rgba(17, 24, 39, 0.14);
+  color: rgba(17, 24, 39, 0.88);
+}
+.btn-outline:hover {
+  background: rgba(17, 24, 39, 0.04);
+}
 
-.btn-primary{
-  color:#fff;
+.btn-outline.danger {
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #b42324;
+}
+.btn-outline.danger:hover {
+  background: rgba(239, 68, 68, 0.06);
+}
+
+.btn-primary {
+  color: #fff;
   background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%);
-  box-shadow: 0 10px 18px rgba(255,77,79,0.16);
+  box-shadow: 0 10px 18px rgba(255, 77, 79, 0.16);
 }
 
-.card{
-  border: 1px solid rgba(17,24,39,0.12);
+/* ===== card ===== */
+.card {
+  border: 1px solid rgba(17, 24, 39, 0.12);
   border-radius: 14px;
   padding: 16px;
-  background:#fff;
+  background: #fff;
 }
 
-.row{ display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-.col{ display:flex; flex-direction:column; gap:6px; }
+/* ===== grid ===== */
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
 
-.label{ font-size: 13px; font-weight: 800; color: rgba(17,24,39,0.85); }
-.req{ color:#ef4444; }
+/* ===== labels & inputs ===== */
+.label {
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(17, 24, 39, 0.82);
+}
+.req {
+  color: #ef4444;
+}
 
-.input{
+.input {
   height: 40px;
   border-radius: 12px;
-  border: 1px solid rgba(17,24,39,0.14);
+  border: 1px solid rgba(17, 24, 39, 0.14);
   padding: 0 12px;
   outline: none;
-  background:#F9FAFB;
-  color: rgba(17,24,39,0.88);
+  background: #fff;
+  color: rgba(17, 24, 39, 0.82);
+  font-size: 13px;
+  font-weight: 400;
 }
-.input:focus{
-  background:#fff;
-  border-color: rgba(255,77,79,0.65);
-  box-shadow: 0 0 0 3px rgba(255,77,79,0.12);
+.input:focus {
+  border-color: rgba(255, 77, 79, 0.65);
+  box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.12);
 }
 
-.block{ margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(17,24,39,0.12); }
-.block-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
-.block-title{ font-weight: 900; font-size: 13px; color: rgba(17,24,39,0.88); }
+/* ===== address block ===== */
+.block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(17, 24, 39, 0.12);
+}
+.block-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+/* card title: 14px fw 500 */
+.block-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: rgba(17, 24, 39, 0.88);
+}
 
-.addr-card{
-  border: 1px solid rgba(17,24,39,0.14);
+.addr-card {
+  border: 1px solid rgba(17, 24, 39, 0.14);
   border-radius: 14px;
   padding: 12px;
-  background:#fff;
+  background: #fff;
   margin-top: 12px;
 }
-.addr-top{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom: 10px; }
-.radio{ display:flex; align-items:center; gap:8px; font-weight: 800; color: rgba(17,24,39,0.78); font-size: 13px; }
-.radio input{ transform: translateY(1px); }
-
-.preview{
-  height: 40px;
-  display:flex;
-  align-items:center;
-  padding: 0 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(17,24,39,0.10);
-  background: rgba(17,24,39,0.03);
-  color: rgba(17,24,39,0.78);
-  font-weight: 700;
-  font-size: 13px;
+.addr-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
-.hint{ font-size: 12px; color: rgba(17,24,39,0.55); }
-.hint.mt{ margin-top: 10px; }
+.radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 400;
+  color: rgba(17, 24, 39, 0.78);
+}
+.radio input {
+  transform: translateY(1px);
+}
 
-.alert{
+.preview {
+  height: 40px;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.10);
+  background: rgba(17, 24, 39, 0.03);
+  color: rgba(17, 24, 39, 0.78);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+/* hint: 12px */
+.hint {
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.55);
+}
+.hint.mt {
+  margin-top: 10px;
+}
+.hint-plain {
+  font-weight: 400;
+}
+
+/* alerts */
+.alert {
   margin-top: 10px;
   border-radius: 12px;
   padding: 10px 12px;
-  display:flex;
-  align-items:center;
-  gap:8px;
-  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: 13px;
+  font-weight: 400;
 }
-.alert.error{ background:#fee2e2; color:#991b1b; }
-.alert.success{ background:#dcfce7; color:#166534; }
+.alert.error {
+  background: rgba(239, 68, 68, 0.10);
+  color: #991b1b;
+  border: 1px solid rgba(239, 68, 68, 0.20);
+}
+.alert.success {
+  background: rgba(34, 197, 94, 0.10);
+  color: #166534;
+  border: 1px solid rgba(34, 197, 94, 0.20);
+}
 
-@media (max-width: 900px){
-  .row{ grid-template-columns: 1fr; }
+/* responsive */
+@media (max-width: 900px) {
+  .row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

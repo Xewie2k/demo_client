@@ -1,3 +1,4 @@
+<!-- File: src/pages/khuyen_mai/dot_giam_gia/DetailDiscountPage.vue -->
 <template>
   <div class="discount-page">
     <div class="header-section">
@@ -6,7 +7,6 @@
         <span class="title-light">CHI TIẾT & CẬP NHẬT</span>
       </h2>
 
-      <!-- ✅ Back hoạt động chắc chắn -->
       <button class="btn-back" type="button" @click="goBack">
         <i class="fa-solid fa-arrow-left"></i> Quay lại
       </button>
@@ -44,24 +44,10 @@
           <div class="form-group row-group">
             <label class="label" style="min-width: 120px">Loại giảm giá:</label>
             <div class="radio-group">
-              <label class="radio-item">
-                <input
-                  type="radio"
-                  :value="false"
-                  v-model="formData.loaiGiamGia"
-                  :disabled="isEnded"
-                />
-                %
-              </label>
-              <label class="radio-item">
-                <input
-                  type="radio"
-                  :value="true"
-                  v-model="formData.loaiGiamGia"
-                  :disabled="isEnded"
-                />
-                VNĐ
-              </label>
+              <div class="d-flex align-items-center gap-2">
+                <input type="radio" :value="false" v-model="formData.loaiGiamGia" checked disabled />
+                <span class="font-weight-normal">% Phần trăm</span>
+              </div>
             </div>
           </div>
 
@@ -76,6 +62,19 @@
             />
           </div>
 
+          <!-- ✅ NEW: Mức ưu tiên -->
+          <div class="form-group">
+            <label class="label">Mức ưu tiên:</label>
+            <input
+              v-model.number="formData.mucUuTien"
+              type="number"
+              class="form-control"
+              placeholder="Nhập mức ưu tiên..."
+              :disabled="isEnded"
+              min="0"
+            />
+          </div>
+
           <div class="form-group">
             <label class="label">Ngày bắt đầu:</label>
             <input
@@ -83,6 +82,7 @@
               type="date"
               class="form-control"
               :disabled="isEnded"
+              @click="$event.target.showPicker()"
             />
           </div>
 
@@ -93,6 +93,7 @@
               type="date"
               class="form-control"
               :disabled="isEnded"
+              @click="$event.target.showPicker()"
             />
           </div>
 
@@ -127,67 +128,107 @@
             </div>
           </div>
 
+          <div class="filter-grid mb-3">
+            <select v-model="sourceFilters.brand" class="form-select-sm bg-white">
+              <option value="">-- Thương hiệu --</option>
+              <option v-for="opt in sourceFilterOptions.brands" :key="opt" :value="opt">{{ opt }}</option>
+            </select>
+            <select v-model="sourceFilters.origin" class="form-select-sm bg-white">
+              <option value="">-- Xuất xứ --</option>
+              <option v-for="opt in sourceFilterOptions.origins" :key="opt" :value="opt">{{ opt }}</option>
+            </select>
+            <button class="btn-clear-filter bg-white" type="button" @click="clearSourceFilters" title="Xóa bộ lọc">
+              <i class="fa-solid fa-filter-circle-xmark"></i>
+            </button>
+          </div>
+
           <div class="table-wrapper-mini">
             <table class="custom-table">
               <colgroup>
+                <col style="width: 40px" />
                 <col style="width: 50px" />
+                <col style="width: 60px" />
                 <col style="width: 150px" />
                 <col />
               </colgroup>
               <thead>
                 <tr>
+                  <th></th>
                   <th class="text-center">#</th>
+                  <th class="text-center">Ảnh</th>
                   <th class="text-center">Mã SP</th>
                   <th class="text-center">Tên sản phẩm</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-if="filteredParentProducts.length === 0">
-                  <td colspan="3" class="text-center text-muted py-4">
+                  <td colspan="5" class="text-center text-muted py-4">
                     Không tìm thấy dữ liệu
                   </td>
                 </tr>
 
-                <tr
-                  v-for="group in paginatedParentProducts"
-                  :key="group.idSanPham"
-                >
-                  <td class="text-center">
-                    <input
-                      type="checkbox"
-                      class="custom-checkbox"
-                      :checked="isGroupSelected(group.idSanPham)"
-                      @change="
-                        handleParentCheck(group.idSanPham, $event.target.checked)
-                      "
-                      :disabled="isEnded"
-                    />
-                  </td>
-                  <td class="text-center">{{ group.maSanPham }}</td>
-                  <td class="font-weight-bold text-center">
-                    {{ group.tenSanPham }}
-                  </td>
-                </tr>
+                <template v-for="group in paginatedParentProducts" :key="group.idSanPham">
+                  <tr class="parent-row">
+                    <td class="text-center">
+                      <button class="btn-expand" @click="toggleExpand(group.idSanPham)" type="button">
+                        <i class="fa-solid" :class="expandedGroupIds.includes(group.idSanPham) ? 'fa-minus' : 'fa-plus'"></i>
+                      </button>
+                    </td>
+                    <td class="text-center">
+                      <input
+                        type="checkbox"
+                        class="custom-checkbox"
+                        :checked="isGroupSelected(group.idSanPham)"
+                        @change="handleParentCheck(group.idSanPham, $event.target.checked)"
+                        :disabled="isEnded"
+                      />
+                    </td>
+                    <td class="text-center" @click="toggleExpand(group.idSanPham)" style="cursor: pointer">
+                      <img :src="group.variants[0]?.anh || 'https://via.placeholder.com/40'" class="product-thumb" />
+                    </td>
+                    <td class="text-center" @click="toggleExpand(group.idSanPham)" style="cursor: pointer">{{ group.maSanPham }}</td>
+                    <td class="text-center" @click="toggleExpand(group.idSanPham)" style="cursor: pointer">
+                      {{ group.tenSanPham }}
+                    </td>
+                  </tr>
+
+                  <tr
+                    v-if="expandedGroupIds.includes(group.idSanPham)"
+                    v-for="v in group.variants"
+                    :key="v.id"
+                    class="child-row"
+                    @click="fillSourceFilters(v)"
+                    style="cursor: pointer"
+                    title="Click để điền bộ lọc"
+                  >
+                    <td></td>
+                    <td class="text-center" @click.stop>
+                      <input
+                        type="checkbox"
+                        class="custom-checkbox"
+                        :value="v.id"
+                        v-model="selectedVariantIds"
+                        :disabled="isEnded"
+                        @change="onSourceCheckboxChange"
+                      />
+                    </td>
+                    <td class="text-center">
+                      <img :src="v.anh || 'https://via.placeholder.com/40'" class="product-thumb-sm" />
+                    </td>
+                    <td class="text-center text-muted small">{{ v.maChiTietSanPham }}</td>
+                    <td class="small">{{ v.tenMauSac }} - {{ v.tenKichThuoc }} - {{ v.tenLoaiSan }}</td>
+                  </tr>
+                </template>
               </tbody>
             </table>
           </div>
 
           <div class="pagination" v-if="totalPages > 0">
-            <button
-              class="page-btn"
-              type="button"
-              @click="changePage(currentPage - 1)"
-              :disabled="currentPage === 1"
-            >
+            <button class="page-btn" type="button" @click="changePage(currentPage - 1)" :disabled="currentPage === 1">
               <i class="fa-solid fa-chevron-left"></i>
             </button>
             <button class="page-btn active" type="button">{{ currentPage }}</button>
-            <button
-              class="page-btn"
-              type="button"
-              @click="changePage(currentPage + 1)"
-              :disabled="currentPage === totalPages"
-            >
+            <button class="page-btn" type="button" @click="changePage(currentPage + 1)" :disabled="currentPage === totalPages">
               <i class="fa-solid fa-chevron-right"></i>
             </button>
           </div>
@@ -200,9 +241,7 @@
         <div class="detail-header">
           <h3 class="section-title">
             Danh sách chi tiết sản phẩm được áp dụng
-            <span v-if="selectedVariantIds.length" class="count-tag">
-              ({{ selectedVariantIds.length }})
-            </span>
+            <span v-if="selectedVariantIds.length" class="count-tag">({{ selectedVariantIds.length }})</span>
           </h3>
 
           <div class="d-flex align-items-center gap-2">
@@ -220,49 +259,30 @@
         <div class="filter-grid mb-3" v-if="selectedVariantIds.length > 0">
           <select v-model="detailFilters.brand" class="form-select-sm">
             <option value="">-- Thương hiệu --</option>
-            <option v-for="opt in filterOptions.brands" :key="opt" :value="opt">
-              {{ opt }}
-            </option>
+            <option v-for="opt in filterOptions.brands" :key="opt" :value="opt">{{ opt }}</option>
           </select>
 
           <select v-model="detailFilters.material" class="form-select-sm">
             <option value="">-- Chất liệu --</option>
-            <option
-              v-for="opt in filterOptions.materials"
-              :key="opt"
-              :value="opt"
-            >
-              {{ opt }}
-            </option>
+            <option v-for="opt in filterOptions.materials" :key="opt" :value="opt">{{ opt }}</option>
           </select>
 
           <select v-model="detailFilters.size" class="form-select-sm">
             <option value="">-- Kích cỡ --</option>
-            <option v-for="opt in filterOptions.sizes" :key="opt" :value="opt">
-              {{ opt }}
-            </option>
+            <option v-for="opt in filterOptions.sizes" :key="opt" :value="opt">{{ opt }}</option>
           </select>
 
           <select v-model="detailFilters.color" class="form-select-sm">
             <option value="">-- Màu sắc --</option>
-            <option v-for="opt in filterOptions.colors" :key="opt" :value="opt">
-              {{ opt }}
-            </option>
+            <option v-for="opt in filterOptions.colors" :key="opt" :value="opt">{{ opt }}</option>
           </select>
 
           <select v-model="detailFilters.sole" class="form-select-sm">
-            <option value="">-- Đế giày --</option>
-            <option v-for="opt in filterOptions.soles" :key="opt" :value="opt">
-              {{ opt }}
-            </option>
+            <option value="">-- Loại sân --</option>
+            <option v-for="opt in filterOptions.soles" :key="opt" :value="opt">{{ opt }}</option>
           </select>
 
-          <button
-            class="btn-clear-filter"
-            type="button"
-            @click="clearDetailFilters"
-            title="Xóa bộ lọc"
-          >
+          <button class="btn-clear-filter" type="button" @click="clearDetailFilters" title="Xóa bộ lọc">
             <i class="fa-solid fa-filter-circle-xmark"></i>
           </button>
         </div>
@@ -281,6 +301,7 @@
                   />
                 </th>
                 <th class="text-center" width="50">STT</th>
+                <th class="text-center" width="60">Ảnh</th>
                 <th>Mã SP (CT)</th>
                 <th class="text-center">Tên sản phẩm</th>
                 <th class="text-center">Giá bán</th>
@@ -289,13 +310,13 @@
                 <th class="text-center">Chất liệu</th>
                 <th class="text-center">Kích cỡ</th>
                 <th class="text-center">Màu sắc</th>
-                <th class="text-center">Đế giày</th>
+                <th class="text-center">Loại sân</th>
               </tr>
             </thead>
 
             <tbody>
               <tr v-if="variantsDisplay.length === 0">
-                <td colspan="11" class="text-center text-muted py-5">
+                <td colspan="12" class="text-center text-muted py-5">
                   <div class="empty-state">
                     <i class="fa-solid fa-box-open fa-2x mb-2"></i>
                     <p>Chưa có sản phẩm nào được chọn cho đợt giảm giá này.</p>
@@ -306,25 +327,29 @@
               <tr
                 v-for="(item, index) in paginatedVariantsDisplay"
                 :key="item.id"
+                @click="fillFilters(item)"
+                style="cursor: pointer"
+                title="Click để điền thông tin vào bộ lọc"
               >
-                <td class="text-center">
+                <td class="text-center" @click.stop>
                   <input
                     type="checkbox"
                     class="custom-checkbox"
                     :value="item.id"
                     v-model="selectedVariantIds"
                     :disabled="isEnded"
+                    @change="onDetailCheckboxChange"
                   />
                 </td>
                 <td class="text-center">
                   {{ (currentDetailPage - 1) * detailItemsPerPage + index + 1 }}
                 </td>
-                <td class="font-weight-bold text-primary">
-                  {{ item.maChiTietSanPham }}
+                <td class="text-center">
+                  <img :src="item.anh || 'https://via.placeholder.com/40'" class="product-thumb-sm" />
                 </td>
-                <td class="text-wrap-name text-center">
-                  {{ item.tenSanPham }}
-                </td>
+                <td class="text-primary">{{ item.maChiTietSanPham }}</td>
+                <td class="text-wrap-name text-center">{{ item.tenSanPham }}</td>
+
                 <td class="text-center">
                   <div v-if="getProductDisplay(item).hasDiscount">
                     <div class="old-price">
@@ -337,21 +362,17 @@
                       </span>
                     </div>
                   </div>
-                  <div v-else class="font-weight-bold">
+                  <div v-else>
                     {{ formatCurrency(item.giaNiemYet) }}
                   </div>
                 </td>
+
                 <td class="text-center">{{ item.tenThuongHieu }}</td>
                 <td class="text-center">{{ item.soLuong }}</td>
                 <td class="text-center">{{ item.tenChatLieu }}</td>
-                <td class="text-center font-weight-bold">
-                  {{ item.tenKichThuoc }}
-                </td>
+                <td class="text-center">{{ item.tenKichThuoc }}</td>
                 <td class="text-center">
-                  <span
-                    class="color-dot"
-                    :style="{ backgroundColor: mapColor(item.tenMauSac) }"
-                  ></span>
+                  <span class="color-dot" :style="{ backgroundColor: mapColor(item.tenMauSac) }"></span>
                   {{ item.tenMauSac }}
                 </td>
                 <td class="text-center">{{ item.tenLoaiSan }}</td>
@@ -361,21 +382,11 @@
         </div>
 
         <div class="pagination" v-if="totalDetailPages > 0">
-          <button
-            class="page-btn"
-            type="button"
-            @click="changeDetailPage(currentDetailPage - 1)"
-            :disabled="currentDetailPage === 1"
-          >
+          <button class="page-btn" type="button" @click="changeDetailPage(currentDetailPage - 1)" :disabled="currentDetailPage === 1">
             <i class="fa-solid fa-chevron-left"></i>
           </button>
           <button class="page-btn active" type="button">{{ currentDetailPage }}</button>
-          <button
-            class="page-btn"
-            type="button"
-            @click="changeDetailPage(currentDetailPage + 1)"
-            :disabled="currentDetailPage === totalDetailPages"
-          >
+          <button class="page-btn" type="button" @click="changeDetailPage(currentDetailPage + 1)" :disabled="currentDetailPage === totalDetailPages">
             <i class="fa-solid fa-chevron-right"></i>
           </button>
         </div>
@@ -388,15 +399,15 @@
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { discountService } from "@/services/khuyen_mai/dot_giam_gia/discountService.js";
+import { sortDotGiamGia } from "@/services/khuyen_mai/dot_giam_gia/dotGiamGiaSort";
 
 const route = useRoute();
 const router = useRouter();
 const discountId = route.params.id;
 
-/** ✅ FIX BACK: chắc chắn về đúng list */
 const goBack = async () => {
   try {
-    await router.push({ name: "admin-dot-giam-gia" });
+    await router.push({ name: "admin-discount" });
   } catch (e) {
     try {
       await router.push("/admin/giam-gia/dot");
@@ -406,7 +417,6 @@ const goBack = async () => {
   }
 };
 
-// --- STATE ---
 const formData = reactive({
   maDotGiamGia: "",
   tenDotGiamGia: "",
@@ -414,6 +424,7 @@ const formData = reactive({
   giaTriGiamGia: null,
   ngayBatDau: "",
   ngayKetThuc: "",
+  mucUuTien: 0, // ✅ NEW
   trangThai: true,
 });
 
@@ -425,6 +436,7 @@ const selectedVariantIds = ref([]);
 const searchKeyword = ref("");
 
 const isLoading = ref(false);
+const expandedGroupIds = ref([]);
 
 const currentDetailPage = ref(1);
 const detailItemsPerPage = 5;
@@ -437,9 +449,33 @@ const detailFilters = reactive({
   sole: "",
 });
 
+const sourceFilters = reactive({ brand: "", origin: "" });
+
+const sourceFilterOptions = computed(() => {
+  const data = rawVariants.value;
+  const getOpts = (k) => [...new Set(data.map(i => i[k]))].filter(Boolean).sort();
+  return {
+    brands: getOpts('tenThuongHieu'),
+    origins: getOpts('tenXuatXu'),
+  };
+});
+
+const clearSourceFilters = () => {
+  sourceFilters.brand = "";
+  sourceFilters.origin = "";
+};
+
+const fillSourceFilters = (item) => {
+  sourceFilters.brand = item.tenThuongHieu || "";
+  sourceFilters.origin = item.tenXuatXu || "";
+};
+
+const onSourceCheckboxChange = (e) => {
+  if (!e.target.checked) clearSourceFilters();
+};
+
 const activeDiscountsMap = ref({});
 
-// --- COMPUTED ---
 const productGroups = computed(() => {
   const groups = {};
   rawVariants.value.forEach((v) => {
@@ -458,13 +494,24 @@ const productGroups = computed(() => {
 });
 
 const filteredParentProducts = computed(() => {
-  if (!searchKeyword.value) return productGroups.value;
-  const key = searchKeyword.value.toLowerCase();
-  return productGroups.value.filter(
-    (g) =>
+  let groups = productGroups.value;
+
+  if (searchKeyword.value) {
+    const key = searchKeyword.value.toLowerCase();
+    groups = groups.filter((g) =>
       (g.tenSanPham || "").toLowerCase().includes(key) ||
       (g.maSanPham || "").toLowerCase().includes(key)
-  );
+    );
+  }
+
+  if (sourceFilters.brand || sourceFilters.origin) {
+    groups = groups.filter(g => g.variants.some(v => {
+      const matchBrand = !sourceFilters.brand || v.tenThuongHieu === sourceFilters.brand;
+      const matchOrigin = !sourceFilters.origin || v.tenXuatXu === sourceFilters.origin;
+      return matchBrand && matchOrigin;
+    }));
+  }
+  return groups;
 });
 
 const totalPages = computed(() =>
@@ -478,6 +525,8 @@ const paginatedParentProducts = computed(() => {
 });
 
 const isEnded = computed(() => {
+  if (formData.trangThai === false) return true;
+
   if (!formData.ngayKetThuc) return false;
   const parts = String(formData.ngayKetThuc).split("-");
   if (parts.length !== 3) return false;
@@ -506,16 +555,11 @@ const filterOptions = computed(() => {
 const variantsDisplay = computed(() => {
   let list = allSelectedVariants.value;
 
-  if (detailFilters.brand)
-    list = list.filter((v) => v.tenThuongHieu === detailFilters.brand);
-  if (detailFilters.material)
-    list = list.filter((v) => v.tenChatLieu === detailFilters.material);
-  if (detailFilters.color)
-    list = list.filter((v) => v.tenMauSac === detailFilters.color);
-  if (detailFilters.size)
-    list = list.filter((v) => v.tenKichThuoc === detailFilters.size);
-  if (detailFilters.sole)
-    list = list.filter((v) => v.tenLoaiSan === detailFilters.sole);
+  if (detailFilters.brand) list = list.filter((v) => v.tenThuongHieu === detailFilters.brand);
+  if (detailFilters.material) list = list.filter((v) => v.tenChatLieu === detailFilters.material);
+  if (detailFilters.color) list = list.filter((v) => v.tenMauSac === detailFilters.color);
+  if (detailFilters.size) list = list.filter((v) => v.tenKichThuoc === detailFilters.size);
+  if (detailFilters.sole) list = list.filter((v) => v.tenLoaiSan === detailFilters.sole);
 
   return list;
 });
@@ -537,7 +581,6 @@ const isAllVariantsSelected = computed(() => {
   );
 });
 
-// --- WATCH ---
 const changePage = (page) => {
   if (page >= 1 && page <= totalPages.value) currentPage.value = page;
 };
@@ -567,7 +610,18 @@ watch(
   { deep: true }
 );
 
-// --- HELPERS ---
+const fillFilters = (item) => {
+  detailFilters.brand = item.tenThuongHieu || "";
+  detailFilters.material = item.tenChatLieu || "";
+  detailFilters.color = item.tenMauSac || "";
+  detailFilters.size = item.tenKichThuoc || "";
+  detailFilters.sole = item.tenLoaiSan || "";
+};
+
+const onDetailCheckboxChange = (e) => {
+  if (!e.target.checked) clearDetailFilters();
+};
+
 const formatDateForInput = (dateInput) => {
   if (!dateInput) return "";
   if (Array.isArray(dateInput)) {
@@ -580,9 +634,7 @@ const formatDateForInput = (dateInput) => {
 };
 
 const parseDate = (input) => {
-  if (Array.isArray(input)) {
-    return new Date(input[0], input[1] - 1, input[2]);
-  }
+  if (Array.isArray(input)) return new Date(input[0], input[1] - 1, input[2]);
   return new Date(input);
 };
 
@@ -593,7 +645,14 @@ const formatCurrency = (value) => {
   }).format(value ?? 0);
 };
 
-// --- LOAD ---
+const toggleExpand = (groupId) => {
+  if (expandedGroupIds.value.includes(groupId)) {
+    expandedGroupIds.value = expandedGroupIds.value.filter(id => id !== groupId);
+  } else {
+    expandedGroupIds.value.push(groupId);
+  }
+};
+
 const loadData = async () => {
   isLoading.value = true;
   try {
@@ -609,6 +668,9 @@ const loadData = async () => {
       Object.assign(formData, discountInfo);
       formData.ngayBatDau = formatDateForInput(discountInfo.ngayBatDau);
       formData.ngayKetThuc = formatDateForInput(discountInfo.ngayKetThuc);
+      if (typeof discountInfo.mucUuTien !== "undefined" && discountInfo.mucUuTien !== null) {
+        formData.mucUuTien = discountInfo.mucUuTien;
+      }
     }
 
     const appliedDetails = await discountService.getDiscountDetails(discountId);
@@ -640,7 +702,11 @@ const loadData = async () => {
 
 const loadActiveDiscounts = async (allDiscounts) => {
   const now = new Date();
-  const active = allDiscounts.filter((d) => {
+
+  // ✅ sort list trước cho ổn định (không bắt buộc nhưng sạch)
+  const sorted = sortDotGiamGia(allDiscounts);
+
+  const active = sorted.filter((d) => {
     if (!d.trangThai) return false;
     const start = parseDate(d.ngayBatDau);
     const end = parseDate(d.ngayKetThuc);
@@ -662,12 +728,74 @@ const loadActiveDiscounts = async (allDiscounts) => {
 
       if (!map[ctspId]) map[ctspId] = [];
       map[ctspId].push({
+        id: d.id,
+        mucUuTien: d.mucUuTien ?? 0,
         value: d.giaTriGiamGia,
         isMoney: d.loaiGiamGia,
       });
     });
   }
   activeDiscountsMap.value = map;
+};
+
+// ✅ chọn “đợt tốt nhất” theo ưu tiên trước, rồi mới xét giảm giá
+const pickBestDiscount = (price, list) => {
+  if (!Array.isArray(list) || list.length === 0) return null;
+
+  const calcFinal = (d) => {
+    const val = Number(d.value ?? 0);
+    const discountAmount = d.isMoney ? val : (price * val) / 100;
+    return Math.max(0, price - discountAmount);
+  };
+
+  let best = null;
+  let bestFinal = price;
+
+  for (const d of list) {
+    const final = calcFinal(d);
+
+    if (!best) {
+      best = d;
+      bestFinal = final;
+      continue;
+    }
+
+    const pBest = Number(best.mucUuTien ?? 0);
+    const pCur = Number(d.mucUuTien ?? 0);
+
+    // 1) ưu tiên desc
+    if (pCur > pBest) {
+      best = d;
+      bestFinal = final;
+      continue;
+    }
+    if (pCur < pBest) continue;
+
+    // 2) nếu ưu tiên bằng nhau -> giá sau giảm thấp hơn thì tốt hơn
+    if (final < bestFinal) {
+      best = d;
+      bestFinal = final;
+      continue;
+    }
+    if (final > bestFinal) continue;
+
+    // 3) tie-break: value desc, rồi id desc
+    const vBest = Number(best.value ?? 0);
+    const vCur = Number(d.value ?? 0);
+    if (vCur > vBest) {
+      best = d;
+      bestFinal = final;
+      continue;
+    }
+    if (vCur < vBest) continue;
+
+    if (Number(d.id ?? 0) > Number(best.id ?? 0)) {
+      best = d;
+      bestFinal = final;
+    }
+  }
+
+  return { best, bestFinal };
 };
 
 const getProductDisplay = (variant) => {
@@ -683,45 +811,33 @@ const getProductDisplay = (variant) => {
     };
   }
 
-  let minPrice = price;
-  let bestDiscount = null;
+  const picked = pickBestDiscount(price, discounts);
+  if (!picked?.best) {
+    return { hasDiscount: false, finalPrice: price, originalPrice: price, badge: null };
+  }
 
-  discounts.forEach((d) => {
-    const discountAmount = d.isMoney ? d.value : (price * d.value) / 100;
-    const currentPrice = price - discountAmount;
-    if (currentPrice < minPrice) {
-      minPrice = currentPrice;
-      bestDiscount = d;
-    }
-  });
+  const best = picked.best;
+  const finalPrice = picked.bestFinal;
 
   let badge = "";
-  if (!bestDiscount) badge = "";
-  else if (bestDiscount.isMoney) {
-    badge =
-      price > 0
-        ? `-${Math.round((bestDiscount.value / price) * 100)}%`
-        : `-${bestDiscount.value}đ`;
+  if (best.isMoney) {
+    badge = price > 0 ? `-${Math.round((best.value / price) * 100)}%` : `-${best.value}đ`;
   } else {
-    badge = `-${bestDiscount.value}%`;
+    badge = `-${best.value}%`;
   }
 
   return {
     hasDiscount: true,
-    finalPrice: Math.max(0, minPrice),
+    finalPrice,
     originalPrice: price,
     badge,
   };
 };
 
-// --- SELECT GROUP / VARIANTS ---
 const isGroupSelected = (parentId) => {
   const group = productGroups.value.find((g) => g.idSanPham === parentId);
   if (!group) return false;
-  return (
-    group.variants.length > 0 &&
-    group.variants.every((v) => selectedVariantIds.value.includes(v.id))
-  );
+  return group.variants.length > 0 && group.variants.every((v) => selectedVariantIds.value.includes(v.id));
 };
 
 const handleParentCheck = (parentId, isChecked) => {
@@ -730,13 +846,10 @@ const handleParentCheck = (parentId, isChecked) => {
   const childIds = group.variants.map((v) => v.id);
 
   if (isChecked) {
-    selectedVariantIds.value = [
-      ...new Set([...selectedVariantIds.value, ...childIds]),
-    ];
+    selectedVariantIds.value = [...new Set([...selectedVariantIds.value, ...childIds])];
   } else {
-    selectedVariantIds.value = selectedVariantIds.value.filter(
-      (id) => !childIds.includes(id)
-    );
+    selectedVariantIds.value = selectedVariantIds.value.filter((id) => !childIds.includes(id));
+    clearSourceFilters();
   }
 };
 
@@ -746,9 +859,7 @@ const toggleAllVariants = (e) => {
     const uniqueIds = new Set([...selectedVariantIds.value, ...visibleIds]);
     selectedVariantIds.value = Array.from(uniqueIds);
   } else {
-    selectedVariantIds.value = selectedVariantIds.value.filter(
-      (id) => !visibleIds.includes(id)
-    );
+    selectedVariantIds.value = selectedVariantIds.value.filter((id) => !visibleIds.includes(id));
   }
 };
 
@@ -763,56 +874,6 @@ const clearDetailFilters = () => {
   Object.keys(detailFilters).forEach((k) => (detailFilters[k] = ""));
 };
 
-// --- VALIDATE OVERLAP ---
-const checkOverlaps = async (newStart, newEnd, selectedIds) => {
-  const allDiscounts = await discountService.getAll();
-  const overlappingDiscounts = (Array.isArray(allDiscounts) ? allDiscounts : []).filter((d) => {
-    if (d.id == discountId) return false;
-    if (!d.trangThai) return false;
-
-    const dStart = parseDate(d.ngayBatDau);
-    const dEnd = parseDate(d.ngayKetThuc);
-    const nStart = new Date(newStart);
-    const nEnd = new Date(newEnd);
-
-    dStart.setHours(0, 0, 0, 0);
-    dEnd.setHours(23, 59, 59, 999);
-    nStart.setHours(0, 0, 0, 0);
-    nEnd.setHours(23, 59, 59, 999);
-
-    return nStart <= dEnd && nEnd >= dStart;
-  });
-
-  for (const discount of overlappingDiscounts) {
-    const details = await discountService.getDiscountDetails(discount.id);
-
-    const conflict = (Array.isArray(details) ? details : []).find((detail) => {
-      const ctspId =
-        detail.idChiTietSanPham ||
-        detail.id_chi_tiet_san_pham ||
-        (detail.chiTietSanPham ? detail.chiTietSanPham.id : null);
-      return ctspId && selectedIds.includes(ctspId);
-    });
-
-    if (conflict) {
-      const conflictId =
-        conflict.idChiTietSanPham ||
-        conflict.id_chi_tiet_san_pham ||
-        (conflict.chiTietSanPham ? conflict.chiTietSanPham.id : null);
-
-      const variant = rawVariants.value.find((v) => v.id === conflictId);
-
-      return {
-        overlap: true,
-        discountName: discount.tenDotGiamGia,
-        productName: variant ? variant.tenSanPham : "Sản phẩm",
-      };
-    }
-  }
-  return { overlap: false };
-};
-
-// --- UPDATE / DELETE ---
 const submitUpdate = async () => {
   if (!formData.tenDotGiamGia || !formData.ngayBatDau || !formData.ngayKetThuc) {
     alert("Vui lòng nhập đủ thông tin đợt giảm giá");
@@ -821,18 +882,6 @@ const submitUpdate = async () => {
 
   if (selectedVariantIds.value.length === 0) {
     if (!confirm("Đợt giảm giá này chưa chọn sản phẩm nào. Bạn có chắc muốn lưu không?")) return;
-  }
-
-  const overlapCheck = await checkOverlaps(
-    formData.ngayBatDau,
-    formData.ngayKetThuc,
-    selectedVariantIds.value
-  );
-  if (overlapCheck.overlap) {
-    alert(
-      `Lỗi trùng lặp: Sản phẩm "${overlapCheck.productName}" đã nằm trong đợt giảm giá "${overlapCheck.discountName}" trong khoảng thời gian này.`
-    );
-    return;
   }
 
   const payload = { ...formData, idChiTietSanPhams: selectedVariantIds.value };
@@ -864,7 +913,6 @@ const softDelete = async () => {
   }
 };
 
-// Map màu sắc
 const mapColor = (colorName) => {
   if (!colorName) return "#ccc";
   const lower = colorName.toLowerCase();
@@ -916,13 +964,13 @@ onMounted(() => loadData());
 }
 .page-title {
   font-size: 22px;
-  font-weight: 700; /* ✅ bớt đậm */
+  font-weight: 600;
   color: var(--ss-text);
   margin: 0;
   letter-spacing: 0.2px;
 }
 .title-light {
-  font-weight: 500; /* ✅ bớt đậm */
+  font-weight: 400;
   color: var(--ss-sub);
 }
 
@@ -933,7 +981,7 @@ onMounted(() => loadData());
   border: 1px solid rgba(17, 24, 39, 0.14);
   padding: 8px 14px;
   border-radius: 10px;
-  font-weight: 600; /* ✅ bớt đậm */
+  font-weight: 500;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -969,7 +1017,7 @@ onMounted(() => loadData());
 
 .card-title {
   font-size: 16px;
-  font-weight: 650; /* ✅ bớt đậm */
+  font-weight: 600;
   color: var(--ss-text);
   margin-bottom: 20px;
   border-bottom: 1px solid rgba(17, 24, 39, 0.08);
@@ -993,7 +1041,7 @@ onMounted(() => loadData());
 }
 .label {
   font-size: 13px;
-  font-weight: 600; /* ✅ bớt đậm */
+  font-weight: 500;
   color: var(--ss-sub);
   margin-bottom: 8px;
   display: block;
@@ -1044,7 +1092,7 @@ onMounted(() => loadData());
   border: none;
   padding: 10px 18px;
   border-radius: 10px;
-  font-weight: 600; /* ✅ bớt đậm */
+  font-weight: 500;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1063,7 +1111,7 @@ onMounted(() => loadData());
   border: none;
   padding: 10px 18px;
   border-radius: 10px;
-  font-weight: 600; /* ✅ bớt đậm */
+  font-weight: 500;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -1084,7 +1132,7 @@ onMounted(() => loadData());
   border-radius: 10px;
   padding: 6px 12px;
   font-size: 12px;
-  font-weight: 600; /* ✅ bớt đậm */
+  font-weight: 500;
   cursor: pointer;
   transition: 0.2s;
   height: 34px;
@@ -1110,6 +1158,7 @@ onMounted(() => loadData());
   outline: none;
   transition: 0.2s;
   color: rgba(17, 24, 39, 0.86);
+  background-color: #fff;
 }
 .input-wrapper input:focus {
   border-color: rgba(255, 77, 79, 0.45);
@@ -1151,7 +1200,7 @@ onMounted(() => loadData());
   cursor: pointer;
   transition: all 0.2s;
   color: rgba(17, 24, 39, 0.70);
-  font-weight: 600; /* ✅ bớt đậm */
+  font-weight: 500;
 }
 .page-btn:hover:not(:disabled) {
   background: rgba(17, 24, 39, 0.04);
@@ -1181,7 +1230,7 @@ onMounted(() => loadData());
 .custom-table th {
   background: #f8fafc;
   color: rgba(17, 24, 39, 0.70);
-  font-weight: 600; /* ✅ bớt đậm */
+  font-weight: 500;
   padding: 12px;
   border-bottom: 1px solid rgba(17, 24, 39, 0.10);
   white-space: nowrap;
@@ -1205,7 +1254,7 @@ onMounted(() => loadData());
   background-color: #ef4444;
   color: #fff;
   font-size: 10px;
-  font-weight: 600; /* ✅ bớt đậm */
+  font-weight: 500;
   padding: 1px 6px;
   border-radius: 6px;
   margin-left: 6px;
@@ -1218,7 +1267,7 @@ onMounted(() => loadData());
 }
 .new-price {
   color: #ef4444;
-  font-weight: 650; /* ✅ bớt đậm */
+  font-weight: 600;
 }
 
 /* Detail header */
@@ -1230,7 +1279,7 @@ onMounted(() => loadData());
 }
 .section-title {
   font-size: 16px;
-  font-weight: 650; /* ✅ bớt đậm */
+  font-weight: 600;
   color: var(--ss-text);
   margin: 0;
 }
@@ -1241,7 +1290,7 @@ onMounted(() => loadData());
   border-radius: 999px;
   font-size: 12px;
   margin-left: 8px;
-  font-weight: 600; /* ✅ bớt đậm */
+  font-weight: 500;
 }
 
 /* Filters */
@@ -1289,9 +1338,6 @@ onMounted(() => loadData());
 .text-center {
   text-align: center;
 }
-.font-weight-bold {
-  font-weight: 650; /* ✅ bớt đậm */
-}
 .text-primary {
   color: #ef4444; /* đỏ chủ đạo */
 }
@@ -1304,7 +1350,8 @@ onMounted(() => loadData());
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: var(--ss-red);
+  accent-color: #ef4444;
+  background-color: #fff;
 }
 
 .color-dot {
@@ -1330,5 +1377,30 @@ onMounted(() => loadData());
   .content-wrapper {
     grid-template-columns: 1fr;
   }
+}
+
+/* Thumbnails */
+.product-thumb {
+  width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;
+}
+.product-thumb-sm {
+  width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;
+}
+
+/* Expand button */
+.btn-expand {
+  background: none; border: none; cursor: pointer; color: #64748b; width: 24px; height: 24px;
+}
+.btn-expand:hover { color: #111827; }
+
+.child-row td {
+  background-color: #f8fafc;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.font-weight-normal { font-weight: 400 !important; }
+
+.bg-white {
+  background-color: #fff !important;
 }
 </style>

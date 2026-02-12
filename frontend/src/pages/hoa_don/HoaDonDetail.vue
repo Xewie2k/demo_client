@@ -1,445 +1,1040 @@
 <template>
-  <div class="p-4">
-    <h5 class="fw-bold text-danger mb-3">Quản Lý Hóa Đơn</h5>
-
-    <!-- TRẠNG THÁI -->
-    <div class="card mb-4">
-      <div class="card-body">
-        <h6 class="fw-bold mb-3">Trạng Thái Đơn Hàng</h6>
-
-        <div class="order-status" :style="{ '--progress': progressPercent + '%' }">
-          <div v-for="(st, i) in trangThaiList" :key="i" class="status-step">
-            <div
-              class="icon-circle"
-              :class="{
-                done: i < selectedHD.trangThai,
-                current: i === selectedHD.trangThai,
-              }"
-            >
-              <i class="bi" :class="st.icon"></i>
-            </div>
-            <div class="status-label">{{ st.label }}</div>
-          </div>
-        </div>
-
-        <div class="d-flex justify-content-between mt-4">
-          <button
-            class="btn btn-secondary"
-            :disabled="selectedHD.id === null || selectedHD.trangThai >= trangThaiList.length - 1"
-            @click="nextTrangThai"
-          >
-            Tiếp tục
-          </button>
-
-          <button class="btn btn-primary" @click="showHistory = true">
-            <i class="bi bi-clock-history me-1"></i>
-            Lịch sử hóa đơn
-          </button>
+  <div class="order-page p-4 ss-page ss-font">
+    <!-- HEADER -->
+    <div class="order-header mb-4">
+      <div>
+        <h5 class="fw-bold mb-1">Chi tiết đơn hàng</h5>
+        <div class="text-muted small">
+          Mã đơn hàng: <b>{{ selectedHD.maHD }}</b> | Ngày tạo:
+          {{ selectedHD.ngayTao }}
         </div>
       </div>
+
+      <button class="btn btn-secondary btn-sm" @click="quayLai">
+        <i class="bi bi-arrow-left"></i> Quay lại danh sách
+      </button>
     </div>
 
-    <!-- THÔNG TIN ĐƠN -->
-    <div class="card mb-4">
-      <div class="card-body d-flex justify-content-between align-items-center">
-        <div>
-          <b>
-            Thông tin đơn hàng có mã hóa đơn:
-            <span class="text-primary">{{ selectedHD.maHD }}</span>
-          </b>
-        </div>
-      </div>
-    </div>
-
-    <!-- SẢN PHẨM -->
-    <div class="card mb-4">
-      <div class="card-body">
-        <table class="table align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>Sản phẩm</th>
-              <th>Số lượng</th>
-              <th>Giá</th>
-              <th>Tổng</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="sp in selectedHD.sanPham" :key="sp.id">
-              <td>SP #{{ sp.idChiTietSanPham }}</td>
-              <td>{{ sp.soLuong }}</td>
-              <td>{{ sp.donGia.toLocaleString() }} đ</td>
-              <td class="fw-bold">{{ sp.thanhTien.toLocaleString() }} đ</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- KHÁCH HÀNG + HÓA ĐƠN -->
     <div class="row g-4">
-      <div class="col-md-8">
-        <div class="card">
+      <!-- CỘT TRÁI -->
+      <div class="col-lg-8">
+        <!-- TRẠNG THÁI -->
+        <div class="card ss-card mb-4">
           <div class="card-body">
-            <h6 class="fw-bold mb-3">Thông tin khách hàng</h6>
+            <h6 class="fw-bold mb-4">
+              <i class="bi bi-truck me-1"></i> Trạng thái đơn hàng
+            </h6>
 
-            <div class="mb-3">
-              <label>Địa chỉ</label>
-              <input class="form-control" v-model="selectedHD.diaChi" />
-            </div>
-
-            <div class="row g-3">
-              <div class="col-md-6">
-                <label>Tên người nhận</label>
-                <input class="form-control" v-model="selectedHD.tenKhachHang" />
+            <div class="ss-status">
+              <div
+                v-for="st in trangThaiHienThi"
+                :key="st.value"
+                class="ss-step"
+                :class="{
+                  done: st.value < selectedHD.trangThai,
+                  active: st.value === selectedHD.trangThai,
+                }"
+              >
+                <div class="ss-icon">
+                  <i :class="`bi ${st.icon}`"></i>
+                </div>
+                <span>{{ st.label }}</span>
               </div>
-              <div class="col-md-6">
-                <label>Số điện thoại</label>
-                <input class="form-control" v-model="selectedHD.sdt" />
+            </div>
+          </div>
+        </div>
+        <!-- THÔNG TIN KHÁCH HÀNG -->
+        <div class="row g-4 mb-4">
+          <div class="col-md-6">
+            <div class="card ss-card">
+              <div class="card-body">
+                <h6 class="fw-bold mb-3">
+                  <i class="bi bi-person me-1"></i> Thông tin khách hàng
+                </h6>
+
+                <div class="ss-info">
+                  <span>Tên khách hàng</span>
+                  <b>{{ selectedHD.tenKhachHang || "—" }}</b>
+                </div>
+
+                <div class="ss-info">
+                  <span>Số điện thoại</span>
+                  <b>{{ selectedHD.sdt || "—" }}</b>
+                </div>
+
+                <div class="ss-info">
+                  <span>Email</span>
+                  <b>{{ selectedHD.email || "—" }}</b>
+                </div>
               </div>
             </div>
+          </div>
 
-            <div class="mt-3">
-              <label>Ghi chú</label>
-              <textarea class="form-control" rows="4" v-model="selectedHD.ghiChu" />
+          <!-- THÔNG TIN GIAO HÀNG -->
+          <div class="col-md-6">
+            <div class="card ss-card">
+              <div class="card-body">
+                <h6 class="fw-bold mb-3">
+                  <i class="bi bi-geo-alt me-1"></i> Thông tin giao hàng
+                </h6>
+
+                <div class="ss-info">
+                  <span>Địa chỉ</span>
+                  <b>{{ selectedHD.diaChi || "—" }}</b>
+                </div>
+
+                <div class="ss-info">
+                  <span>Loại đơn</span>
+                  <b>{{ loaiDonText }}</b>
+                </div>
+
+                <div class="ss-info">
+                  <span>Ghi chú</span>
+                  <b>{{ selectedHD.ghiChu || "—" }}</b>
+                </div>
+              </div>
             </div>
+          </div>
+        </div>
+
+        <!-- DANH SÁCH SẢN PHẨM -->
+        <div class="card ss-card">
+          <div class="card-body">
+            <h6 class="fw-bold mb-3">
+              <i class="bi bi-box-seam me-1"></i>
+              Danh sách sản phẩm ({{ selectedHD.sanPham.length }})
+            </h6>
+
+            <table class="table align-middle">
+              <thead class="table-light">
+                <tr>
+                  <th>STT</th>
+                  <th>Tên sản phẩm</th>
+                  <th>Số lượng</th>
+                  <th>Đơn giá</th>
+                  <th>Thành tiền</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(sp, index) in selectedHD.sanPham" :key="sp.id">
+                  <td>{{ index + 1 }}</td>
+                  <td>{{ sp.tenSanPham }}</td>
+                  <td>{{ sp.soLuong }}</td>
+                  <td>{{ sp.donGia.toLocaleString("vi-VN") }} đ</td>
+                  <td class="fw-bold text-danger">
+                    {{ sp.thanhTien.toLocaleString("vi-VN") }} đ
+                  </td>
+                </tr>
+
+                <tr
+                  v-if="!selectedHD.sanPham || selectedHD.sanPham.length === 0"
+                >
+                  <td colspan="5" class="text-center text-muted">
+                    Không có sản phẩm
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
 
-      <div class="col-md-4">
-        <div class="card">
-          <div class="card-body">
-            <h6 class="fw-bold mb-3">Hóa đơn</h6>
+      <!-- CỘT PHẢI -->
+      <div class="col-lg-4">
+        <div class="sticky-summary">
+          <div class="card ss-card mb-3">
+            <div class="card-body">
+              <h6 class="fw-bold mb-3">
+                <i class="bi bi-wallet2 me-1"></i> Tổng kết thanh toán
+              </h6>
 
-            <div class="d-flex justify-content-between mb-2">
-              <span>Tổng tiền:</span>
-              <span>{{ hoaDon.tongTien.toLocaleString() }} đ</span>
+              <div class="ss-money">
+                <span>Tổng tiền hàng</span>
+                <b>{{ hoaDon.tongTien.toLocaleString() }} đ</b>
+              </div>
+
+              <div class="ss-money">
+                <span>Giảm giá</span>
+                <b class="text-success">
+                  - {{ hoaDon.giamGia.toLocaleString() }} đ
+                </b>
+              </div>
+
+              <div class="ss-money">
+                <span>Phí vận chuyển</span>
+                <b>+ {{ hoaDon.phiVanChuyen.toLocaleString() }} đ</b>
+              </div>
+
+              <hr />
+
+              <div class="ss-total">
+                <span>TỔNG TIỀN</span>
+                <b>{{ hoaDon.canThanhToan.toLocaleString() }} đ</b>
+              </div>
             </div>
-
-            <div class="d-flex justify-content-between mb-2">
-              <span>Giảm giá:</span>
-              <span class="text-success"> - {{ hoaDon.giamGia.toLocaleString() }} đ </span>
-            </div>
-
-            <div class="d-flex justify-content-between mb-2">
-              <span>Phí vận chuyển:</span>
-              <span>+ {{ hoaDon.phiVanChuyen.toLocaleString() }} đ</span>
-            </div>
-
-            <div class="d-flex justify-content-between mb-2">
-              <span>Phụ phí:</span>
-              <span>+ {{ hoaDon.phuPhi.toLocaleString() }} đ</span>
-            </div>
-
-            <div class="d-flex justify-content-between mb-3">
-              <span>Hoàn phí:</span>
-              <span class="text-danger"> - {{ hoaDon.hoanPhi.toLocaleString() }} đ </span>
-            </div>
-
-            <hr />
-
-            <div class="d-flex justify-content-between align-items-center mb-3">
-              <span class="fw-bold">Cần thanh toán:</span>
-              <span class="fw-bold text-danger fs-5">
-                {{ hoaDon.canThanhToan.toLocaleString() }} đ
-              </span>
-            </div>
-
-            <button class="btn btn-primary w-100 mb-2" @click="capNhatHoaDon">
-              CẬP NHẬT ĐƠN HÀNG
-            </button>
-
-            <button class="btn btn-outline-secondary w-100" @click="quayLai">Quay lại</button>
           </div>
+
+          <div class="card ss-card mt-3">
+            <div class="card-body payment-history-card">
+              <h6 class="fw-bold mb-3">
+                <i class="bi bi-clock-history me-1"></i>
+                Lịch sử thanh toán
+              </h6>
+
+              <div v-if="lichSuThanhToan.length === 0" class="empty-history">
+                Chưa có lịch sử thanh toán
+              </div>
+
+              <div
+                v-for="(item, index) in lichSuThanhToan"
+                :key="index"
+                class="d-flex justify-content-between border-bottom py-2"
+              >
+                <!-- Cột bên trái: loại thanh toán -->
+                <div class="fw-bold">
+                  {{ item.loai }}+
+                </div>
+
+                <!-- Cột bên phải: số tiền + thời gian ở dưới -->
+                <div class="text-end">
+                  <div class="fw-bold text-danger">
+                    {{ item.soTien.toLocaleString() }} đ
+                  </div>
+                  <div class="text-muted small">
+                    {{ item.thoiGian }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- NÚT THANH TOÁN - chỉ hiện khi trạng thái = ĐÃ GIAO HÀNG -->
+              <div class="payment-action">
+                <button
+                  v-if="selectedHD.trangThai === 4"
+                  class="btn btn-success btn-sm"
+                  @click="moModalThanhToan"
+                >
+                  Thanh toán
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <hr />
+          <button class="btn btn-primary w-100 mb-2" @click="inHoaDon">
+            <i class="bi bi-printer me-1"></i> In hóa đơn
+          </button>
+          <button class="btn btn-warning w-100" @click="moModalSua">
+            <i class="bi bi-pencil me-1"></i> Chỉnh sửa đơn hàng
+          </button>
         </div>
       </div>
     </div>
   </div>
 
-  <Teleport to="body">
-    <div v-if="showHistory" class="modal-overlay">
-      <div class="history-modal">
-        <h5 class="fw-bold mb-4 text-center">📜 Lịch sử hóa đơn</h5>
+  <div class="modal fade" id="modalEdit" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Cập nhật thông tin đơn hàng</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
 
-        <div class="timeline">
-          <div class="timeline-item" v-for="(item, index) in lichSuTrangThai" :key="index">
-            <div class="dot"></div>
-            <div class="content">
-              <div class="fw-semibold">{{ item.label }}</div>
-              <small class="text-muted">{{ item.time }}</small>
+        <div class="modal-body">
+          <!-- TAB HEADER -->
+          <ul class="nav nav-tabs mb-3">
+            <li class="nav-item">
+              <button
+                class="nav-link"
+                :class="{ active: tab === 'donhang' }"
+                @click="tab = 'donhang'"
+              >
+                Thông tin đơn hàng
+              </button>
+            </li>
+
+            <li class="nav-item">
+              <button
+                class="nav-link"
+                :class="{ active: tab === 'khachhang' }"
+                @click="tab = 'khachhang'"
+              >
+                Thông tin khách hàng
+              </button>
+            </li>
+          </ul>
+
+          <!-- TAB THÔNG TIN ĐƠN HÀNG -->
+          <div v-if="tab === 'donhang'">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Mã đơn hàng</label>
+                <input class="form-control" v-model="form.maHD" disabled />
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Ngày tạo</label>
+                <input class="form-control" v-model="form.ngayTao" disabled />
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Trạng thái</label>
+
+                <select class="form-select" v-model="form.trangThai">
+                  <option
+                    v-for="st in danhSachTrangThaiHopLe"
+                    :key="st.value"
+                    :value="st.value"
+                  >
+                    {{ st.label }}
+                  </option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB THÔNG TIN KHÁCH HÀNG -->
+          <div v-if="tab === 'khachhang'">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Tên khách hàng</label>
+                <input class="form-control" v-model="form.tenKhachHang" />
+              </div>
+
+              <div class="col-md-6">
+                <label class="form-label">Số điện thoại</label>
+                <input class="form-control" v-model="form.sdt" />
+              </div>
+
+              <div class="col-md-12">
+                <label class="form-label">Email</label>
+                <input class="form-control" v-model="form.email" />
+              </div>
             </div>
           </div>
         </div>
 
-        <button class="btn btn-secondary w-100 mt-4" @click="showHistory = false">Đóng</button>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+
+          <button class="btn btn-success" @click="updateHoaDon">Lưu</button>
+        </div>
       </div>
     </div>
-  </Teleport>
+  </div>
 
-  <Teleport to="body">
-    <div v-if="showPaymentHistory" class="modal-overlay">
-      <div class="history-modal">
-        <h5 class="fw-bold mb-4 text-center">💰 Lịch sử thanh toán</h5>
-
-        <table class="table table-bordered align-middle">
-          <thead class="table-light">
-            <tr>
-              <th>Số tiền</th>
-              <th>Phương thức</th>
-              <th>Thời gian</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="(item, i) in lichSuThanhToan" :key="i">
-              <td class="fw-bold text-success">{{ item.soTien.toLocaleString() }} đ</td>
-              <td>{{ item.phuongThuc }}</td>
-              <td>{{ item.time }}</td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div v-if="lichSuThanhToan.length === 0" class="text-center text-muted">
-          Chưa có thanh toán nào
+  <!--Modal thanh toan-->
+  <div class="modal fade" id="modalThanhToan" tabindex="-1">
+    <div class="modal-dialog">
+      <div class="modal-content p-3">
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold w-100 text-center">THANH TOÁN</h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
         </div>
 
-        <button class="btn btn-secondary w-100 mt-3" @click="showPaymentHistory = false">
-          Đóng
-        </button>
+        <div class="modal-body">
+          <div class="d-flex justify-content-between mb-3">
+            <span>Tổng tiền hàng</span>
+            <b class="text-danger">
+              {{ hoaDon.canThanhToan.toLocaleString() }} đ
+            </b>
+          </div>
+
+          <!-- CHỌN PHƯƠNG THỨC -->
+          <div class="text-center mb-3">
+            <button
+              class="btn me-2"
+              :class="phuongThuc === 'CK' ? 'btn-success' : 'btn-light'"
+              @click="phuongThuc = 'CK'"
+            >
+              CHUYỂN KHOẢN
+            </button>
+
+            <button
+              class="btn"
+              :class="phuongThuc === 'TM' ? 'btn-success' : 'btn-light'"
+              @click="phuongThuc = 'TM'"
+            >
+              TIỀN MẶT
+            </button>
+          </div>
+
+          <!-- KHU VỰC CHUYỂN KHOẢN -->
+          <div v-if="phuongThuc === 'CK'" class="mb-3 text-center">
+            <div class="border rounded p-3">
+              <p class="mb-1"><b>Ngân hàng:</b> MB Bank</p>
+              <p class="mb-2"><b>Số tài khoản:</b> 0876524519</p>
+
+              <img
+                src="https://img.vietqr.io/image/MB-0876524519-compact.png"
+                alt="QR Thanh toán"
+                style="max-width: 200px"
+              />
+
+              <p class="mt-2 text-muted small">
+                Quét mã để thanh toán đúng số tiền
+              </p>
+            </div>
+          </div>
+
+          <!-- KHU VỰC TIỀN MẶT -->
+          <div v-if="phuongThuc === 'TM'" class="mb-3">
+            <label class="form-label">Tiền khách đưa</label>
+            <input
+              class="form-control"
+              v-model="tienKhachDuaHienThi"
+              @input="formatTienMat"
+              placeholder="Nhập số tiền..."
+            />
+          </div>
+
+          <table class="table table-bordered text-center">
+            <thead class="table-light">
+              <tr>
+                <th>STT</th>
+                <th>Phương thức</th>
+                <th>Số tiền</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="lichSuThanhToan.length === 0">
+                <td colspan="4">Không có giao dịch</td>
+              </tr>
+
+              <tr v-for="(item, index) in lichSuThanhToan" :key="index">
+                <td>{{ index + 1 }}</td>
+                <td>{{ item.loai }}</td>
+                <td>{{ item.soTien.toLocaleString() }} đ</td>
+                <td>—</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="d-flex justify-content-between mb-3">
+            <span>Tiền thiếu</span>
+            <b class="text-danger">
+              {{ hoaDon.canThanhToan.toLocaleString() }} đ
+            </b>
+          </div>
+
+          <button class="btn btn-primary" @click="xacNhanThanhToan">
+            Xác nhận thanh toán
+          </button>
+        </div>
       </div>
     </div>
-  </Teleport>
+  </div>
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import axios from 'axios'
+import { ref, watch, computed } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import axios from "axios";
+import { Modal } from "bootstrap";
 
-const route = useRoute()
-const router = useRouter()
+const tab = ref("donhang");
 
-const API_HD = 'http://localhost:8080/api/admin/hoa-don'
+const form = ref({
+  maHD: "",
+  ngayTao: "",
+  trangThai: 1,
 
-const trangThaiMap = {
-  CHO_XAC_NHAN: 0,
-  DA_THANH_TOAN: 1,
-  CHO_GIAO: 2,
-  DANG_GIAO: 3,
-  HOAN_THANH: 4,
-}
+  tenKhachHang: "",
+  sdt: "",
+  email: "",
+});
+
+let modal = null;
+
+const route = useRoute();
+const router = useRouter();
+
+const API_HD = "http://localhost:8080/api/admin/hoa-don";
 
 const trangThaiList = [
-  { label: 'Chờ xác nhận', icon: 'bi-cart-check' },
-  { label: 'Đã thanh toán', icon: 'bi-cash-stack' },
-  { label: 'Chờ giao', icon: 'bi-truck' },
-  { label: 'Đang giao', icon: 'bi-truck-front' },
-  { label: 'Hoàn thành', icon: 'bi-star-fill' },
-]
+  { value: 1, label: "Chờ xác nhận", icon: "bi-hourglass" },
+  { value: 2, label: "Chờ giao hàng", icon: "bi-box" },
+  { value: 3, label: "Đang vận chuyển", icon: "bi-truck" },
+  { value: 4, label: "Đã giao hàng", icon: "bi-check-circle" },
+  { value: 5, label: "Đã thanh toán", icon: "bi-cash" },
+  { value: 6, label: "Hoàn thành", icon: "bi-flag" },
+  { value: 7, label: "Giao thất bại", icon: "bi-x-circle" },
+];
 
 const selectedHD = ref({
-  id: null,
+  trangThai: 1,
   sanPham: [],
-  tongTien: 0,
-  daThanhToan: 0,
-  trangThai: 0,
-})
+});
 
-const showHistory = ref(false)
+const danhSachTrangThaiHopLe = computed(() => {
+  const current = selectedHD.value.trangThai;
 
-const lichSuTrangThai = ref([{ label: 'Chờ xác nhận', time: '10:30 01/01/2026' }])
+  return trangThaiList.filter((st) => {
+    if (st.value === current) return true;
 
-const loadChiTiet = async (id) => {
-  const { data } = await axios.get(`${API_HD}/${id}`)
-  selectedHD.value = {
-    id: data.id,
-    maHD: data.maHoaDon,
-    tenKhachHang: data.tenKhachHang ?? '',
-    sdt: data.soDienThoaiKhachHang ?? '',
-    diaChi: data.diaChiKhachHang ?? '',
-    ghiChu: data.ghiChu ?? '',
-    tongTien: data.tongTien ?? 0,
-    daThanhToan: data.tongTienSauGiam ?? 0,
-    trangThai: trangThaiMap[data.trangThaiHienTai?.trim()] ?? 0,
-    sanPham: data.sanPham ?? [],
+    switch (current) {
+      case 1:
+        return st.value === 2;
+      case 2:
+        return st.value === 3;
+      case 3:
+        return st.value === 4 || st.value === 7;
+      case 4:
+        return st.value === 5;
+      case 5:
+        return st.value === 6;
+      default:
+        return false;
+    }
+  });
+});
+
+const moModalSua = () => {
+  tab.value = "donhang";
+
+  form.value = {
+    maHD: selectedHD.value.maHD,
+    ngayTao: selectedHD.value.ngayTao,
+    trangThai: selectedHD.value.trangThai,
+
+    tenKhachHang: selectedHD.value.tenKhachHang,
+    sdt: selectedHD.value.sdt,
+    email: selectedHD.value.email,
+  };
+
+  const el = document.getElementById("modalEdit");
+  modal = Modal.getOrCreateInstance(el);
+  modal.show();
+};
+
+const moModalThanhToan = () => {
+  const el = document.getElementById("modalThanhToan");
+  const modal = Modal.getOrCreateInstance(el);
+  modal.show();
+};
+
+const updateHoaDon = async () => {
+  try {
+    const id = route.params.id;
+
+    await axios.put(`${API_HD}/${id}/trang-thai`, {
+      trangThai: form.value.trangThai,
+      ghiChu: "Cập nhật trạng thái từ giao diện",
+    });
+
+    alert("Lưu thay đổi thành công!");
+
+    modal.hide();
+
+    loadChiTiet(id);
+  } catch (error) {
+    console.error("Update error:", error);
+
+    alert(
+      "Lỗi khi cập nhật: " + (error.response?.data?.message || error.message),
+    );
   }
-}
+};
 
-watch(
-  () => route.params.id,
-  (id) => id && loadChiTiet(id),
-  { immediate: true },
-)
+const phuongThuc = ref("TM");
+const tienKhachDua = ref(0);
+const tienKhachDuaHienThi = ref("");
+const lichSuThanhToan = ref([]);
 
-const progressPercent = computed(
-  () => (selectedHD.value.trangThai / (trangThaiList.length - 1)) * 100,
-)
+const layThoiGianHienTai = () => {
+  const now = new Date();
 
-const nextTrangThai = () => {
-  if (!selectedHD.value.id) return
+  const gio = String(now.getHours()).padStart(2, "0");
+  const phut = String(now.getMinutes()).padStart(2, "0");
 
-  if (selectedHD.value.trangThai >= trangThaiList.length - 1) return
+  const ngay = String(now.getDate()).padStart(2, "0");
+  const thang = String(now.getMonth() + 1).padStart(2, "0");
+  const nam = now.getFullYear();
 
-  const next = selectedHD.value.trangThai + 1
+  return `${gio}:${phut} ${ngay}/${thang}/${nam}`;
+};
 
-  selectedHD.value.trangThai = next
-
-  lichSuTrangThai.value.push({
-    label: trangThaiList[next].label,
-    time: new Date().toLocaleString(),
-  })
-}
+const formatTienMat = () => {
+  let raw = tienKhachDuaHienThi.value.replace(/\D/g, "");
+  tienKhachDua.value = Number(raw);
+  tienKhachDuaHienThi.value = raw.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
 
 const hoaDon = computed(() => {
-  const tongTien = selectedHD.value.tongTien
-  const giamGia = selectedHD.value.giamGia ?? 0
-  const phiVanChuyen = selectedHD.value.phiVanChuyen ?? 0
-  const phuPhi = selectedHD.value.phuPhi ?? 0
-  const hoanPhi = selectedHD.value.hoanPhi ?? 0
-  const daThanhToan = selectedHD.value.daThanhToan ?? 0
+  const tongTien = selectedHD.value.tongTien ?? 0;
+  const giamGia = selectedHD.value.giamGia ?? 0;
+  const phiVanChuyen = selectedHD.value.phiVanChuyen ?? 0;
 
   return {
     tongTien,
     giamGia,
     phiVanChuyen,
-    phuPhi,
-    hoanPhi,
-    canThanhToan: tongTien - giamGia + phiVanChuyen + phuPhi - hoanPhi - daThanhToan,
+    canThanhToan: tongTien - giamGia + phiVanChuyen,
+  };
+});
+
+const xacNhanThanhToan = async () => {
+  if (phuongThuc.value === "TM") {
+    if (!tienKhachDua.value || tienKhachDua.value <= 0) {
+      alert("Vui lòng nhập số tiền hợp lệ!");
+      return;
+    }
   }
-})
 
-const capNhatHoaDon = async () => {
-  const trangThaiString = Object.keys(trangThaiMap).find(
-    (k) => trangThaiMap[k] === selectedHD.value.trangThai,
-  )
+  const loaiThanhToan = phuongThuc.value === "TM" ? "Tiền mặt" : "Chuyển khoản";
 
-  await axios.put(`${API_HD}/${selectedHD.value.id}`, {
-    tenKhachHang: selectedHD.value.tenKhachHang,
-    soDienThoaiKhachHang: selectedHD.value.sdt,
-    diaChiKhachHang: selectedHD.value.diaChi,
-    ghiChu: selectedHD.value.ghiChu,
-    trangThaiHienTai: trangThaiString,
-  })
+  const banGhiMoi = {
+    loai: loaiThanhToan,
+    soTien:
+      phuongThuc.value === "TM"
+        ? tienKhachDua.value
+        : hoaDon.value.canThanhToan,
+    thoiGian: layThoiGianHienTai(),
+  };
 
-  // ✅ THÊM LỊCH SỬ SAU KHI CẬP NHẬT
-  lichSuTrangThai.value.push({
-    label: `Cập nhật đơn hàng (${trangThaiList[selectedHD.value.trangThai].label})`,
-    time: new Date().toLocaleString(),
-  })
+  lichSuThanhToan.value.unshift(banGhiMoi);
 
-  alert('✅ Cập nhật thành công')
-}
+  try {
+    const id = route.params.id;
+
+    await axios.put(`${API_HD}/${id}/trang-thai`, {
+      trangThai: selectedHD.value.trangThai + 1,
+      ghiChu: "Tự động cập nhật sau khi thanh toán",
+    });
+
+    alert("Thanh toán thành công!");
+
+    await loadChiTiet(id);
+
+    tienKhachDua.value = 0;
+    tienKhachDuaHienThi.value = "";
+
+    const el = document.getElementById("modalThanhToan");
+    Modal.getInstance(el)?.hide();
+  } catch (error) {
+    alert("Lỗi khi cập nhật trạng thái sau thanh toán!");
+    console.error(error);
+  }
+};
+
+const trangThaiHienThi = computed(() => {
+  return trangThaiList.filter((st) => st.value <= selectedHD.value.trangThai);
+});
+
+const loaiDonText = computed(() => {
+  const type = selectedHD.value?.loaiDon;
+  if (type === true) return "Online";
+  if (type === false) return "Tại cửa hàng";
+  return "Không xác định";
+});
+
+const loadChiTiet = async (id) => {
+  const { data } = await axios.get(`${API_HD}/${id}`);
+
+  selectedHD.value = {
+    maHD: data.maHoaDon,
+    ngayTao: data.ngayTao
+      ? new Date(data.ngayTao).toLocaleString("vi-VN")
+      : "—",
+
+    tenKhachHang: data.tenKhachHang ?? "",
+    sdt: data.soDienThoaiKhachHang ?? "",
+    email: data.emailKhachHang ?? "",
+
+    diaChi: data.diaChiKhachHang ?? "",
+    ghiChu: data.ghiChu ?? "",
+
+    loaiDon: data.loaiDon,
+
+    tongTien: data.tongTienSauGiam ?? 0,
+    giamGia: data.tongTienGiam ?? 0,
+    phiVanChuyen: data.phiVanChuyen ?? 0,
+
+    trangThai: data.trangThaiHienTai ?? 1,
+
+    sanPham: Array.isArray(data.chiTietHoaDon)
+      ? data.chiTietHoaDon.map((sp) => ({
+          id: sp.id,
+          tenSanPham:
+            sp.tenSanPham ||
+            sp.chiTietSanPham?.sanPham?.tenSanPham ||
+            "Không xác định",
+          soLuong: sp.soLuong ?? 0,
+          donGia: sp.donGia ?? 0,
+          thanhTien: (sp.soLuong ?? 0) * (sp.donGia ?? 0),
+        }))
+      : [],
+  };
+};
 
 watch(
-  lichSuTrangThai,
-  () => {
-    localStorage.setItem('lichSuHD_' + selectedHD.value.id, JSON.stringify(lichSuTrangThai.value))
-  },
-  { deep: true },
-)
+  () => route.params.id,
+  (id) => id && loadChiTiet(id),
+  { immediate: true },
+);
 
-onMounted(() => {
-  const data = localStorage.getItem('lichSuHD_' + route.params.id)
-  if (data) {
-    lichSuTrangThai.value = JSON.parse(data)
-  }
-})
+const inHoaDon = () => {
+  const hd = selectedHD.value;
 
-const quayLai = () => router.push('/hoa-don')
+  let html = `
+    <html>
+      <head>
+        <title>Hóa đơn ${hd.maHD}</title>
+        <style>
+          body { font-family: Arial; padding: 20px; font-size: 13px; color: rgba(17,24,39,0.82); }
+          .header { text-align: center; margin-bottom: 20px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-weight: 400; }
+          th { background: #f2f2f2; }
+          .right { text-align: right; }
+          .bold { font-weight: 400; }
+          b, strong { font-weight: 400; }
+          .info { margin-bottom: 10px; }
+        </style>
+      </head>
+
+      <body>
+        <div class="header">
+          <h2 style="margin:0 0 6px; font-size:18px; font-weight:500;">HÓA ĐƠN BÁN HÀNG</h2>
+          <div>Mã đơn: <b>${hd.maHD}</b></div>
+          <div>Ngày tạo: ${hd.ngayTao}</div>
+        </div>
+
+        <div class="info">
+          <b>Khách hàng:</b> ${hd.tenKhachHang || "—"} <br/>
+          <b>SĐT:</b> ${hd.sdt || "—"} <br/>
+          <b>Địa chỉ:</b> ${hd.diaChi || "—"} <br/>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>STT</th>
+              <th>Tên sản phẩm</th>
+              <th>Số lượng</th>
+              <th>Đơn giá</th>
+              <th>Thành tiền</th>
+            </tr>
+          </thead>
+          <tbody>
+  `;
+
+  hd.sanPham.forEach((sp, index) => {
+    html += `
+      <tr>
+        <td>${index + 1}</td>
+        <td>${sp.tenSanPham}</td>
+        <td>${sp.soLuong}</td>
+        <td>${sp.donGia.toLocaleString()} đ</td>
+        <td>${sp.thanhTien.toLocaleString()} đ</td>
+      </tr>
+    `;
+  });
+
+  html += `
+        </tbody>
+      </table>
+
+      <br/>
+
+      <div class="right">
+        <div>Tổng tiền hàng: <b>${hoaDon.value.tongTien.toLocaleString()} đ</b></div>
+        <div>Giảm giá: <b>- ${hoaDon.value.giamGia.toLocaleString()} đ</b></div>
+        <div>Phí vận chuyển: <b>+ ${hoaDon.value.phiVanChuyen.toLocaleString()} đ</b></div>
+        <hr/>
+        <div class="bold">
+          Tổng thanh toán: ${hoaDon.value.canThanhToan.toLocaleString()} đ
+        </div>
+      </div>
+
+      <script>
+        window.print();
+      <\/script>
+
+      </body>
+    </html>
+  `;
+
+  const printWindow = window.open("", "", "height=700,width=900");
+  printWindow.document.write(html);
+  printWindow.document.close();
+};
+
+const quayLai = () => router.push("/admin/hoa-don");
 </script>
 
 <style scoped>
-.order-status {
+/* ===== Font + màu chữ đồng bộ ChatLieuPage ===== */
+.ss-font {
+  font-family: inherit;
+  color: rgba(17, 24, 39, 0.82);
+}
+
+/* Dập mọi chữ in đậm từ bootstrap/utilities ngay trong trang này */
+.order-page :deep(b),
+.order-page :deep(strong),
+.order-page :deep(.fw-bold),
+.order-page :deep(.fw-semibold),
+.order-page :deep(.bold) {
+  font-weight: 400 !important;
+}
+
+/* ===== PAGE ===== */
+.order-page {
+  background: #f5f6fa;
+  min-height: 100vh;
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.82);
+}
+
+/* ===== HEADER ===== */
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.order-header h5 {
+  font-size: 20px;
+  font-weight: 500 !important; /* title 20px */
+  letter-spacing: 0.2px;
+  margin: 0;
+  color: rgba(17, 24, 39, 0.9);
+}
+.order-header .small {
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.55) !important;
+}
+
+/* ===== CARD CHUNG ===== */
+.ss-card {
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 10px 26px rgba(17, 24, 39, 0.06);
+  transition: all 0.25s ease;
+}
+.ss-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(17, 24, 39, 0.08);
+}
+
+/* Tiêu đề h6 trong card */
+.ss-card h6 {
+  font-size: 14px;
+  font-weight: 500 !important;
+  color: rgba(17, 24, 39, 0.82);
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+/* ===== STATUS ===== */
+.ss-status {
   display: flex;
   justify-content: space-between;
   position: relative;
-  margin-top: 20px;
+  margin-top: 16px;
 }
-
-.status-step {
-  flex: 1;
+.ss-status::before {
+  content: "";
+  position: absolute;
+  top: 32px;
+  left: 5%;
+  right: 5%;
+  height: 3px;
+  background: #e9ecef;
+  z-index: 0;
+}
+.ss-step {
   text-align: center;
   position: relative;
+  z-index: 1;
+  flex: 1;
 }
-.icon-circle {
-  width: 85px;
-  height: 85px;
+.ss-icon {
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
-  border: 4px solid #ddd;
   background: #fff;
+  border: 3px solid #dee2e6;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36px;
+  font-size: 24px;
   margin: auto;
+  transition: all 0.3s ease;
 }
-.icon-circle.done,
-.icon-circle.current {
+.ss-step span {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.55);
+  font-weight: 400;
+}
+.ss-step.done .ss-icon {
+  border-color: #28a745;
+  background: #28a745;
+  color: #fff;
+}
+.ss-step.active .ss-icon {
   border-color: #28a745;
   color: #28a745;
+  background: #eafff1;
 }
-.status-label {
-  margin-top: 10px;
-  font-size: 14px;
+/* trạng thái done/active: chỉ đổi màu, không đậm */
+.ss-step.done span,
+.ss-step.active span {
+  color: #28a745;
+  font-weight: 400 !important;
 }
 
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.4);
-  z-index: 9999;
+/* ===== INFO ROW ===== */
+.ss-info {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px dashed #eee;
+  font-size: 13px;
+}
+.ss-info:last-child {
+  border-bottom: none;
+}
+.ss-info span {
+  color: rgba(17, 24, 39, 0.55);
 }
 
-.history-modal {
-  background: #fff;
-  width: 420px;
-  border-radius: 16px;
-  padding: 25px;
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+/* ===== TABLE ===== */
+.table {
+  border-radius: 12px;
+  overflow: hidden;
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.82);
 }
-
-.timeline {
-  position: relative;
-  margin-left: 15px;
-}
-
-.timeline::before {
-  content: '';
-  position: absolute;
-  left: 7px;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: #28a745;
-}
-
-.timeline-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 15px;
-  margin-bottom: 20px;
-  position: relative;
-}
-
-.timeline-item:last-child {
-  margin-bottom: 0;
-}
-
-.dot {
-  width: 16px;
-  height: 16px;
-  background: #28a745;
-  border-radius: 50%;
-  margin-top: 3px;
-  z-index: 1;
-}
-
-.content {
+.table thead th {
   background: #f8f9fa;
-  padding: 10px 14px;
+  font-size: 13px;
+  text-transform: none; /* bỏ uppercase */
+  color: rgba(17, 24, 39, 0.75);
+  border-bottom: none;
+  font-weight: 500; /* header 13px fw 500 */
+}
+.table tbody td {
+  font-weight: 400;
+}
+.table tbody tr {
+  transition: background 0.2s ease;
+}
+.table tbody tr:hover {
+  background: rgba(17, 24, 39, 0.03);
+}
+/* ô thành tiền: giữ màu, bỏ đậm */
+.table .text-danger {
+  font-weight: 400 !important;
+}
+
+/* ===== MONEY ===== */
+.ss-money {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.82);
+}
+.ss-total {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 500; /* không đậm, chỉ 500 */
+  color: rgba(220, 53, 69, 0.92);
+}
+
+/* ===== BUTTON ===== */
+button.btn {
   border-radius: 10px;
-  flex: 1;
+  font-weight: 400 !important;
+  font-size: 13px;
+  line-height: 1;
+  transition: all 0.25s ease;
+}
+button.btn-sm {
+  font-size: 13px;
+}
+button.btn-primary {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+  border: none;
+}
+button.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(59, 130, 246, 0.4);
+}
+button.btn-warning {
+  background: linear-gradient(135deg, #f59e0b, #f97316);
+  border: none;
+  color: #fff;
+}
+button.btn-warning:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(249, 115, 22, 0.4);
+}
+
+/* ===== BADGE ===== */
+.badge {
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 400;
+}
+
+/* ===== STICKY SUMMARY ===== */
+.sticky-summary {
+  position: sticky;
+  top: 90px;
+}
+@media (max-width: 992px) {
+  .sticky-summary {
+    position: static;
+  }
+}
+
+/* Nội dung trống */
+.empty-history {
+  padding: 10px 0;
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.55);
+}
+
+/* Icon đồng bộ */
+.bi-clock-history {
+  font-size: 16px;
+  color: rgba(17, 24, 39, 0.82);
+}
+
+/* Wrapper của lịch sử thanh toán */
+.payment-history-card {
+  position: relative;
+  min-height: 120px;
+}
+
+/* Khu vực chứa nút thanh toán */
+.payment-action {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+}
+
+/* Responsive status */
+@media (max-width: 768px) {
+  .ss-status {
+    flex-direction: column;
+    gap: 25px;
+  }
+  .ss-status::before {
+    display: none;
+  }
+}
+
+/* Các phần custom cuối file: giữ cấu trúc nhưng bỏ font-weight đậm */
+.btn-method,
+.payment-table th {
+  font-weight: 400 !important;
 }
 </style>

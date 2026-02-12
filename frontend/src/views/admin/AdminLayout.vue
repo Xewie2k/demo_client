@@ -1,263 +1,42 @@
+<!-- File: src/views/admin/AdminLayout.vue -->
 <template>
-  <div class="container-fluid p-0 d-flex min-vh-100 bg-light">
-    <!-- Sidebar -->
-    <aside class="sidebar position-fixed h-100 ss-sidebar" style="width: 280px; z-index: 1000">
-      <!-- LOGO -->
-      <div class="sidebar-logo text-center">
-        <img
-          src="@/assets/images/logo/Logo_SevenStrike.png"
-          alt="Logo"
-          class="img-fluid"
-          style="max-height: 78px"
-        />
-      </div>
-
-      <nav class="nav flex-column px-3 flex-grow-1 sidebar-nav">
-        <!-- Thống kê -->
-        <router-link class="nav-link nav-item text-secondary" to="/admin/dashboard">
-          <span class="material-icons nav-ic">grid_view</span>
-          <span class="nav-text">Thống kê</span>
-        </router-link>
-
-        <!-- Bán hàng tại quầy -->
-        <router-link class="nav-link nav-item text-secondary" to="/admin/pos">
-          <span class="material-icons nav-ic">shopping_cart</span>
-          <span class="nav-text">Bán hàng tại quầy</span>
-        </router-link>
-
-        <!-- Hóa đơn -->
-        <router-link class="nav-link nav-item text-secondary" to="/admin/hoa-don">
-          <span class="material-icons nav-ic">receipt_long</span>
-          <span class="nav-text">Hóa đơn</span>
-        </router-link>
-
-        <!-- Giảm giá (Dropdown) -->
-        <div class="nav-group">
-          <button
-            type="button"
-            class="nav-link nav-item nav-toggle w-100"
-            :class="isDiscountGroupActive ? 'sidebar-active-custom' : 'text-secondary'"
-            @click="toggleDiscountMenu"
-          >
-            <span class="d-flex align-items-center gap-2 nav-left">
-              <span class="material-icons nav-ic" :class="isDiscountGroupActive ? 'text-orange-red' : ''">
-                local_offer
-              </span>
-              <span class="nav-text">Giảm giá</span>
-            </span>
-
-            <span class="material-icons nav-caret" :class="isDiscountGroupActive ? 'text-orange-red' : ''">
-              {{ discountMenuOpen ? "expand_less" : "expand_more" }}
-            </span>
-          </button>
-
-          <div v-show="discountMenuOpen" class="sub-menu">
-            <router-link
-              class="sub-link"
-              :class="route.path === '/admin/giam-gia/phieu' ? 'sub-item-active fw-bold' : 'text-secondary'"
-              to="/admin/giam-gia/phieu"
-            >
-              Phiếu giảm giá
-            </router-link>
-
-            <router-link
-              class="sub-link"
-              :class="route.path.startsWith('/admin/giam-gia/dot') ? 'sub-item-active fw-bold' : 'text-secondary'"
-              to="/admin/giam-gia/dot"
-            >
-              Đợt giảm giá
-            </router-link>
-          </div>
-        </div>
-
-        <!-- Quản lý sản phẩm (Dropdown) -->
-        <div class="nav-group">
-          <button
-            type="button"
-            class="nav-link nav-item nav-toggle w-100"
-            :class="isProductGroupActive ? 'sidebar-active-custom' : 'text-secondary'"
-            @click="toggleProductMenu"
-          >
-            <span class="d-flex align-items-center gap-2 nav-left">
-              <span class="material-icons nav-ic" :class="isProductGroupActive ? 'text-orange-red' : ''">
-                inventory_2
-              </span>
-              <span class="nav-text">Quản lý sản phẩm</span>
-            </span>
-
-            <span class="material-icons nav-caret" :class="isProductGroupActive ? 'text-orange-red' : ''">
-              {{ productMenuOpen ? "expand_less" : "expand_more" }}
-            </span>
-          </button>
-
-          <div v-show="productMenuOpen" class="sub-menu">
-            <router-link
-              class="sub-link"
-              :class="route.path.startsWith('/admin/san-pham') ? 'sub-item-active fw-bold' : 'text-secondary'"
-              to="/admin/san-pham"
-            >
-              Sản phẩm
-            </router-link>
-
-            <router-link
-              class="sub-link"
-              :class="route.path.startsWith('/admin/chi-tiet-san-pham') ? 'sub-item-active fw-bold' : 'text-secondary'"
-              to="/admin/chi-tiet-san-pham"
-            >
-              Sản phẩm chi tiết
-            </router-link>
-
-            <!-- THUỘC TÍNH -->
-            <button
-              type="button"
-              class="sub-link sub-toggle"
-              :class="isAttrGroupActive ? 'sub-item-active fw-bold' : 'text-secondary'"
-              @click="toggleAttrMenu"
-            >
-              <span>Thuộc tính</span>
-              <span class="material-icons sub-caret">
-                {{ attrMenuOpen ? "expand_less" : "expand_more" }}
-              </span>
-            </button>
-
-            <div v-show="attrMenuOpen" class="sub-menu sub-menu-lv2">
-              <router-link
-                class="sub-link"
-                :class="route.path === '/admin/xuat-xu' ? 'sub-item-active fw-bold' : 'text-secondary'"
-                to="/admin/xuat-xu"
-              >
-                Xuất xứ
-              </router-link>
-
-              <router-link
-                class="sub-link"
-                :class="route.path === '/admin/thuong-hieu' ? 'sub-item-active fw-bold' : 'text-secondary'"
-                to="/admin/thuong-hieu"
-              >
-                Thương hiệu
-              </router-link>
-
-              <router-link
-                class="sub-link"
-                :class="route.path === '/admin/vi-tri-thi-dau' ? 'sub-item-active fw-bold' : 'text-secondary'"
-                to="/admin/vi-tri-thi-dau"
-              >
-                Vị trí thi đấu
-              </router-link>
-
-              <router-link
-                class="sub-link"
-                :class="route.path === '/admin/phong-cach-choi' ? 'sub-item-active fw-bold' : 'text-secondary'"
-                to="/admin/phong-cach-choi"
-              >
-                Phong cách chơi
-              </router-link>
-
-              <router-link
-                class="sub-link"
-                :class="route.path === '/admin/co-giay' ? 'sub-item-active fw-bold' : 'text-secondary'"
-                to="/admin/co-giay"
-              >
-                Cổ giày
-              </router-link>
-
-              <router-link
-                class="sub-link"
-                :class="route.path === '/admin/chat-lieu' ? 'sub-item-active fw-bold' : 'text-secondary'"
-                to="/admin/chat-lieu"
-              >
-                Chất liệu
-              </router-link>
-
-              <router-link
-                class="sub-link"
-                :class="route.path === '/admin/mau-sac' ? 'sub-item-active fw-bold' : 'text-secondary'"
-                to="/admin/mau-sac"
-              >
-                Màu sắc
-              </router-link>
-
-              <router-link
-                class="sub-link"
-                :class="route.path === '/admin/kich-thuoc' ? 'sub-item-active fw-bold' : 'text-secondary'"
-                to="/admin/kich-thuoc"
-              >
-                Kích thước
-              </router-link>
-
-              <router-link
-                class="sub-link"
-                :class="route.path === '/admin/form-chan' ? 'sub-item-active fw-bold' : 'text-secondary'"
-                to="/admin/form-chan"
-              >
-                Form chân
-              </router-link>
-
-              <router-link
-                class="sub-link"
-                :class="route.path === '/admin/loai-san' ? 'sub-item-active fw-bold' : 'text-secondary'"
-                to="/admin/loai-san"
-              >
-                Loại sân
-              </router-link>
-            </div>
-          </div>
-        </div>
-
-        <!-- Quản lý tài khoản (Dropdown) -->
-        <div class="nav-group">
-          <button
-            type="button"
-            class="nav-link nav-item nav-toggle w-100"
-            :class="isAccountGroupActive ? 'sidebar-active-custom' : 'text-secondary'"
-            @click="toggleAccountMenu"
-          >
-            <span class="d-flex align-items-center gap-2 nav-left">
-              <span class="material-icons nav-ic" :class="isAccountGroupActive ? 'text-orange-red' : ''">
-                group
-              </span>
-              <span class="nav-text">Quản lý tài khoản</span>
-            </span>
-
-            <span class="material-icons nav-caret" :class="isAccountGroupActive ? 'text-orange-red' : ''">
-              {{ accountMenuOpen ? "expand_less" : "expand_more" }}
-            </span>
-          </button>
-
-          <div v-show="accountMenuOpen" class="sub-menu">
-            <!-- ✅ FIX: trỏ thẳng route mới + active startsWith -->
-            <router-link
-              class="sub-link"
-              :class="route.path.startsWith('/admin/tai-khoan/khach-hang') ? 'sub-item-active fw-bold' : 'text-secondary'"
-              to="/admin/tai-khoan/khach-hang"
-            >
-              Khách hàng
-            </router-link>
-
-            <router-link
-              class="sub-link"
-              :class="route.path.startsWith('/admin/tai-khoan/nhan-vien') ? 'sub-item-active fw-bold' : 'text-secondary'"
-              to="/admin/tai-khoan/nhan-vien"
-            >
-              Nhân viên
-            </router-link>
-          </div>
-        </div>
-      </nav>
-    </aside>
+  <div class="container-fluid p-0 min-vh-100 bg-light ss-admin-root">
+    <!-- ✅ Sidebar tách riêng -->
+    <SidebarMenu />
 
     <!-- Main -->
-    <main class="flex-grow-1" style="margin-left: 280px">
-      <!-- ✅ PRIMEVUE TOAST (đặt trước header để không bị che) -->
+    <main class="ss-main">
       <Toast position="top-right" />
 
-      <!-- Header -->
       <header class="navbar bg-white px-4 sticky-top ss-header" style="height: 64px">
         <div class="container-fluid justify-content-end gap-3">
           <span class="material-icons text-secondary cursor-pointer">dark_mode</span>
-          <div class="d-flex align-items-center gap-2 cursor-pointer border-start ps-3">
-            <span class="material-icons text-secondary">account_circle</span>
-            <span class="material-icons small text-secondary">expand_more</span>
+
+          <!-- ✅ User dropdown (tự quản lý, không phụ thuộc bootstrap js) -->
+          <div ref="userWrapRef" class="ss-user-wrap border-start ps-3">
+            <button class="ss-user-btn" type="button" @click="toggleUserMenu">
+              <span class="material-icons text-secondary">account_circle</span>
+              <span class="fw-bold small text-secondary d-none d-md-inline">
+                {{ userName }}
+              </span>
+              <span class="material-icons small text-secondary">
+                {{ userMenuOpen ? "expand_less" : "expand_more" }}
+              </span>
+            </button>
+
+            <div v-show="userMenuOpen" class="ss-user-menu shadow">
+              <button class="ss-user-item" type="button" @click="handleProfile">
+                <span class="material-icons ss-user-ic">person</span>
+                <span class="small fw-bold">Thông tin cá nhân</span>
+              </button>
+
+              <div class="ss-user-divider"></div>
+
+              <button class="ss-user-item ss-danger" type="button" @click="handleLogout">
+                <span class="material-icons ss-user-ic">logout</span>
+                <span class="small fw-bold">Đăng xuất</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -270,228 +49,205 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { onBeforeUnmount, onMounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import Swal from "sweetalert2";
 
-// ✅ dùng component global "Toast" đã register trong main.js
+import SidebarMenu from "@/components/layouts/SidebarMenu.vue";
+// Toast là component global (đã register trong main.js)
 
 const route = useRoute();
+const router = useRouter();
 
-// ===== PATH GROUPS =====
-const productPaths = [
-  "/admin/san-pham",
-  "/admin/chi-tiet-san-pham",
-  "/admin/xuat-xu",
-  "/admin/thuong-hieu",
-  "/admin/vi-tri-thi-dau",
-  "/admin/phong-cach-choi",
-  "/admin/co-giay",
-  "/admin/chat-lieu",
-  "/admin/mau-sac",
-  "/admin/kich-thuoc",
-  "/admin/form-chan",
-  "/admin/loai-san",
-];
+const userName = ref("Tài khoản");
+const userMenuOpen = ref(false);
+const userWrapRef = ref(null);
 
-const attrPaths = [
-  "/admin/xuat-xu",
-  "/admin/thuong-hieu",
-  "/admin/vi-tri-thi-dau",
-  "/admin/phong-cach-choi",
-  "/admin/co-giay",
-  "/admin/chat-lieu",
-  "/admin/mau-sac",
-  "/admin/kich-thuoc",
-  "/admin/form-chan",
-  "/admin/loai-san",
-];
-
-const discountPaths = ["/admin/giam-gia/phieu", "/admin/giam-gia/dot"];
-
-// ✅ FIX: group tài khoản theo path mới
-const accountPaths = ["/admin/tai-khoan/khach-hang", "/admin/tai-khoan/nhan-vien"];
-
-const isProductGroupActive = computed(() => productPaths.some((p) => route.path.startsWith(p)));
-const isAttrGroupActive = computed(() => attrPaths.some((p) => route.path.startsWith(p)));
-const isDiscountGroupActive = computed(() => discountPaths.some((p) => route.path.startsWith(p)));
-const isAccountGroupActive = computed(() => accountPaths.some((p) => route.path.startsWith(p)));
-
-const productMenuOpen = ref(false);
-const attrMenuOpen = ref(false);
-const discountMenuOpen = ref(false);
-const accountMenuOpen = ref(false);
-
-// auto open when active route
-watch(
-  () => route.path,
-  (p) => {
-    if (productPaths.some((x) => p.startsWith(x))) productMenuOpen.value = true;
-    if (attrPaths.some((x) => p.startsWith(x))) attrMenuOpen.value = true;
-    if (discountPaths.some((x) => p.startsWith(x))) discountMenuOpen.value = true;
-
-    // ✅ FIX: open nhóm tài khoản khi đi vào /admin/tai-khoan/...
-    if (accountPaths.some((x) => p.startsWith(x))) accountMenuOpen.value = true;
-  },
-  { immediate: true }
-);
-
-const toggleProductMenu = () => {
-  productMenuOpen.value = !productMenuOpen.value;
-  if (!productMenuOpen.value) attrMenuOpen.value = false;
+const getToken = () => {
+  const keys = ["accessToken", "token", "jwt", "ss_token"];
+  for (const k of keys) {
+    const v = localStorage.getItem(k) || sessionStorage.getItem(k);
+    if (v) return v;
+  }
+  return null;
 };
-const toggleAttrMenu = () => (attrMenuOpen.value = !attrMenuOpen.value);
 
-const toggleDiscountMenu = () => (discountMenuOpen.value = !discountMenuOpen.value);
-const toggleAccountMenu = () => (accountMenuOpen.value = !accountMenuOpen.value);
+const getUser = () => {
+  const raw =
+    localStorage.getItem("user") ||
+    sessionStorage.getItem("user") ||
+    localStorage.getItem("nguoiDung") ||
+    sessionStorage.getItem("nguoiDung");
+
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+};
+
+const syncUserName = () => {
+  const u = getUser();
+  const name =
+    u?.hoTen ||
+    u?.tenNhanVien ||
+    u?.ten ||
+    u?.username ||
+    u?.email;
+
+  if (name) userName.value = name;
+};
+
+const clearAuth = () => {
+  const keys = ["accessToken", "token", "jwt", "ss_token", "user", "nguoiDung"];
+  keys.forEach((k) => {
+    localStorage.removeItem(k);
+    sessionStorage.removeItem(k);
+  });
+};
+
+const requireAuthOrRedirect = () => {
+  const token = getToken();
+  const u = getUser();
+
+  // ✅ Cho phép 1 trong 2: có token hoặc có user
+  if (!token && !u) {
+    router.replace({
+      path: "/dang-nhap",
+      query: { redirect: route.fullPath },
+    });
+  }
+};
+
+const toggleUserMenu = () => {
+  userMenuOpen.value = !userMenuOpen.value;
+};
+
+const handleProfile = () => {
+  // TODO: sau này có trang profile thì push route ở đây
+  userMenuOpen.value = false;
+};
+
+const handleLogout = () => {
+  Swal.fire({
+    title: "Xác nhận đăng xuất?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonColor: "#ff4d4f",
+    cancelButtonColor: "#6c757d",
+    confirmButtonText: "Đăng xuất",
+    cancelButtonText: "Hủy",
+  }).then((result) => {
+    if (result.isConfirmed) {
+      clearAuth();
+      userMenuOpen.value = false;
+      router.replace("/dang-nhap");
+    }
+  });
+};
+
+const onClickOutside = (e) => {
+  if (!userMenuOpen.value) return;
+  const el = userWrapRef.value;
+  if (el && !el.contains(e.target)) userMenuOpen.value = false;
+};
+
+onMounted(() => {
+  requireAuthOrRedirect();
+  syncUserName();
+  document.addEventListener("click", onClickOutside);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("click", onClickOutside);
+});
 </script>
 
 <style scoped>
-/* Logo */
-.sidebar-logo {
-  padding: 18px 10px 10px 10px;
+/* ✅ chặn tràn ngang toàn layout + set biến width sidebar */
+.ss-admin-root {
+  overflow-x: hidden;
+  --ss-sidebar-w: 240px;
 }
 
-.ss-sidebar {
-  background: #fff;
-  border-right: 1px solid var(--ss-border);
-  box-shadow: 14px 0 28px -12px rgba(0, 0, 0, 0.18);
+/* ✅ main ăn theo width sidebar mới */
+.ss-main {
+  margin-left: var(--ss-sidebar-w, 240px);
+  width: calc(100% - var(--ss-sidebar-w, 240px));
+  overflow-x: hidden;
+  min-height: 100vh;
 }
 
 .ss-header {
-  border-bottom: 1px solid var(--ss-border);
-}
-
-.sidebar-active-custom {
-  background-color: #fff0f0 !important;
-  color: #ff4d4f !important;
-  border-radius: 10px;
-  border: 1px solid var(--ss-border);
-}
-
-.sub-item-active {
-  background-color: #ffe5e5 !important;
-  color: #ff4d4f !important;
-  border-radius: 8px;
-  border: 1px solid var(--ss-border);
-}
-
-.text-orange-red {
-  color: #ff4d4f !important;
+  border-bottom: 1px solid var(--ss-border, #eee);
 }
 
 .cursor-pointer {
   cursor: pointer;
 }
 
-/* Item */
-.nav-item {
+/* ===== USER MENU ===== */
+.ss-user-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ss-user-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  padding: 6px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.ss-user-btn:hover {
+  background: rgba(255, 77, 79, 0.06);
+}
+
+.ss-user-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 220px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #eee;
+  overflow: hidden;
+  z-index: 1200;
+}
+
+.ss-user-item {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
-
-  padding: 10px 12px !important;
-  border-radius: 10px;
-
-  font-size: 13px;
-  font-weight: 650;
-  line-height: 1.2;
-
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-
-  transition: all 0.2s ease;
-}
-.nav-item:hover {
-  background-color: #f8f9fa;
-  color: #ff4d4f !important;
-  border: 1px solid var(--ss-border);
-}
-
-.nav-ic {
-  font-size: 18px;
-  width: 22px;
-  display: inline-flex;
-  justify-content: center;
-}
-
-.nav-toggle {
   border: 0;
   background: transparent;
+  padding: 10px 12px;
   text-align: left;
+  cursor: pointer;
 }
 
-.nav-left {
-  min-width: 0;
-  flex: 1;
+.ss-user-item:hover {
+  background: rgba(255, 77, 79, 0.06);
 }
 
-.nav-text {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.ss-user-divider {
+  height: 1px;
+  background: #eee;
 }
 
-.nav-caret {
-  font-size: 18px;
-  flex: 0 0 auto;
+.ss-user-ic {
+  font-size: 20px;
 }
 
-/* Sub menu */
-.sub-menu {
-  padding-left: 36px;
-  padding-right: 10px;
-  margin-top: 6px;
-
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.sub-link {
-  display: block;
-  width: 100%;
-  padding: 8px 10px;
-  border-radius: 8px;
-  text-decoration: none;
-
-  font-size: 12.5px;
-  font-weight: 700;
-  line-height: 1.15;
-
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.sub-link:hover {
-  background-color: #f8f9fa;
-  color: #ff4d4f !important;
-  border: 1px solid var(--ss-border);
-}
-
-/* Thuộc tính: button giống router-link */
-.sub-toggle {
-  border: 0;
-  background: transparent;
-  text-align: left;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.sub-caret {
-  font-size: 18px;
-}
-
-/* menu con cấp 2 */
-.sub-menu-lv2 {
-  padding-left: 14px;
-  margin-top: 6px;
-
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.ss-danger {
+  color: #dc3545;
 }
 </style>

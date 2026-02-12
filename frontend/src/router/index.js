@@ -2,13 +2,25 @@
 import { createRouter, createWebHistory } from "vue-router";
 
 import AdminLayout from "@/views/admin/AdminLayout.vue";
+import LoginManager from "@/views/authen_author/LoginManager.vue";
 
 import ProductManagePage from "@/pages/product/ProductManagePage.vue";
 import ProductDetailListPage from "@/pages/product/ProductDetailListPage.vue";
 import ProductDetailFormPage from "@/pages/product/ProductDetailFormPage.vue";
 import ProductFormPage from "@/pages/product/ProductFormPage.vue";
 
-import CoGiayPage from "@/pages/product/thuoc_tinh/co_giay/CoGiayPage.vue";
+import CoGiayPage from "@/pages/product/thuoc_tinh/CoGiayPage.vue";
+
+// ✅ THUỘC TÍNH (file lẻ, không folder snake_case)
+import XuatXuPage from "@/pages/product/thuoc_tinh/XuatXuPage.vue";
+import ThuongHieuPage from "@/pages/product/thuoc_tinh/ThuongHieuPage.vue";
+import ViTriThiDauPage from "@/pages/product/thuoc_tinh/ViTriThiDauPage.vue";
+import PhongCachChoiPage from "@/pages/product/thuoc_tinh/PhongCachChoiPage.vue";
+import ChatLieuPage from "@/pages/product/thuoc_tinh/ChatLieuPage.vue";
+import MauSacPage from "@/pages/product/thuoc_tinh/MauSacPage.vue";
+import KichThuocPage from "@/pages/product/thuoc_tinh/KichThuocPage.vue";
+import FormChanPage from "@/pages/product/thuoc_tinh/FormChanPage.vue";
+import LoaiSanPage from "@/pages/product/thuoc_tinh/LoaiSanPage.vue";
 
 import DiscountPage from "@/pages/khuyen_mai/dot_giam_gia/DiscountPage.vue";
 import AddDiscountPage from "@/pages/khuyen_mai/dot_giam_gia/AddDiscountPage.vue";
@@ -31,29 +43,57 @@ import CapNhatKhachHangPage from "@/pages/tai_khoan/capnhat_khachhang.vue";
 import HoaDonList from "@/pages/hoa_don/HoaDonList.vue";
 import HoaDonDetail from "@/pages/hoa_don/HoaDonDetail.vue";
 
+// ✅ Bán hàng
+import SalesPage from "@/pages/sales/SalesPage.vue";
+
 // ✅ Client Pages
 import ClientLayout from "@/views/client/ClientLayout.vue";
 import HomePage from "@/pages/client/HomePage.vue";
+import ProductsPage from "@/pages/client/ProductsPage.vue";
 import ProductDetailPage from "@/pages/client/ProductDetailPage.vue";
 import CartPage from "@/pages/client/CartPage.vue";
 import CheckoutPage from "@/pages/client/CheckoutPage.vue";
 import OrderSuccessPage from "@/pages/client/OrderSuccessPage.vue";
+import GuestOrderTrackingPage from "@/pages/client/GuestOrderTrackingPage.vue";
 import AccountLayout from "@/pages/client/account/AccountLayout.vue";
 import OrderHistoryPage from "@/pages/client/account/OrderHistoryPage.vue";
 import OrderTrackingPage from "@/pages/client/account/OrderTrackingPage.vue";
-import GuestOrderTrackingPage from "@/pages/client/GuestOrderTrackingPage.vue";
-import ProductsPage from "@/pages/client/ProductsPage.vue";
+
+// ✅ Thống kê
+import ThongKePage from "@/pages/thong_ke/ThongKePage.vue";
+
+// ✅ Check đăng nhập: token (nếu có) HOẶC user (hiện tại backend chưa trả token)
+const isLoggedIn = () => {
+  const tokenKeys = ["accessToken", "token", "jwt", "ss_token"];
+  const hasToken = tokenKeys.some(
+    (k) => !!localStorage.getItem(k) || !!sessionStorage.getItem(k)
+  );
+
+  const hasUser =
+    !!localStorage.getItem("user") ||
+    !!sessionStorage.getItem("user") ||
+    !!localStorage.getItem("nguoiDung") ||
+    !!sessionStorage.getItem("nguoiDung");
+
+  return hasToken || hasUser;
+};
 
 const SimplePage = (title) => ({
   template: `<div class="p-4"><h3 style="font-weight:800">${title}</h3><div class="text-muted">Demo page</div></div>`,
 });
 
 const routes = [
-  { path: "/", redirect: "/client" },
+  // ✅ vào web sẽ về login (vì có auth)
+  { path: "/", redirect: "/dang-nhap" },
 
+  // ✅ Login
+  { path: "/dang-nhap", name: "dang-nhap", component: LoginManager, meta: { public: true } },
+
+  // ✅ Client (public - không cần đăng nhập)
   {
     path: "/client",
     component: ClientLayout,
+    meta: { public: true },
     children: [
       { path: "", name: "client-home", component: HomePage },
       { path: "products", name: "client-products", component: ProductsPage },
@@ -62,35 +102,39 @@ const routes = [
       { path: "checkout", name: "client-checkout", component: CheckoutPage },
       { path: "success", name: "client-order-success", component: OrderSuccessPage },
       { path: "tracking", name: "client-guest-tracking", component: GuestOrderTrackingPage },
-      { 
+      {
         path: "account",
         component: AccountLayout,
         redirect: "/client/account/orders",
         children: [
-            { path: "orders", component: OrderHistoryPage },
-            { path: "orders/:id", name: "client-tracking", component: OrderTrackingPage },
-            { path: "profile", component: SimplePage("Hồ sơ") },
-            { path: "address", component: SimplePage("Địa chỉ") },
-            { path: "coupons", component: SimplePage("Phiếu giảm giá") },
-            { path: "password", component: SimplePage("Đổi mật khẩu") },
-        ]
-      }
-    ]
+          { path: "orders", component: OrderHistoryPage },
+          { path: "orders/:id", name: "client-tracking", component: OrderTrackingPage },
+          { path: "profile", component: SimplePage("Hồ sơ") },
+          { path: "address", component: SimplePage("Địa chỉ") },
+          { path: "coupons", component: SimplePage("Phiếu giảm giá") },
+          { path: "password", component: SimplePage("Đổi mật khẩu") },
+        ],
+      },
+    ],
   },
 
   {
     path: "/admin",
     component: AdminLayout,
+    meta: { requiresAuth: true },
     children: [
       { path: "", redirect: "/admin/san-pham" },
 
-      { path: "dashboard", component: SimplePage("THỐNG KÊ") },
-      { path: "pos", component: SimplePage("BÁN HÀNG TẠI QUẦY") },
+      // ✅ THỐNG KÊ
+      { path: "dashboard", name: "admin-dashboard", component: ThongKePage },
+
+      // ✅ Bán hàng
+      { path: "pos", name: "admin-pos", component: SalesPage },
 
       // ✅ Hóa đơn
       { path: "hoa-don", name: "admin-hoa-don", component: HoaDonList },
       {
-        path: "hoa-don/:id",
+        path: "hoa-don/:id(\\d+)",
         name: "admin-hoa-don-detail",
         component: HoaDonDetail,
         props: true,
@@ -99,38 +143,19 @@ const routes = [
       // =========================================================
       // ✅ KHUYẾN MẠI
       // =========================================================
-
-      // ✅ Phiếu giảm giá
+      { path: "giam-gia/phieu", name: "admin-voucher", component: VoucherManagePage },
+      { path: "giam-gia/phieu/them", name: "admin-voucher-new", component: VoucherFormPage },
       {
-        path: "giam-gia/phieu",
-        name: "admin-voucher",
-        component: VoucherManagePage,
-      },
-      {
-        path: "giam-gia/phieu/them",
-        name: "admin-voucher-new",
-        component: VoucherFormPage,
-      },
-      // ✅ chi tiết phải đứng TRƯỚC :id để tránh match nhầm
-      {
-        path: "giam-gia/phieu/chi-tiet/:id",
+        path: "giam-gia/phieu/:id(\\d+)",
         name: "admin-voucher-detail",
         component: VoucherFormPage,
         props: true,
       },
-      // ✅ sửa (giữ theo dạng :id như bạn đang làm)
-      {
-        path: "giam-gia/phieu/:id",
-        name: "admin-voucher-edit",
-        component: VoucherFormPage,
-        props: true,
-      },
 
-      // ✅ Đợt giảm giá
       { path: "giam-gia/dot", name: "admin-discount", component: DiscountPage },
       { path: "giam-gia/dot/new", name: "admin-discount-new", component: AddDiscountPage },
       {
-        path: "giam-gia/dot/:id",
+        path: "giam-gia/dot/:id(\\d+)",
         name: "admin-discount-detail",
         component: DetailDiscountPage,
         props: true,
@@ -141,29 +166,28 @@ const routes = [
       // =========================================================
       { path: "san-pham", name: "admin-san-pham", component: ProductManagePage },
       { path: "san-pham/new", name: "admin-san-pham-new", component: ProductFormPage },
-      { path: "san-pham/:id", name: "admin-san-pham-one", component: ProductFormPage, props: true },
-      { path: "san-pham/:id/edit", name: "admin-san-pham-edit", component: ProductFormPage, props: true },
+      { path: "san-pham/:id(\\d+)", name: "admin-san-pham-one", component: ProductFormPage, props: true },
+      { path: "san-pham/:id(\\d+)/edit", name: "admin-san-pham-edit", component: ProductFormPage, props: true },
 
-      // ✅ Chi tiết sản phẩm
       { path: "chi-tiet-san-pham", name: "admin-ctsp", component: ProductDetailListPage },
       { path: "chi-tiet-san-pham/new", name: "admin-ctsp-new", component: ProductDetailFormPage },
-      { path: "chi-tiet-san-pham/:id", name: "admin-ctsp-one", component: ProductDetailFormPage, props: true },
+      { path: "chi-tiet-san-pham/:id(\\d+)", name: "admin-ctsp-one", component: ProductDetailFormPage, props: true },
 
       // =========================================================
       // ✅ THUỘC TÍNH
       // =========================================================
-      { path: "xuat-xu", component: SimplePage("XUẤT XỨ") },
-      { path: "thuong-hieu", component: SimplePage("THƯƠNG HIỆU") },
-      { path: "vi-tri-thi-dau", component: SimplePage("VỊ TRÍ THI ĐẤU") },
-      { path: "phong-cach-choi", component: SimplePage("PHONG CÁCH CHƠI") },
-      { path: "co-giay", component: CoGiayPage },
-      { path: "chat-lieu", component: SimplePage("CHẤT LIỆU") },
-      { path: "mau-sac", component: SimplePage("MÀU SẮC") },
-      { path: "kich-thuoc", component: SimplePage("KÍCH THƯỚC") },
-      { path: "form-chan", component: SimplePage("FORM CHÂN") },
-      { path: "loai-san", component: SimplePage("LOẠI SÂN") },
+      { path: "xuat-xu", name: "admin-xuat-xu", component: XuatXuPage },
+      { path: "thuong-hieu", name: "admin-thuong-hieu", component: ThuongHieuPage },
+      { path: "vi-tri-thi-dau", name: "admin-vi-tri-thi-dau", component: ViTriThiDauPage },
+      { path: "phong-cach-choi", name: "admin-phong-cach-choi", component: PhongCachChoiPage },
+      { path: "co-giay", name: "admin-co-giay", component: CoGiayPage },
+      { path: "chat-lieu", name: "admin-chat-lieu", component: ChatLieuPage },
+      { path: "mau-sac", name: "admin-mau-sac", component: MauSacPage },
+      { path: "kich-thuoc", name: "admin-kich-thuoc", component: KichThuocPage },
+      { path: "form-chan", name: "admin-form-chan", component: FormChanPage },
+      { path: "loai-san", name: "admin-loai-san", component: LoaiSanPage },
 
-      // ✅ (giữ nguyên demo cũ nếu bạn còn dùng)
+      // ✅ redirect demo cũ
       { path: "khach-hang", redirect: "/admin/tai-khoan/khach-hang" },
       { path: "nhan-vien", redirect: "/admin/tai-khoan/nhan-vien" },
 
@@ -177,7 +201,7 @@ const routes = [
         children: [
           { path: "them", name: "tai-khoan-khach-hang-them", component: ThemKhachHangPage },
           {
-            path: "cap-nhat/:id",
+            path: "cap-nhat/:id(\\d+)",
             name: "tai-khoan-khach-hang-cap-nhat",
             component: CapNhatKhachHangPage,
             props: true,
@@ -191,7 +215,7 @@ const routes = [
         children: [
           { path: "them", name: "tai-khoan-nhan-vien-them", component: ThemNhanVienPage },
           {
-            path: "cap-nhat/:id",
+            path: "cap-nhat/:id(\\d+)",
             name: "tai-khoan-nhan-vien-cap-nhat",
             component: CapNhatNhanVienPage,
             props: true,
@@ -201,10 +225,27 @@ const routes = [
     ],
   },
 
-  { path: "/:pathMatch(.*)*", redirect: "/admin/san-pham" },
+  { path: "/:pathMatch(.*)*", redirect: "/dang-nhap" },
 ];
 
-export default createRouter({
+const router = createRouter({
   history: createWebHistory(),
   routes,
 });
+
+// ✅ Guard: chặn /admin nếu chưa login
+router.beforeEach((to, from, next) => {
+  if (to.meta?.public) return next();
+
+  const requiresAuth = to.matched.some((r) => r.meta?.requiresAuth);
+  if (!requiresAuth) return next();
+
+  if (isLoggedIn()) return next();
+
+  return next({
+    name: "dang-nhap",
+    query: { redirect: to.fullPath },
+  });
+});
+
+export default router;
