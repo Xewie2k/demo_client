@@ -17,4 +17,9 @@ public class VariantClientDTO {
     private String tenKichThuoc;
     private BigDecimal giaBan;
     private Integer soLuong;
+    private String anhDaiDien;
+    // discount info
+    private BigDecimal giaGoc;
+    private BigDecimal giaSauGiam;
+    private Integer phanTramGiam;
 }

@@ -1,4 +1,4 @@
-package com.example.datn_sevenstrike.service;
+package com.example.datn_sevenstrike.service.client;
 
 import com.example.datn_sevenstrike.entity.HoaDon;
 import com.example.datn_sevenstrike.entity.HoaDonChiTiet;

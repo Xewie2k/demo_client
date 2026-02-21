@@ -33,7 +33,6 @@ public class AuthService {
         NhanVien nv = nhanVienRepo.findByTenTaiKhoanAndXoaMemFalse(username.trim())
                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại trên hệ thống!"));
 
-        // ✅ Tránh NPE nếu nv.getMatKhau() null
         if (!Objects.equals(nv.getMatKhau(), password)) {
             throw new RuntimeException("Mật khẩu không chính xác!");
         }
@@ -45,7 +44,6 @@ public class AuthService {
         String role = "STAFF";
         String tenQuyen = "Nhân viên";
 
-        // ✅ So sánh Integer chuẩn, tránh dùng ==
         if (Objects.equals(nv.getIdQuyenHan(), 1)) {
             role = "ADMIN";
             tenQuyen = "Quản trị viên";
@@ -54,6 +52,8 @@ public class AuthService {
         return LoginResponse.builder()
                 .id(nv.getId())
                 .hoTen(nv.getTenNhanVien())
+                .email(nv.getEmail())
+                .soDienThoai(nv.getSoDienThoai())
                 .role(role)
                 .message("Đăng nhập thành công với quyền " + tenQuyen)
                 .build();

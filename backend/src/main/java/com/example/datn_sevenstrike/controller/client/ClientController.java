@@ -1,7 +1,7 @@
-package com.example.datn_sevenstrike.controller;
+package com.example.datn_sevenstrike.controller.client;
 
 import com.example.datn_sevenstrike.dto.client.*;
-import com.example.datn_sevenstrike.service.BanHangOnlineService;
+import com.example.datn_sevenstrike.service.client.ClientOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +13,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ClientController {
 
-    private final BanHangOnlineService service;
+    private final ClientOrderService service;
 
     @GetMapping("/products")
     public ResponseEntity<List<ProductClientDTO>> getProducts() {

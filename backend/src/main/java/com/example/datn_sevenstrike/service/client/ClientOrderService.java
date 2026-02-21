@@ -1,4 +1,4 @@
-package com.example.datn_sevenstrike.service;
+package com.example.datn_sevenstrike.service.client;
 
 import com.example.datn_sevenstrike.dto.client.*;
 import com.example.datn_sevenstrike.entity.*;
@@ -6,8 +6,10 @@ import com.example.datn_sevenstrike.constants.TrangThaiHoaDon;
 import com.example.datn_sevenstrike.exception.BadRequestEx;
 import com.example.datn_sevenstrike.exception.NotFoundEx;
 import com.example.datn_sevenstrike.repository.*;
+// EmailService is now in the same package
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,17 +21,21 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class BanHangOnlineService {
+public class ClientOrderService {
 
     private final SanPhamRepository sanPhamRepo;
     private final ChiTietSanPhamRepository ctspRepo;
     private final AnhChiTietSanPhamRepository anhRepo;
     private final PhieuGiamGiaRepository phieuRepo;
+    private final PhieuGiamGiaCaNhanRepository phieuCaNhanRepo;
     private final HoaDonRepository hoaDonRepo;
     private final HoaDonChiTietRepository hdctRepo;
     private final LichSuHoaDonRepository lsHdRepo;
     private final EmailService emailService;
     private final EntityManager entityManager;
+
+    @Value("${app.backend.url:http://localhost:8080}")
+    private String backendUrl;
 
     // List all products for client
     @Transactional(readOnly = true)
@@ -65,6 +71,74 @@ public class BanHangOnlineService {
                         .ngayKetThuc(p.getNgayKetThuc())
                         .build())
                 .collect(Collectors.toList());
+    }
+
+    // My Coupons (personal + public)
+    @Transactional(readOnly = true)
+    public List<MyVoucherDTO> getMyCoupons(Integer customerId) {
+        LocalDate today = LocalDate.now();
+        Map<Integer, MyVoucherDTO> result = new LinkedHashMap<>();
+
+        // 1. Phiếu cá nhân
+        List<PhieuGiamGiaCaNhan> personalList = phieuCaNhanRepo.findAllByIdKhachHangFetch(customerId);
+        for (PhieuGiamGiaCaNhan cn : personalList) {
+            PhieuGiamGia p = cn.getPhieuGiamGia();
+            if (p == null || Boolean.TRUE.equals(p.getXoaMem())) continue;
+
+            result.put(p.getId(), MyVoucherDTO.builder()
+                    .id(p.getId())
+                    .maPhieuGiamGia(p.getMaPhieuGiamGia())
+                    .tenPhieuGiamGia(p.getTenPhieuGiamGia())
+                    .loaiPhieuGiamGia(p.getLoaiPhieuGiamGia())
+                    .giaTriGiamGia(p.getGiaTriGiamGia())
+                    .soTienGiamToiDa(p.getSoTienGiamToiDa())
+                    .hoaDonToiThieu(p.getHoaDonToiThieu())
+                    .ngayBatDau(p.getNgayBatDau())
+                    .ngayKetThuc(p.getNgayKetThuc())
+                    .moTa(p.getMoTa())
+                    .nguon("personal")
+                    .daSuDung(cn.getDaSuDung())
+                    .ngayNhan(cn.getNgayNhan())
+                    .maPhieuGiamGiaCaNhan(cn.getMaPhieuGiamGiaCaNhan())
+                    .idPhieuGiamGiaCaNhan(cn.getId())
+                    .trangThaiHienThi(computeStatus(p, today, cn.getDaSuDung()))
+                    .build());
+        }
+
+        // 2. Phiếu công khai
+        List<PhieuGiamGia> publicList = phieuRepo.findAllByXoaMemFalseOrderByIdDesc();
+        for (PhieuGiamGia p : publicList) {
+            if (result.containsKey(p.getId())) continue;
+            if (!Boolean.TRUE.equals(p.getTrangThai())) continue;
+            if (p.getSoLuongSuDung() <= 0) continue;
+            if (p.getNgayKetThuc().isBefore(today)) continue;
+
+            result.put(p.getId(), MyVoucherDTO.builder()
+                    .id(p.getId())
+                    .maPhieuGiamGia(p.getMaPhieuGiamGia())
+                    .tenPhieuGiamGia(p.getTenPhieuGiamGia())
+                    .loaiPhieuGiamGia(p.getLoaiPhieuGiamGia())
+                    .giaTriGiamGia(p.getGiaTriGiamGia())
+                    .soTienGiamToiDa(p.getSoTienGiamToiDa())
+                    .hoaDonToiThieu(p.getHoaDonToiThieu())
+                    .ngayBatDau(p.getNgayBatDau())
+                    .ngayKetThuc(p.getNgayKetThuc())
+                    .moTa(p.getMoTa())
+                    .nguon("public")
+                    .daSuDung(false)
+                    .trangThaiHienThi(computeStatus(p, today, false))
+                    .build());
+        }
+
+        return new ArrayList<>(result.values());
+    }
+
+    private String computeStatus(PhieuGiamGia p, LocalDate today, Boolean daSuDung) {
+        if (Boolean.TRUE.equals(daSuDung)) return "used";
+        if (p.getNgayKetThuc().isBefore(today)) return "expired";
+        if (p.getNgayBatDau().isAfter(today)) return "upcoming";
+        if (p.getSoLuongSuDung() <= 0) return "exhausted";
+        return "available";
     }
 
     // My Orders
@@ -135,7 +209,11 @@ public class BanHangOnlineService {
                  firstProductName = ctsp.getSanPham().getTenSanPham();
                  // find thumb
                  List<AnhChiTietSanPham> imgs = anhRepo.findAllByIdChiTietSanPhamAndXoaMemFalseOrderByIdDesc(ctsp.getId());
-                 if (!imgs.isEmpty()) thumb = imgs.get(0).getDuongDanAnh();
+                 if (!imgs.isEmpty()) {
+                     thumb = imgs.stream().filter(img -> Boolean.TRUE.equals(img.getLaAnhDaiDien()))
+                             .findFirst().map(img -> getFullUrl(img.getDuongDanAnh()))
+                             .orElse(getFullUrl(imgs.get(0).getDuongDanAnh()));
+                 }
              }
         }
         
@@ -165,7 +243,11 @@ public class BanHangOnlineService {
                       (ctsp.getKichThuoc() != null ? ctsp.getKichThuoc().getTenKichThuoc() : "");
             
             List<AnhChiTietSanPham> imgs = anhRepo.findAllByIdChiTietSanPhamAndXoaMemFalseOrderByIdDesc(ctsp.getId());
-             if (!imgs.isEmpty()) thumb = imgs.get(0).getDuongDanAnh();
+             if (!imgs.isEmpty()) {
+                 thumb = imgs.stream().filter(img -> Boolean.TRUE.equals(img.getLaAnhDaiDien()))
+                         .findFirst().map(img -> getFullUrl(img.getDuongDanAnh()))
+                         .orElse(getFullUrl(imgs.get(0).getDuongDanAnh()));
+             }
         }
 
         return ClientOrderItemDTO.builder()
@@ -256,6 +338,7 @@ public class BanHangOnlineService {
 
         // Create HoaDon
         HoaDon hd = HoaDon.builder()
+                .idKhachHang(req.getIdKhachHang())
                 .tenKhachHang(req.getTenKhachHang())
                 .soDienThoaiKhachHang(req.getSoDienThoai())
                 .diaChiKhachHang(req.getDiaChi())
@@ -318,13 +401,23 @@ public class BanHangOnlineService {
             List<AnhChiTietSanPham> imgs = anhRepo.findAllByIdChiTietSanPhamAndXoaMemFalseOrderByIdDesc(v.getId());
             for (AnhChiTietSanPham img : imgs) {
                 if (Boolean.TRUE.equals(img.getLaAnhDaiDien())) {
-                    thumb = img.getDuongDanAnh();
+                    thumb = getFullUrl(img.getDuongDanAnh());
                     break;
                 }
             }
-            if (thumb == null && !imgs.isEmpty()) thumb = imgs.get(0).getDuongDanAnh();
+            if (thumb == null && !imgs.isEmpty()) thumb = getFullUrl(imgs.get(0).getDuongDanAnh());
             if (thumb != null) break;
         }
+
+        List<VariantClientDTO> variantDTOs = variants.stream().map(v ->
+                VariantClientDTO.builder()
+                        .id(v.getId())
+                        .tenMauSac(v.getMauSac() != null ? v.getMauSac().getTenMauSac() : "")
+                        .tenKichThuoc(v.getKichThuoc() != null ? v.getKichThuoc().getTenKichThuoc() : "")
+                        .giaBan(v.getGiaBan() != null ? v.getGiaBan() : v.getGiaNiemYet())
+                        .soLuong(v.getSoLuong())
+                        .build()
+        ).collect(Collectors.toList());
 
         return ProductClientDTO.builder()
                 .id(sp.getId())
@@ -334,6 +427,7 @@ public class BanHangOnlineService {
                 .giaCaoNhat(max)
                 .anhDaiDien(thumb)
                 .moTaNgan(sp.getMoTaNgan())
+                .variants(variantDTOs)
                 .build();
     }
 
@@ -349,13 +443,18 @@ public class BanHangOnlineService {
 
         for (ChiTietSanPham v : variants) {
             List<AnhChiTietSanPham> imgs = anhRepo.findAllByIdChiTietSanPhamAndXoaMemFalseOrderByIdDesc(v.getId());
+            String variantThumb = null;
             for (AnhChiTietSanPham img : imgs) {
-                imgSet.add(img.getDuongDanAnh());
+                imgSet.add(getFullUrl(img.getDuongDanAnh()));
                 if (Boolean.TRUE.equals(img.getLaAnhDaiDien()) && thumb == null) {
-                    thumb = img.getDuongDanAnh();
+                    thumb = getFullUrl(img.getDuongDanAnh());
+                }
+                if (Boolean.TRUE.equals(img.getLaAnhDaiDien())) {
+                    variantThumb = getFullUrl(img.getDuongDanAnh());
                 }
             }
-            if (thumb == null && !imgs.isEmpty()) thumb = imgs.get(0).getDuongDanAnh();
+            if (thumb == null && !imgs.isEmpty()) thumb = getFullUrl(imgs.get(0).getDuongDanAnh());
+            if (variantThumb == null && !imgs.isEmpty()) variantThumb = getFullUrl(imgs.get(0).getDuongDanAnh());
 
             variantDTOs.add(VariantClientDTO.builder()
                     .id(v.getId())
@@ -363,6 +462,7 @@ public class BanHangOnlineService {
                     .tenKichThuoc(v.getKichThuoc() != null ? v.getKichThuoc().getTenKichThuoc() : "")
                     .giaBan(v.getGiaBan() != null ? v.getGiaBan() : v.getGiaNiemYet())
                     .soLuong(v.getSoLuong())
+                    .anhDaiDien(variantThumb)
                     .build());
         }
         
@@ -386,5 +486,24 @@ public class BanHangOnlineService {
                 .images(new ArrayList<>(imgSet))
                 .variants(variantDTOs)
                 .build();
+    }
+
+    private String getFullUrl(String path) {
+        if (path == null || path.isBlank()) return null;
+        if (path.startsWith("http")) return path;
+
+        // 1. Chuẩn hóa dấu gạch chéo (Windows path -> Web path)
+        String normalized = path.replace("\\", "/");
+
+        // 2. Nếu lưu đường dẫn tuyệt đối ổ cứng (C:/.../uploads/...), cắt lấy phần từ /uploads trở đi
+        int idx = normalized.indexOf("/uploads/");
+        if (idx >= 0) {
+            normalized = normalized.substring(idx);
+        }
+
+        // 3. Đảm bảo bắt đầu bằng /
+        if (!normalized.startsWith("/")) normalized = "/" + normalized;
+
+        return backendUrl + normalized;
     }
 }

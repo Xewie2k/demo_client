@@ -5,6 +5,7 @@
       <div class="col-lg-7">
         <div class="bg-white p-4 rounded-3 shadow-sm mb-4">
             <h5 class="fw-bold mb-4" style="color: var(--ss-accent);">THÔNG TIN THANH TOÁN</h5>
+
             <form @submit.prevent="submitOrder">
               <div class="row g-3">
                   <div class="col-md-6">
@@ -24,7 +25,7 @@
                     <label class="form-label fw-bold text-secondary small">Địa chỉ cụ thể <span class="text-danger">*</span></label>
                     <div class="input-group">
                        <input type="text" class="form-control rounded-1" v-model="form.diaChi" required placeholder="Số nhà, ngõ, đường...">
-                       <button class="btn btn-outline-secondary rounded-1" type="button" disabled>Chọn địa chỉ</button>
+                       <button v-if="isLoggedIn" class="btn btn-dark px-4 rounded-1" type="button" data-bs-toggle="modal" data-bs-target="#addressModal">CHỌN</button>
                     </div>
                   </div>
                   <div class="col-md-4">
@@ -140,6 +141,48 @@
       </div>
     </div>
 
+    <!-- Address Modal -->
+    <div class="modal fade" id="addressModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title fw-bold">Chọn địa chỉ giao hàng</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div v-if="savedAddresses.length > 0" class="d-flex flex-column gap-2">
+              <div
+                v-for="addr in savedAddresses"
+                :key="addr.id"
+                class="d-flex align-items-center justify-content-between p-3 rounded-3 border cursor-pointer hover-bg-light"
+                :class="{'border-danger bg-danger-subtle': tempSelectedAddress && tempSelectedAddress.id === addr.id}"
+                @click="tempSelectedAddress = addr"
+              >
+                <div>
+                  <div class="fw-bold">
+                    {{ addr.tenDiaChi }}
+                    <span v-if="addr.macDinh" class="badge bg-danger ms-1" style="font-size: 10px;">Mặc định</span>
+                  </div>
+                  <div class="small text-secondary">{{ [addr.diaChiCuThe, addr.phuong, addr.quan, addr.thanhPho].filter(Boolean).join(', ') }}</div>
+                </div>
+                <div v-if="tempSelectedAddress && tempSelectedAddress.id === addr.id">
+                  <i class="bi bi-check-circle-fill" style="color: var(--ss-accent); font-size: 20px;"></i>
+                </div>
+              </div>
+            </div>
+            <div v-else class="text-center py-5 text-muted">
+              <i class="bi bi-geo-alt" style="font-size: 2rem;"></i>
+              <p class="mt-2 mb-0">Chưa có địa chỉ nào. Vui lòng thêm tại <router-link to="/client/account/address">Quản lý địa chỉ</router-link>.</p>
+            </div>
+          </div>
+          <div class="modal-footer border-0 pt-0">
+            <button type="button" class="btn btn-secondary rounded-1" data-bs-dismiss="modal">Đóng</button>
+            <button type="button" class="btn rounded-1 text-white" style="background-color: var(--ss-accent); border:none;" data-bs-dismiss="modal" @click="applyAddress">Áp dụng</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Coupon Modal -->
     <div class="modal fade" id="couponModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">
@@ -188,17 +231,21 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCart } from '@/services/cart';
+import { useClientAuth } from '@/services/authClient';
 import apiClient from '@/services/apiClient';
 import vnAddressService from '@/services/vnAddressService';
 import Swal from 'sweetalert2';
 
 const { cart, clearCart } = useCart();
+const { customer, isLoggedIn } = useClientAuth();
 const router = useRouter();
 const loading = ref(false);
 const vouchers = ref([]);
 const selectedVoucher = ref(null);
 const tempSelectedVoucher = ref(null); // For modal selection before applying
 const paymentMethod = ref('COD');
+const savedAddresses = ref([]);
+const tempSelectedAddress = ref(null);
 
 const form = reactive({
   tenKhachHang: '',
@@ -264,6 +311,40 @@ const onDistrictChange = async () => {
 const onWardChange = () => {
     const w = wards.value.find(x => x.code == addressCodes.ward);
     address.ward = w ? w.name : "";
+};
+// --- Saved Address Selection ---
+const fillAddressFromSaved = async (addr) => {
+    if (!addr) return;
+    form.diaChi = addr.diaChiCuThe || '';
+
+    // Match province by name
+    const matchedProvince = provinces.value.find(p => p.name === addr.thanhPho);
+    if (matchedProvince) {
+        addressCodes.city = matchedProvince.code;
+        address.city = matchedProvince.name;
+        districts.value = await vnAddressService.getDistricts(matchedProvince.code);
+
+        // Match district by name
+        const matchedDistrict = districts.value.find(d => d.name === addr.quan);
+        if (matchedDistrict) {
+            addressCodes.district = matchedDistrict.code;
+            address.district = matchedDistrict.name;
+            wards.value = await vnAddressService.getWards(matchedDistrict.code);
+
+            // Match ward by name
+            const matchedWard = wards.value.find(w => w.name === addr.phuong);
+            if (matchedWard) {
+                addressCodes.ward = matchedWard.code;
+                address.ward = matchedWard.name;
+            }
+        }
+    }
+};
+
+const applyAddress = async () => {
+    if (tempSelectedAddress.value) {
+        await fillAddressFromSaved(tempSelectedAddress.value);
+    }
 };
 // ---------------------
 
@@ -333,10 +414,27 @@ const applyVoucher = () => {
     }
 };
 
-onMounted(() => {
+onMounted(async () => {
   fetchVouchers();
-  loadProvinces();
-  // ... Load user info ...
+  await loadProvinces();
+  if (isLoggedIn.value && customer.value) {
+    form.tenKhachHang = customer.value.hoTen || '';
+    form.email = customer.value.email || '';
+    form.soDienThoai = customer.value.soDienThoai || '';
+
+    // Fetch saved addresses and auto-fill default
+    try {
+      const res = await apiClient.get(`/api/client/account/addresses/${customer.value.id}`);
+      const addresses = res.data || [];
+      savedAddresses.value = addresses;
+      const defaultAddr = addresses.find(a => a.macDinh) || addresses[0];
+      if (defaultAddr) {
+        await fillAddressFromSaved(defaultAddr);
+      }
+    } catch (e) {
+      console.error('Failed to load default address', e);
+    }
+  }
 });
 
 const submitOrder = async () => {
@@ -357,6 +455,7 @@ const submitOrder = async () => {
         const payload = {
             ...form,
             diaChi: fullAddress,
+            idKhachHang: customer.value?.id || null,
             idPhieuGiamGia: selectedVoucher.value ? selectedVoucher.value.id : null,
             items: displayItems.value.map(item => ({
                 idChiTietSanPham: item.variantId,

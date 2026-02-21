@@ -55,14 +55,23 @@ import CartPage from "@/pages/client/CartPage.vue";
 import CheckoutPage from "@/pages/client/CheckoutPage.vue";
 import OrderSuccessPage from "@/pages/client/OrderSuccessPage.vue";
 import GuestOrderTrackingPage from "@/pages/client/GuestOrderTrackingPage.vue";
+import LoginPage from "@/pages/client/LoginPage.vue";
+import RegisterPage from "@/pages/client/RegisterPage.vue";
 import AccountLayout from "@/pages/client/account/AccountLayout.vue";
 import OrderHistoryPage from "@/pages/client/account/OrderHistoryPage.vue";
 import OrderTrackingPage from "@/pages/client/account/OrderTrackingPage.vue";
+import ProfilePage from "@/pages/client/account/ProfilePage.vue";
+import AddressPage from "@/pages/client/account/AddressPage.vue";
+import ChangePasswordPage from "@/pages/client/account/ChangePasswordPage.vue";
+import CouponsPage from "@/pages/client/account/CouponsPage.vue";
+import AboutPage from "@/pages/client/AboutPage.vue";
+import NewsPage from "@/pages/client/NewsPage.vue";
+import ContactPage from "@/pages/client/ContactPage.vue";
 
 // ✅ Thống kê
 import ThongKePage from "@/pages/thong_ke/ThongKePage.vue";
 
-// ✅ Check đăng nhập: token (nếu có) HOẶC user (hiện tại backend chưa trả token)
+// ✅ Check đăng nhập admin
 const isLoggedIn = () => {
   const tokenKeys = ["accessToken", "token", "jwt", "ss_token"];
   const hasToken = tokenKeys.some(
@@ -78,18 +87,18 @@ const isLoggedIn = () => {
   return hasToken || hasUser;
 };
 
-const SimplePage = (title) => ({
-  template: `<div class="p-4"><h3 style="font-weight:800">${title}</h3><div class="text-muted">Demo page</div></div>`,
-});
+// ✅ Check đăng nhập client
+const isClientLoggedIn = () => {
+  return !!localStorage.getItem("ss_customer");
+};
 
 const routes = [
-  // ✅ vào web sẽ về login (vì có auth)
   { path: "/", redirect: "/dang-nhap" },
 
-  // ✅ Login
+  // ✅ Login admin
   { path: "/dang-nhap", name: "dang-nhap", component: LoginManager, meta: { public: true } },
 
-  // ✅ Client (public - không cần đăng nhập)
+  // ✅ Client
   {
     path: "/client",
     component: ClientLayout,
@@ -102,22 +111,29 @@ const routes = [
       { path: "checkout", name: "client-checkout", component: CheckoutPage },
       { path: "success", name: "client-order-success", component: OrderSuccessPage },
       { path: "tracking", name: "client-guest-tracking", component: GuestOrderTrackingPage },
+      { path: "about", name: "client-about", component: AboutPage },
+      { path: "news", name: "client-news", component: NewsPage },
+      { path: "contact", name: "client-contact", component: ContactPage },
+      { path: "login", name: "client-login", component: LoginPage },
+      { path: "register", name: "client-register", component: RegisterPage },
       {
         path: "account",
         component: AccountLayout,
+        meta: { requiresClientAuth: true },
         redirect: "/client/account/orders",
         children: [
           { path: "orders", component: OrderHistoryPage },
           { path: "orders/:id", name: "client-tracking", component: OrderTrackingPage },
-          { path: "profile", component: SimplePage("Hồ sơ") },
-          { path: "address", component: SimplePage("Địa chỉ") },
-          { path: "coupons", component: SimplePage("Phiếu giảm giá") },
-          { path: "password", component: SimplePage("Đổi mật khẩu") },
+          { path: "profile", component: ProfilePage },
+          { path: "address", component: AddressPage },
+          { path: "coupons", component: CouponsPage },
+          { path: "password", component: ChangePasswordPage },
         ],
       },
     ],
   },
 
+  // ✅ Admin
   {
     path: "/admin",
     component: AdminLayout,
@@ -125,45 +141,20 @@ const routes = [
     children: [
       { path: "", redirect: "/admin/san-pham" },
 
-      // ✅ THỐNG KÊ
       { path: "dashboard", name: "admin-dashboard", component: ThongKePage },
-
-      // ✅ Bán hàng
       { path: "pos", name: "admin-pos", component: SalesPage },
 
-      // ✅ Hóa đơn
       { path: "hoa-don", name: "admin-hoa-don", component: HoaDonList },
-      {
-        path: "hoa-don/:id(\\d+)",
-        name: "admin-hoa-don-detail",
-        component: HoaDonDetail,
-        props: true,
-      },
+      { path: "hoa-don/:id(\\d+)", name: "admin-hoa-don-detail", component: HoaDonDetail, props: true },
 
-      // =========================================================
-      // ✅ KHUYẾN MẠI
-      // =========================================================
       { path: "giam-gia/phieu", name: "admin-voucher", component: VoucherManagePage },
       { path: "giam-gia/phieu/them", name: "admin-voucher-new", component: VoucherFormPage },
-      {
-        path: "giam-gia/phieu/:id(\\d+)",
-        name: "admin-voucher-detail",
-        component: VoucherFormPage,
-        props: true,
-      },
+      { path: "giam-gia/phieu/:id(\\d+)", name: "admin-voucher-detail", component: VoucherFormPage, props: true },
 
       { path: "giam-gia/dot", name: "admin-discount", component: DiscountPage },
       { path: "giam-gia/dot/new", name: "admin-discount-new", component: AddDiscountPage },
-      {
-        path: "giam-gia/dot/:id(\\d+)",
-        name: "admin-discount-detail",
-        component: DetailDiscountPage,
-        props: true,
-      },
+      { path: "giam-gia/dot/:id(\\d+)", name: "admin-discount-detail", component: DetailDiscountPage, props: true },
 
-      // =========================================================
-      // ✅ SẢN PHẨM
-      // =========================================================
       { path: "san-pham", name: "admin-san-pham", component: ProductManagePage },
       { path: "san-pham/new", name: "admin-san-pham-new", component: ProductFormPage },
       { path: "san-pham/:id(\\d+)", name: "admin-san-pham-one", component: ProductFormPage, props: true },
@@ -173,9 +164,6 @@ const routes = [
       { path: "chi-tiet-san-pham/new", name: "admin-ctsp-new", component: ProductDetailFormPage },
       { path: "chi-tiet-san-pham/:id(\\d+)", name: "admin-ctsp-one", component: ProductDetailFormPage, props: true },
 
-      // =========================================================
-      // ✅ THUỘC TÍNH
-      // =========================================================
       { path: "xuat-xu", name: "admin-xuat-xu", component: XuatXuPage },
       { path: "thuong-hieu", name: "admin-thuong-hieu", component: ThuongHieuPage },
       { path: "vi-tri-thi-dau", name: "admin-vi-tri-thi-dau", component: ViTriThiDauPage },
@@ -187,25 +175,16 @@ const routes = [
       { path: "form-chan", name: "admin-form-chan", component: FormChanPage },
       { path: "loai-san", name: "admin-loai-san", component: LoaiSanPage },
 
-      // ✅ redirect demo cũ
       { path: "khach-hang", redirect: "/admin/tai-khoan/khach-hang" },
       { path: "nhan-vien", redirect: "/admin/tai-khoan/nhan-vien" },
 
-      // =========================================================
-      // ✅ TÀI KHOẢN
-      // =========================================================
       {
         path: "tai-khoan/khach-hang",
         name: "tai-khoan-khach-hang",
         component: TaiKhoanKhachHangPage,
         children: [
           { path: "them", name: "tai-khoan-khach-hang-them", component: ThemKhachHangPage },
-          {
-            path: "cap-nhat/:id(\\d+)",
-            name: "tai-khoan-khach-hang-cap-nhat",
-            component: CapNhatKhachHangPage,
-            props: true,
-          },
+          { path: "cap-nhat/:id(\\d+)", name: "tai-khoan-khach-hang-cap-nhat", component: CapNhatKhachHangPage, props: true },
         ],
       },
       {
@@ -214,12 +193,7 @@ const routes = [
         component: TaiKhoanNhanVienPage,
         children: [
           { path: "them", name: "tai-khoan-nhan-vien-them", component: ThemNhanVienPage },
-          {
-            path: "cap-nhat/:id(\\d+)",
-            name: "tai-khoan-nhan-vien-cap-nhat",
-            component: CapNhatNhanVienPage,
-            props: true,
-          },
+          { path: "cap-nhat/:id(\\d+)", name: "tai-khoan-nhan-vien-cap-nhat", component: CapNhatNhanVienPage, props: true },
         ],
       },
     ],
@@ -233,8 +207,14 @@ const router = createRouter({
   routes,
 });
 
-// ✅ Guard: chặn /admin nếu chưa login
+// ✅ Guard
 router.beforeEach((to, from, next) => {
+  // Client auth guard
+  const requiresClientAuth = to.matched.some((r) => r.meta?.requiresClientAuth);
+  if (requiresClientAuth && !isClientLoggedIn()) {
+    return next({ name: "client-login", query: { redirect: to.fullPath } });
+  }
+
   if (to.meta?.public) return next();
 
   const requiresAuth = to.matched.some((r) => r.meta?.requiresAuth);

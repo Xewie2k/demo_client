@@ -33,5 +33,11 @@ public class HoaDonChiTietResponse {
     private String maSanPham;
     private String tenSanPham;
 
+    // thông tin biến thể
+    private String mauSac;
+    private String kichCo;
+    private String loaiSan;
+    private String formChan;
+
     private String duongDanAnhDaiDien;
 }

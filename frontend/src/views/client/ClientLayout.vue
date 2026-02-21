@@ -82,29 +82,49 @@
               </span>
             </router-link>
 
-            <!-- User Dropdown -->
-            <div class="dropdown">
-              <div class="text-dark cursor-pointer p-1" data-bs-toggle="dropdown" aria-expanded="false">
-                <i class="bi bi-person-circle" style="font-size: 22px;"></i>
-              </div>
-              <div class="dropdown-menu dropdown-menu-end border-0 shadow-lg mt-2 py-3" style="min-width: 220px;">
-                <div class="px-3 pb-2 mb-2 border-bottom">
-                  <div class="fw-bold text-dark" style="font-size: 15px;">Nguyễn Văn A</div>
-                  <div class="text-muted" style="font-size: 12px;">vana@example.com</div>
-                  <div class="text-muted" style="font-size: 12px;">0123456788</div>
+            <!-- User: Logged In -->
+            <div v-if="isLoggedIn" ref="userDropdownWrap" class="position-relative">
+              <button
+                class="btn btn-link text-dark p-1"
+                type="button"
+                @click.stop="showUserDropdown = !showUserDropdown"
+                style="line-height: 1;"
+              >
+                <img v-if="customer.anhDaiDien" :src="baseUrl + customer.anhDaiDien" class="rounded-circle" width="26" height="26" style="object-fit: cover; vertical-align: middle;" alt="Avatar">
+                <i v-else class="bi bi-person-circle" style="font-size: 22px;"></i>
+              </button>
+              <transition name="dropdown-fade">
+                <div
+                  v-if="showUserDropdown"
+                  class="user-dropdown-menu position-absolute end-0 bg-white border shadow rounded-3 overflow-hidden"
+                  style="min-width: 260px; top: calc(100% + 10px); z-index: 1050;"
+                >
+                  <div class="px-3 py-3 border-bottom" style="background: linear-gradient(135deg, #f8f9fa, #fff);">
+                    <div class="fw-bold text-dark" style="font-size: 15px;">{{ customer.hoTen }}</div>
+                    <div class="text-muted" style="font-size: 12px;">{{ customer.email }}</div>
+                    <div v-if="customer.soDienThoai" class="text-muted" style="font-size: 12px;">{{ customer.soDienThoai }}</div>
+                  </div>
+                  <div class="py-1">
+                    <router-link class="dropdown-item py-2 px-3" to="/client/account/profile" @click="showUserDropdown = false">
+                      <i class="bi bi-person me-2 text-muted"></i>Thông tin cá nhân
+                    </router-link>
+                    <router-link class="dropdown-item py-2 px-3" to="/client/account/orders" @click="showUserDropdown = false">
+                      <i class="bi bi-bag me-2 text-muted"></i>Đơn mua
+                    </router-link>
+                  </div>
+                  <div class="border-top py-1">
+                    <a class="dropdown-item py-2 px-3 text-danger" href="#" @click.prevent="handleLogout(); showUserDropdown = false;">
+                      <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
+                    </a>
+                  </div>
                 </div>
-                <router-link class="dropdown-item py-2" to="/client/account/profile">
-                  <i class="bi bi-person me-2"></i>Thông tin cá nhân
-                </router-link>
-                <router-link class="dropdown-item py-2" to="/client/account/orders">
-                  <i class="bi bi-bag me-2"></i>Đơn mua
-                </router-link>
-                <div class="dropdown-divider"></div>
-                <a class="dropdown-item py-2 text-danger" href="#">
-                  <i class="bi bi-box-arrow-right me-2"></i>Đăng xuất
-                </a>
-              </div>
+              </transition>
             </div>
+
+            <!-- User: Not Logged In -->
+            <router-link v-else to="/client/login" class="btn btn-link text-dark p-1" style="line-height: 1;" title="Đăng nhập / Đăng ký">
+              <i class="bi bi-person" style="font-size: 22px;"></i>
+            </router-link>
           </div>
         </div>
 
@@ -154,7 +174,7 @@
       <div class="container">
         <div class="row gy-5">
           <!-- Col 1: Brand -->
-          <div class="col-lg-4 col-md-6">
+          <div class="col-lg-3 col-md-6">
             <h5 class="fw-bold text-white mb-3">SevenStrike</h5>
             <p class="text-white-50 small mb-4">
               Giày bóng đá nam chính hãng - giao nhanh
@@ -168,7 +188,7 @@
           </div>
 
           <!-- Col 2: Liên hệ -->
-          <div class="col-lg-4 col-md-6">
+          <div class="col-lg-3 col-md-6">
              <h6 class="fw-bold text-uppercase mb-4">Liên hệ</h6>
              <ul class="list-unstyled text-white-50 small">
                 <li class="mb-3 d-flex align-items-start gap-2">
@@ -187,7 +207,7 @@
           </div>
 
           <!-- Col 3: Kết nối -->
-          <div class="col-lg-4 col-md-12">
+          <div class="col-lg-2 col-md-6">
              <h6 class="fw-bold text-uppercase mb-4">Kết nối</h6>
              <ul class="list-unstyled text-white-50 small">
                 <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Chính sách bảo mật</a></li>
@@ -195,6 +215,18 @@
                 <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Chính sách đổi trả</a></li>
                 <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Quy định sử dụng</a></li>
              </ul>
+          </div>
+
+          <!-- Col 4: Bản đồ -->
+          <div class="col-lg-4 col-md-6">
+             <h6 class="fw-bold text-uppercase mb-4">Bản đồ cửa hàng</h6>
+             <div class="rounded-3 overflow-hidden" style="height: 180px;">
+               <iframe
+                 src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3723.863906198498!2d105.7461767!3d21.0381236!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x313454b32b842a37%3A0xe91a56573e7f9a11!2zU-G7kSAxIFRy4buLbmggVsSDbiBCw7QsIFBow6FvIE3hu5csIE5hbSBU4burIExpw6ptLCBIw6AgTuG7mWk!5e0!3m2!1svi!2svn!4v1700000000000!5m2!1svi!2svn"
+                 width="100%" height="180" style="border:0;" allowfullscreen="" loading="lazy"
+                 referrerpolicy="no-referrer-when-downgrade">
+               </iframe>
+             </div>
           </div>
         </div>
 
@@ -214,12 +246,15 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCart } from '@/services/cart';
+import { useClientAuth } from '@/services/authClient';
 
 const router = useRouter();
 const { cart } = useCart();
+const { customer, isLoggedIn, logout } = useClientAuth();
+const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const cartCount = computed(() => cart.value.reduce((acc, item) => acc + item.quantity, 0));
 
 const searchQuery = ref('');
@@ -230,6 +265,28 @@ const doSearch = () => {
     router.push({ name: 'client-products', query: { q: searchQuery.value.trim() } });
     showMobileSearch.value = false;
   }
+};
+
+// User dropdown (manual toggle)
+const showUserDropdown = ref(false);
+const userDropdownWrap = ref(null);
+
+const onClickOutside = (e) => {
+  if (userDropdownWrap.value && !userDropdownWrap.value.contains(e.target)) {
+    showUserDropdown.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', onClickOutside);
+});
+onBeforeUnmount(() => {
+  document.removeEventListener('click', onClickOutside);
+});
+
+const handleLogout = () => {
+  logout();
+  router.push('/client');
 };
 </script>
 
@@ -280,5 +337,20 @@ const doSearch = () => {
 .input-group .form-control:focus {
   box-shadow: none;
   border-color: #ced4da;
+}
+
+/* Dropdown fade transition */
+.dropdown-fade-enter-active,
+.dropdown-fade-leave-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.dropdown-fade-enter-from,
+.dropdown-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
+.user-dropdown-menu .dropdown-item:hover {
+  background-color: #f8f9fa;
 }
 </style>

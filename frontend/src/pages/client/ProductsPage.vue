@@ -124,11 +124,12 @@
                   @error="e => e.target.src = '/placeholder-shoe.png'"
                 >
               </div>
+              <span v-if="product.phanTramGiam" class="position-absolute top-0 end-0 m-2 badge bg-danger rounded-pill px-2 py-1" style="font-size: 0.75rem;">-{{ product.phanTramGiam }}%</span>
               <div class="product-action position-absolute top-50 start-50 translate-middle d-flex gap-2 opacity-0">
                 <button class="btn btn-dark btn-sm rounded-circle shadow" title="Xem nhanh">
                   <i class="bi bi-eye"></i>
                 </button>
-                <button class="btn btn-danger btn-sm rounded-circle shadow" title="Thêm vào giỏ">
+                <button class="btn btn-danger btn-sm rounded-circle shadow" title="Thêm vào giỏ" @click="quickAddToCart(product, $event)">
                   <i class="bi bi-cart-plus"></i>
                 </button>
               </div>
@@ -138,8 +139,14 @@
               <h6 class="card-title fw-bold text-dark text-truncate mb-2" :title="product.tenSanPham" style="font-size: 0.9rem;">
                 {{ product.tenSanPham }}
               </h6>
-              <div class="mt-auto fw-bold text-danger" style="font-size: 0.95rem;">
-                {{ formatPrice(product.giaThapNhat) }}
+              <div class="mt-auto">
+                <template v-if="product.phanTramGiam">
+                  <div class="text-muted text-decoration-line-through" style="font-size: 0.8rem;">{{ formatPrice(product.giaGocThapNhat) }}</div>
+                  <div class="fw-bold text-danger" style="font-size: 0.95rem;">{{ formatPrice(product.giaSauGiamThapNhat) }}</div>
+                </template>
+                <div v-else class="fw-bold text-danger" style="font-size: 0.95rem;">
+                  {{ formatPrice(product.giaThapNhat) }}
+                </div>
               </div>
             </div>
           </div>
@@ -153,6 +160,10 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import apiClient from '@/services/apiClient';
+import { useCart } from '@/services/cart';
+import Swal from 'sweetalert2';
+
+const { addToCart } = useCart();
 
 const products = ref([]);
 const loading = ref(true);
@@ -238,6 +249,26 @@ const goToDetail = (id) => {
 const formatPrice = (value) => {
   if (value === null || value === undefined) return '0 ₫';
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+};
+
+const quickAddToCart = (product, $event) => {
+  $event.stopPropagation();
+  const variants = product.variants || [];
+  const inStock = variants.filter(v => v.soLuong > 0);
+
+  if (inStock.length === 0) {
+    Swal.fire({ icon: 'warning', title: 'Hết hàng', text: 'Sản phẩm này hiện đã hết hàng.', timer: 2000, showConfirmButton: false });
+    return;
+  }
+
+  if (inStock.length === 1) {
+    addToCart(product, inStock[0], 1);
+    Swal.fire({ icon: 'success', title: 'Đã thêm vào giỏ!', text: `${product.tenSanPham} - ${inStock[0].tenMauSac} / ${inStock[0].tenKichThuoc}`, timer: 1500, showConfirmButton: false, position: 'top-end', toast: true });
+    return;
+  }
+
+  // Multiple variants → go to detail page to choose
+  router.push({ name: 'client-product-detail', params: { id: product.id } });
 };
 
 onMounted(fetchProducts);

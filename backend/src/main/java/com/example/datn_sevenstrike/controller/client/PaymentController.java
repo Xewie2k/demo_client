@@ -1,7 +1,7 @@
-package com.example.datn_sevenstrike.controller;
+package com.example.datn_sevenstrike.controller.client;
 
 import com.example.datn_sevenstrike.config.VNPayConfig;
-import com.example.datn_sevenstrike.service.VNPayService;
+import com.example.datn_sevenstrike.service.client.VNPayService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

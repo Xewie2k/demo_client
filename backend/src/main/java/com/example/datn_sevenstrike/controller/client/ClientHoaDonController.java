@@ -1,13 +1,20 @@
-package com.example.datn_sevenstrike.controller;
+package com.example.datn_sevenstrike.controller.client;
 
+import com.example.datn_sevenstrike.dto.response.HoaDonChiTietResponse;
 import com.example.datn_sevenstrike.dto.response.HoaDonResponse;
 import com.example.datn_sevenstrike.entity.HoaDon;
+import com.example.datn_sevenstrike.entity.HoaDonChiTiet;
+import com.example.datn_sevenstrike.entity.ChiTietSanPham;
 import com.example.datn_sevenstrike.exception.BadRequestEx;
 import com.example.datn_sevenstrike.exception.NotFoundEx;
+import com.example.datn_sevenstrike.repository.HoaDonChiTietRepository;
 import com.example.datn_sevenstrike.repository.HoaDonRepository;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/client/hoa-don")
@@ -15,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 public class ClientHoaDonController {
 
     private final HoaDonRepository repo;
+    private final HoaDonChiTietRepository hdctRepo;
     private final ModelMapper mapper;
 
     @GetMapping("/tracking")
@@ -26,6 +34,19 @@ public class ClientHoaDonController {
             throw new BadRequestEx("Thông tin xác thực không chính xác (Email không khớp)");
         }
 
-        return mapper.map(hd, HoaDonResponse.class);
+        HoaDonResponse response = mapper.map(hd, HoaDonResponse.class);
+
+        List<HoaDonChiTiet> details = hdctRepo.findAllByIdHoaDonAndXoaMemFalseOrderByIdAsc(hd.getId());
+        List<HoaDonChiTietResponse> chiTietList = details.stream().map(ct -> {
+            HoaDonChiTietResponse dto = mapper.map(ct, HoaDonChiTietResponse.class);
+            ChiTietSanPham ctsp = ct.getChiTietSanPham();
+            if (ctsp != null && ctsp.getSanPham() != null) {
+                dto.setTenSanPham(ctsp.getSanPham().getTenSanPham());
+            }
+            return dto;
+        }).collect(Collectors.toList());
+
+        response.setChiTietHoaDon(chiTietList);
+        return response;
     }
 }

@@ -23,6 +23,7 @@ public class KhachHangResponse {
 
     private Boolean gioiTinh;
     private LocalDate ngaySinh;
+    private String anhDaiDien;
 
     private Boolean trangThai;
     private Boolean xoaMem;

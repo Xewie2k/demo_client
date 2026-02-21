@@ -12,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class OrderRequest {
+    private Integer idKhachHang;
     private String tenKhachHang;
     private String soDienThoai;
     private String email;

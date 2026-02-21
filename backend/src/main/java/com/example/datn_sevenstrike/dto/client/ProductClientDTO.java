@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Data
 @SuperBuilder
@@ -19,4 +20,12 @@ public class ProductClientDTO {
     private BigDecimal giaCaoNhat;
     private String anhDaiDien;
     private String moTaNgan;
+
+    // discount info
+    private BigDecimal giaGocThapNhat;
+    private BigDecimal giaSauGiamThapNhat;
+    private Integer phanTramGiam;
+
+    // variants for quick add-to-cart
+    private List<VariantClientDTO> variants;
 }
