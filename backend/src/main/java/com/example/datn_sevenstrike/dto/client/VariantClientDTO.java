@@ -15,6 +15,8 @@ public class VariantClientDTO {
     private Integer id;
     private String tenMauSac;
     private String tenKichThuoc;
+    private String tenLoaiSan;
+    private String tenFormChan;
     private BigDecimal giaBan;
     private Integer soLuong;
     private String anhDaiDien;

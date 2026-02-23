@@ -16,6 +16,11 @@ public class ProductClientDTO {
     private Integer id;
     private String tenSanPham;
     private String tenThuongHieu;
+    private String tenXuatXu;
+    private String tenViTriThiDau;
+    private String tenPhongCachChoi;
+    private String tenCoGiay;
+    private String tenChatLieu;
     private BigDecimal giaThapNhat;
     private BigDecimal giaCaoNhat;
     private String anhDaiDien;
