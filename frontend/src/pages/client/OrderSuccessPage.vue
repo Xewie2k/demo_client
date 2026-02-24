@@ -20,6 +20,9 @@
           <p class="mb-3 text-secondary">
             Trạng thái: <strong class="text-dark">chờ xác nhận</strong>
           </p>
+          <p v-if="tongTienDisplay" class="mb-3 text-secondary">
+            Tổng thanh toán: <strong class="text-danger">{{ formatPrice(tongTienDisplay) }}</strong>
+          </p>
 
           <p class="text-muted mb-5" style="font-size: 14px;">
             Thanh toán của bạn đã được ghi nhận. Chúng tôi sẽ xác nhận đơn hàng của bạn trong thời gian sớm nhất.

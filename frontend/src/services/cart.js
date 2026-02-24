@@ -25,7 +25,9 @@ export function useCart() {
         name: product.tenSanPham,
         color: variant.tenMauSac,
         size: variant.tenKichThuoc,
-        price: variant.giaBan,
+        price: variant.giaSauGiam ?? variant.giaBan,
+        originalPrice: variant.phanTramGiam ? (variant.giaGoc || variant.giaBan) : null,
+        discountPercent: variant.phanTramGiam || null,
         image: product.anhDaiDien,
         quantity: quantity,
         maxStock: variant.soLuong

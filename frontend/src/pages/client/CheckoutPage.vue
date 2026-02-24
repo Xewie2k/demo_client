@@ -112,8 +112,11 @@
                         <h6 class="mb-1 fw-bold text-dark text-truncate" style="max-width: 180px;">{{ item.name }}</h6>
                         <small class="text-muted d-block">{{ item.color }} / {{ item.size }}</small>
                     </div>
-                    <div class="fw-bold text-danger text-end">
-                        {{ formatPrice(item.price * item.quantity) }}
+                    <div class="text-end">
+                        <div class="fw-bold text-danger">{{ formatPrice(item.price * item.quantity) }}</div>
+                        <div v-if="item.discountPercent" class="text-muted text-decoration-line-through" style="font-size:0.78rem;">
+                            {{ formatPrice(item.originalPrice * item.quantity) }}
+                        </div>
                     </div>
                </div>
             </div>
@@ -121,6 +124,10 @@
             <div class="d-flex justify-content-between mb-2 text-secondary">
               <span>Tạm tính</span>
               <span class="fw-bold text-dark">{{ formatPrice(itemsPrice) }}</span>
+            </div>
+            <div v-if="campaignSavings > 0" class="d-flex justify-content-between mb-2 text-success fw-bold">
+              <span>Tiết kiệm (đợt giảm giá)</span>
+              <span>-{{ formatPrice(campaignSavings) }}</span>
             </div>
              <div class="d-flex justify-content-between mb-2 text-secondary">
               <span>Phí vận chuyển</span>
@@ -366,6 +373,15 @@ const displayItems = computed(() => {
 const itemsPrice = computed(() => {
   return displayItems.value.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 });
+
+const campaignSavings = computed(() =>
+  displayItems.value.reduce((acc, item) => {
+    if (item.discountPercent && item.originalPrice) {
+      return acc + (item.originalPrice - item.price) * item.quantity;
+    }
+    return acc;
+  }, 0)
+);
 
 const shippingFee = ref(40000); // Fixed or calculated
 

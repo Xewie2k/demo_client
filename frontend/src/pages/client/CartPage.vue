@@ -34,12 +34,15 @@
                         </td>
                         <td class="py-4">
                             <div class="d-flex align-items-center gap-3">
-                                <img 
-                                    :src="item.image || '/placeholder-shoe.png'" 
-                                    class="rounded-3 border object-fit-cover" 
-                                    width="80" height="80" 
-                                    alt="Product"
-                                >
+                                <div class="position-relative flex-shrink-0">
+                                    <img
+                                        :src="item.image || '/placeholder-shoe.png'"
+                                        class="rounded-3 border object-fit-cover"
+                                        width="80" height="80"
+                                        alt="Product"
+                                    >
+                                    <span v-if="item.discountPercent" class="position-absolute top-0 end-0 badge bg-danger rounded-pill px-2 py-1" style="font-size: 0.75rem; transform: translate(30%, -30%);">-{{ item.discountPercent }}%</span>
+                                </div>
                                 <div>
                                     <h6 class="mb-1 fw-bold text-dark">{{ item.name }}</h6>
                                     <div class="text-secondary small">
@@ -48,8 +51,12 @@
                                 </div>
                             </div>
                         </td>
-                        <td class="text-center fw-bold text-dark">
-                            {{ formatPrice(item.price) }}
+                        <td class="text-center">
+                            <template v-if="item.discountPercent">
+                                <div class="fw-bold text-danger">{{ formatPrice(item.price) }}</div>
+                                <div class="text-muted text-decoration-line-through" style="font-size:0.8rem;">{{ formatPrice(item.originalPrice) }}</div>
+                            </template>
+                            <span v-else class="fw-bold text-dark">{{ formatPrice(item.price) }}</span>
                         </td>
                         <td class="text-center">
                             <div class="d-inline-flex border rounded bg-white">
