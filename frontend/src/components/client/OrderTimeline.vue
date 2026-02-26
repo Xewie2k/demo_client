@@ -2,11 +2,11 @@
   <div class="order-timeline w-100 px-2">
     <div class="d-flex justify-content-between position-relative" style="padding-top: 20px;">
       <!-- Background line -->
-      <div class="position-absolute w-100" style="height:4px; background:#e9ecef; top:20px; left:0; z-index:0;"></div>
+      <div class="position-absolute w-100" style="height:4px; background:#e9ecef; top:40px; left:0; z-index:0;"></div>
       <!-- Progress line -->
       <div
         class="position-absolute"
-        :style="{ width: progressPercentage + '%', height: '4px', backgroundColor: 'var(--ss-accent, #e53935)', top: '20px', left: 0, zIndex: 0, transition: 'width 0.5s ease' }"
+        :style="{ width: progressPercentage + '%', height: '4px', backgroundColor: 'var(--ss-accent, #e53935)', top: '40px', left: 0, zIndex: 0, transition: 'width 0.5s ease' }"
       ></div>
 
       <!-- Steps -->
