@@ -19,9 +19,8 @@ const trangThaiMap = {
   2: { label: "Chờ giao hàng", bg: "#eff6ff", color: "#1d4ed8" },
   3: { label: "Đang vận chuyển", bg: "#fef3c7", color: "#92400e" },
   4: { label: "Đã giao hàng", bg: "#ecfeff", color: "#0e7490" },
-  5: { label: "Đã thanh toán", bg: "#f0fdf4", color: "#166534" },
-  6: { label: "Hoàn thành", bg: "#dcfce7", color: "#15803d" },
-  7: { label: "Giao thất bại", bg: "#fee2e2", color: "#b91c1c" },
+  5: { label: "Hoàn thành", bg: "#dcfce7", color: "#15803d" },
+
 };
 
 const chartData = computed(() => {

@@ -14,6 +14,7 @@ import java.math.BigDecimal;
 public class VariantClientDTO {
     private Integer id;
     private String tenMauSac;
+    private String maMauHex;
     private String tenKichThuoc;
     private String tenLoaiSan;
     private String tenFormChan;

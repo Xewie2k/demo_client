@@ -5,7 +5,7 @@
       <div class="container">
         <nav aria-label="breadcrumb">
           <ol class="breadcrumb mb-0 small">
-            <li class="breadcrumb-item"><router-link to="/client" class="text-decoration-none">Trang chủ</router-link></li>
+            <li class="breadcrumb-item"><router-link to="/client" class="text-decoration-none" style="color: var(--ss-accent);">Trang chủ</router-link></li>
             <li class="breadcrumb-item active">Liên hệ</li>
           </ol>
         </nav>

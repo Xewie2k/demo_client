@@ -33,7 +33,7 @@ public class HoaDonChiTietResponse {
     private String maSanPham;
     private String tenSanPham;
 
-    // thông tin biến thể
+    // ✅ thêm thông tin biến thể để FE hiển thị rõ
     private String mauSac;
     private String kichCo;
     private String loaiSan;

@@ -114,10 +114,10 @@
               <tr>
                 <th>STT</th>
                 <th>Mã hóa đơn</th>
-                <th>Tên khách hàng</th>
                 <th>Tên nhân viên</th>
-                <th class="text-end">Tổng tiền</th>
+                <th>Tên khách hàng</th>
                 <th>Ngày tạo</th>
+                <th class="text-end">Tổng tiền</th>
                 <th>Loại đơn</th>
                 <th>SĐT khách hàng</th>
                 <th>Trạng thái</th>
@@ -139,20 +139,24 @@
 
                 <td class="ss-td-code">{{ hd.maHD }}</td>
 
+                <td class="ss-td-text">{{ hd.nhanVien }}</td>
+
                 <td class="ss-td-text">{{ hd.khachHang }}</td>
 
-                <td class="ss-td-text">{{ hd.nhanVien }}</td>
+                <td class="ss-td-date">{{ hd.ngayTao }}</td>
 
                 <td class="text-end ss-td-money">
                   {{ hd.tongTien.toLocaleString("vi-VN") }}đ
                 </td>
 
-                <td class="ss-td-date">{{ hd.ngayTao }}</td>
-
                 <td>
                   <span
                     class="ss-pill ss-pill-type"
-                    :class="hd.loaiDon === 'Online' ? 'ss-pill-online' : 'ss-pill-store'"
+                    :class="
+                      hd.loaiDon === 'Online'
+                        ? 'ss-pill-online'
+                        : 'ss-pill-store'
+                    "
                   >
                     {{ hd.loaiDon }}
                   </span>
@@ -205,7 +209,7 @@ const API_HD = "http://localhost:8080/api/admin/hoa-don";
 const hoaDonList = ref([]);
 const filteredHoaDon = ref([]);
 
-/* ================== FILTER =================aneti================== */
+/* ================== FILTER ================= */
 const filterMaHD = ref("");
 const filterLoaiDon = ref("");
 const tabTrangThai = ref("ALL");
@@ -226,9 +230,7 @@ const TRANG_THAI = {
   CHO_GIAO_HANG: 2,
   DANG_VAN_CHUYEN: 3,
   DA_GIAO_HANG: 4,
-  DA_THANH_TOAN: 5,
-  HOAN_THANH: 6,
-  GIAO_THAT_BAI: 7,
+  HOAN_THANH: 5,
 };
 
 /* Tabs (đúng UI anh gửi) */
@@ -238,9 +240,7 @@ const tabList = [
   { label: "Chờ giao hàng", value: TRANG_THAI.CHO_GIAO_HANG },
   { label: "Vận chuyển", value: TRANG_THAI.DANG_VAN_CHUYEN },
   { label: "Đã giao hàng", value: TRANG_THAI.DA_GIAO_HANG },
-  { label: "Đã thanh toán", value: TRANG_THAI.DA_THANH_TOAN },
   { label: "Hoàn thành", value: TRANG_THAI.HOAN_THANH },
-  { label: "Hủy", value: TRANG_THAI.GIAO_THAT_BAI },
 ];
 
 /* Badge trạng thái (list) */
@@ -249,9 +249,7 @@ const trangThaiMap = {
   2: { label: "Chờ giao hàng", bg: "#eff6ff", color: "#1d4ed8" },
   3: { label: "Đang vận chuyển", bg: "#fef3c7", color: "#92400e" },
   4: { label: "Đã giao hàng", bg: "#ecfeff", color: "#0e7490" },
-  5: { label: "Đã thanh toán", bg: "#f0fdf4", color: "#166534" },
-  6: { label: "Hoàn thành", bg: "#dcfce7", color: "#15803d" },
-  7: { label: "Giao thất bại", bg: "#fee2e2", color: "#b91c1c" },
+  5: { label: "Hoàn thành", bg: "#dcfce7", color: "#15803d" },
 };
 
 const hienTrangThai = (code) => {
@@ -279,21 +277,31 @@ const loadHoaDon = async () => {
   const res = await axios.get(API_HD);
 
   hoaDonList.value = res.data
-    .map((hd) => ({
-      id: hd.id,
-      maHD: hd.maHoaDon,
-      khachHang: hd.tenKhachHang ?? "",
-      sdtKhachHang: hd.soDienThoaiKhachHang ?? "",
-      nhanVien: hd.tenNhanVien ?? "",
-      tongTien: hd.tongTien ?? 0,
-      ngayTao: hd.ngayTao?.substring(0, 10) ?? "",
-      loaiDon: hd.loaiDon ? "Online" : "Tại cửa hàng",
-      trangThaiHienTai: Number(hd.trangThaiHienTai),
-    }))
-    .sort((a, b) => new Date(a.ngayTao) - new Date(b.ngayTao));
+    .map((hd) => {
+      const tongHang = Number(hd.tongTien ?? 0);
+      const giamGia = Number(hd.tongTienGiam ?? 0);
+      const phiShip = Number(hd.phiVanChuyen ?? 0);
+
+      const tongThanhToan = tongHang - giamGia + phiShip;
+
+      return {
+        id: hd.id,
+        maHD: hd.maHoaDon,
+        khachHang: hd.tenKhachHang ?? "",
+        sdtKhachHang: hd.soDienThoaiKhachHang ?? "",
+        nhanVien: hd.tenNhanVien ?? "",
+        tongTien: tongThanhToan, // ✅ công thức chuẩn
+        ngayTao: hd.ngayTao?.substring(0, 10) ?? "",
+        loaiDon: hd.loaiDon ? "Online" : "Tại cửa hàng",
+        trangThaiHienTai: Number(hd.trangThaiHienTai),
+      };
+    })
+    .sort((a, b) => new Date(b.ngayTao) - new Date(a.ngayTao));
 
   filteredHoaDon.value = [...hoaDonList.value];
 };
+
+
 
 /* ================== FILTER CORE ================== */
 const apDungBoLoc = () => {
@@ -468,7 +476,7 @@ onMounted(async () => {
 .ss-btn-lite {
   background: #f3f4f6 !important;
   color: rgba(17, 24, 39, 0.88) !important;
-  border: 1px solid rgba(17, 24, 39, 0.10) !important;
+  border: 1px solid rgba(17, 24, 39, 0.1) !important;
 }
 .ss-btn-lite:hover {
   background: #eef0f3 !important;
@@ -558,11 +566,26 @@ onMounted(async () => {
 }
 
 /* Cell styles (không in đậm) */
-.ss-td-index { color: rgba(17, 24, 39, 0.65); font-weight: 400; }
-.ss-td-code  { color: rgba(17, 24, 39, 0.9);  font-weight: 400; }
-.ss-td-date  { color: rgba(17, 24, 39, 0.7);  font-weight: 400; }
-.ss-td-text  { color: rgba(17, 24, 39, 0.84); font-weight: 400; }
-.ss-td-money { color: rgba(17, 24, 39, 0.88); font-weight: 400; }
+.ss-td-index {
+  color: rgba(17, 24, 39, 0.65);
+  font-weight: 400;
+}
+.ss-td-code {
+  color: rgba(17, 24, 39, 0.9);
+  font-weight: 400;
+}
+.ss-td-date {
+  color: rgba(17, 24, 39, 0.7);
+  font-weight: 400;
+}
+.ss-td-text {
+  color: rgba(17, 24, 39, 0.84);
+  font-weight: 400;
+}
+.ss-td-money {
+  color: rgba(17, 24, 39, 0.88);
+  font-weight: 400;
+}
 
 /* Pills (không in đậm) */
 .ss-pill {
@@ -577,7 +600,9 @@ onMounted(async () => {
   letter-spacing: 0.1px;
   white-space: nowrap;
 }
-.ss-pill-status { min-width: 130px; }
+.ss-pill-status {
+  min-width: 130px;
+}
 .ss-pill-type {
   min-width: 110px;
   border: 1px solid rgba(17, 24, 39, 0.14);

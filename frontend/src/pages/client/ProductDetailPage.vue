@@ -5,7 +5,7 @@
       <div class="container">
         <nav aria-label="breadcrumb">
           <ol class="breadcrumb mb-0 small">
-            <li class="breadcrumb-item"><router-link to="/client" class="text-decoration-none">Trang chủ</router-link></li>
+            <li class="breadcrumb-item"><router-link to="/client" class="text-decoration-none" style="color: var(--ss-accent);">Trang chủ</router-link></li>
             <li class="breadcrumb-item"><router-link to="/client/products" class="text-decoration-none">Sản phẩm</router-link></li>
             <li class="breadcrumb-item active" v-if="product">{{ product.tenSanPham }}</li>
           </ol>
@@ -38,7 +38,7 @@
                 >
               </div>
               <!-- Discount badge on main image -->
-              <span v-if="displayDiscount" class="position-absolute top-0 end-0 m-3 badge bg-danger rounded-pill px-3 py-2 fs-6 shadow">
+              <span v-if="displayDiscount" class="position-absolute top-0 end-0 m-3 badge fs-6 shadow" :class="discountBadgeClass(displayDiscount)" :style="discountBadgeStyle(displayDiscount)">
                 -{{ displayDiscount }}%
               </span>
             </div>
@@ -80,7 +80,7 @@
                 <template v-if="selectedVariant.phanTramGiam">
                   <div class="d-flex align-items-center gap-3">
                     <span class="fs-4 fw-bold text-danger">{{ formatPrice(selectedVariant.giaSauGiam) }}</span>
-                    <span class="badge bg-danger rounded-pill px-2 py-1">-{{ selectedVariant.phanTramGiam }}%</span>
+                    <span class="badge" :class="discountBadgeClass(selectedVariant.phanTramGiam)" :style="discountBadgeStyle(selectedVariant.phanTramGiam)">-{{ selectedVariant.phanTramGiam }}%</span>
                   </div>
                   <div class="text-muted text-decoration-line-through mt-1">{{ formatPrice(selectedVariant.giaGoc || selectedVariant.giaBan) }}</div>
                 </template>
@@ -90,7 +90,7 @@
                 <template v-if="product.phanTramGiam">
                   <div class="d-flex align-items-center gap-3">
                     <span class="fs-4 fw-bold text-danger">{{ formatPrice(product.giaSauGiamThapNhat) }}</span>
-                    <span class="badge bg-danger rounded-pill px-2 py-1">-{{ product.phanTramGiam }}%</span>
+                    <span class="badge" :class="discountBadgeClass(product.phanTramGiam)" :style="discountBadgeStyle(product.phanTramGiam)">-{{ product.phanTramGiam }}%</span>
                   </div>
                   <div class="text-muted text-decoration-line-through mt-1">{{ formatPrice(product.giaGocThapNhat) }}</div>
                 </template>
@@ -326,6 +326,14 @@ const displayDiscount = computed(() => {
   if (product.value?.phanTramGiam) return product.value.phanTramGiam;
   return null;
 });
+
+const discountBadgeClass = (pct) => {
+  if (!pct) return '';
+  if (pct > 70) return 'text-white rounded-pill px-2 py-1';
+  if (pct >= 50) return 'bg-warning text-dark rounded-pill px-2 py-1';
+  return 'bg-danger text-white rounded-pill px-2 py-1';
+};
+const discountBadgeStyle = (pct) => pct > 70 ? 'background-color:#FF6B00;font-size:inherit;' : '';
 
 const handleAddToCart = () => {
   if (!selectedVariant.value) return;

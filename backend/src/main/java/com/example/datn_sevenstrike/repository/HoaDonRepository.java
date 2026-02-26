@@ -17,6 +17,8 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, Integer> {
     Page<HoaDon> findAllByXoaMemFalse(Pageable pageable);
 
     Optional<HoaDon> findByIdAndXoaMemFalse(Integer id);
+
+    Optional<HoaDon> findByMaHoaDonAndXoaMemFalse(String maHoaDon);
     @Query("""
         SELECT new com.example.datn_sevenstrike.dto.response.HoaDonResponse(
             hd.id,

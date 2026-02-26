@@ -5,10 +5,14 @@
     <div class="ss-head">
       <div class="ss-head-left">
         <div class="ss-title">Bán hàng</div>
+        <div class="ss-subtitle">
+          Người bán:
+          <span class="ss-seller-name">{{ nguoiBanTen || "—" }}</span>
+        </div>
       </div>
 
       <div class="ss-head-right">
-        <button class="btn ss-btn-primary" type="button" @click="createOrderTab">
+        <button class="btn ss-btn-primary" type="button" @click="createOrderTab" :disabled="submitting">
           <span class="material-icons-outlined" style="font-size: 18px">add</span>
           Tạo đơn hàng
         </button>
@@ -28,7 +32,6 @@
     <div v-if="!hasOrders" class="ss-card ss-border ss-card-main">
       <div class="ss-empty-wrap">
         <div class="ss-empty-icon" aria-hidden="true">
-          <!-- Icon giống mẫu (túi/hộp màu xám) -->
           <svg width="54" height="54" viewBox="0 0 64 64">
             <path
               d="M18 22h28c2.2 0 4 1.8 4 4v22c0 4.4-3.6 8-8 8H22c-4.4 0-8-3.6-8-8V26c0-2.2 1.8-4 4-4z"
@@ -41,12 +44,7 @@
               stroke-width="6"
               stroke-linecap="round"
             />
-            <path
-              d="M26 28h12"
-              stroke="#e5e7eb"
-              stroke-width="4"
-              stroke-linecap="round"
-            />
+            <path d="M26 28h12" stroke="#e5e7eb" stroke-width="4" stroke-linecap="round" />
           </svg>
         </div>
         <div class="ss-empty-text">Chưa có đơn hàng</div>
@@ -66,7 +64,13 @@
             type="button"
             @click="switchTab(idx)"
           >
-            {{ t.name }}
+            <span class="ss-tab-name">
+              {{ t.name }}
+              <span v-if="tabItemCount(t) > 0" class="ss-tab-badge" :title="`Đơn có ${tabItemCount(t)} sản phẩm`">
+                {{ tabItemCount(t) }}
+              </span>
+            </span>
+
             <span class="ss-tab-x" title="Đóng" @click.stop="closeTab(idx)">×</span>
           </button>
         </div>
@@ -90,12 +94,11 @@
 
         <!-- Cart -->
         <div class="ss-cart-box ss-border">
-          <!-- EMPTY CART: đúng mẫu "No Data Found" -->
           <div v-if="cartItems.length === 0" class="ss-empty-wrap ss-empty-cart">
             <div class="ss-empty-icon" aria-hidden="true">
               <svg width="54" height="54" viewBox="0 0 64 64">
                 <path
-                  d="M18 22h28c2.2 0 4 1.8 4 4v22c0 4.4-3.6 8-8 8H22c-4.4 0-8-3.6-8-8V26c0-2.2 1.8-4 4-4z"
+                  d="M18 22h28c2.2 0 4 1.8 4 4v22c0 4.4-3.6-8-8-8H22c-4.4 0-8-3.6-8-8V26c0-2.2 1.8-4 4-4z"
                   fill="#d1d5db"
                 />
                 <path
@@ -105,22 +108,17 @@
                   stroke-width="6"
                   stroke-linecap="round"
                 />
-                <path
-                  d="M26 28h12"
-                  stroke="#e5e7eb"
-                  stroke-width="4"
-                  stroke-linecap="round"
-                />
+                <path d="M26 28h12" stroke="#e5e7eb" stroke-width="4" stroke-linecap="round" />
               </svg>
             </div>
-            <div class="ss-empty-text ss-empty-eng">No Data Found</div>
+            <div class="ss-empty-text ss-empty-eng">Không có dữ liệu</div>
           </div>
 
           <div v-else class="ss-cart-list">
             <div v-for="it in cartItems" :key="it.id" class="ss-cart-item">
               <input class="ss-cart-check" type="checkbox" v-model="it.checked" />
 
-              <div class="ss-cart-thumb">
+              <div class="ss-cart-thumb thumb-wrap">
                 <img
                   v-if="resolveImage(it.anhUrl)"
                   :src="resolveImage(it.anhUrl)"
@@ -129,6 +127,14 @@
                   @error="onImgErr"
                 />
                 <div v-else class="ss-thumb-ph"></div>
+
+                <span
+                  v-if="getPhanTramGiamDisplay(it) > 0"
+                  class="discount-badge sm"
+                  :title="getGiamGiaTitle(it)"
+                >
+                  -{{ getPhanTramGiamDisplay(it) }}%
+                </span>
               </div>
 
               <div class="ss-cart-info">
@@ -143,14 +149,31 @@
               </div>
 
               <div class="ss-cart-price">
-                <div v-if="showGiaGoc(it)" class="ss-price-old">{{ formatMoney(it.giaBan) }}</div>
+                <div v-if="showGiaGoc(it)" class="ss-price-old">{{ formatMoney(getGiaGoc(it)) }}</div>
                 <div class="ss-price-now">{{ formatMoney(getGiaThucTe(it)) }}</div>
               </div>
 
               <div class="ss-cart-qty">
-                <button class="ss-qty-btn" type="button" @click="decQty(it)" :disabled="it.qty <= 1">-</button>
-                <div class="ss-qty-num">{{ it.qty }}</div>
-                <button class="ss-qty-btn" type="button" @click="incQty(it)" :disabled="it.qty >= Number(it.soLuong || 0)">+</button>
+                <button class="ss-qty-btn" type="button" @click="decQty(it)" :disabled="Number(it.qty || 1) <= 1">-</button>
+
+                <input
+                  class="ss-qty-input"
+                  type="text"
+                  :value="String(it.qty || 1)"
+                  :title="`Tối đa: ${getMaxQtyForItem(it)}`"
+                  @input="onQtyInput(it, $event)"
+                  @blur="onQtyBlur(it)"
+                />
+
+                <button
+                  class="ss-qty-btn"
+                  type="button"
+                  @click="incQty(it)"
+                  :disabled="Number(it.qty || 1) >= getMaxQtyForItem(it)"
+                  :title="Number(it.qty || 1) >= getMaxQtyForItem(it) ? 'Đã đạt tồn tối đa' : 'Tăng số lượng'"
+                >
+                  +
+                </button>
               </div>
 
               <button class="ss-trash" type="button" title="Xóa" @click="removeItem(it.id)">
@@ -177,7 +200,6 @@
                   Chọn khách hàng
                 </button>
 
-                <!-- chỉ bật khi: giao hàng + đã có KH + có >1 địa chỉ -->
                 <button
                   class="btn ss-btn-outline"
                   type="button"
@@ -228,7 +250,7 @@
                   </div>
                 </template>
 
-                <!-- KHÁCH VÃNG LAI (không tạo tài khoản) -->
+                <!-- KHÁCH VÃNG LAI -->
                 <template v-else>
                   <div class="ss-guest-hint">Khách vãng lai (không cần tạo tài khoản)</div>
 
@@ -240,7 +262,12 @@
 
                     <div class="ss-field">
                       <div class="ss-filter-label">Số điện thoại</div>
-                      <input v-model.trim="guest.soDienThoai" class="form-control ss-input" placeholder="Nhập số điện thoại..." />
+                      <input
+                        v-model="guest.soDienThoai"
+                        class="form-control ss-input"
+                        placeholder="Nhập số điện thoại..."
+                        @input="onGuestPhoneInput"
+                      />
                     </div>
 
                     <div class="ss-field ss-guest-full">
@@ -248,7 +275,6 @@
                       <input v-model.trim="guest.diaChiCuThe" class="form-control ss-input" placeholder="Số nhà, ngõ, đường..." />
                     </div>
 
-                    <!-- ComboBox kiểu nhập + gợi ý -->
                     <div class="ss-field">
                       <div class="ss-filter-label">Tỉnh/Thành phố</div>
                       <input
@@ -327,7 +353,6 @@
                 </div>
               </div>
 
-              <!-- Hint voucher -->
               <div v-if="effectiveVoucher && tongTienHang > 0" class="ss-voucher-auto">
                 <div class="ss-voucher-auto-line">
                   Áp dụng thành công phiếu giảm giá
@@ -405,11 +430,7 @@
           <div class="ss-filter">
             <div class="ss-field grow">
               <div class="ss-filter-label">Tìm kiếm</div>
-              <input
-                v-model.trim="ctspFilter.keyword"
-                class="form-control ss-input"
-                placeholder="Tìm mã, tên, màu, kích cỡ..."
-              />
+              <input v-model.trim="ctspFilter.keyword" class="form-control ss-input" placeholder="Tìm mã, tên, màu, kích cỡ..." />
             </div>
 
             <div class="ss-field">
@@ -460,32 +481,51 @@
                   <td class="col-stt">{{ (ctspPage - 1) * ctspPageSize + idx + 1 }}</td>
                   <td class="col-code">{{ row.maCtsp }}</td>
                   <td class="col-img">
-                    <div class="ss-thumb">
-                      <img
-                        v-if="resolveImage(row.anhUrl)"
-                        :src="resolveImage(row.anhUrl)"
-                        class="ss-thumb-img"
-                        alt=""
-                        @error="onImgErr"
-                      />
+                    <div class="ss-thumb thumb-wrap">
+                      <img v-if="resolveImage(row.anhUrl)" :src="resolveImage(row.anhUrl)" class="ss-thumb-img" alt="" @error="onImgErr" />
                       <div v-else class="ss-thumb-ph"></div>
+
+                      <span
+                        v-if="getPhanTramGiamDisplay(row) > 0"
+                        class="discount-badge sm"
+                        :title="getGiamGiaTitle(row)"
+                      >
+                        -{{ getPhanTramGiamDisplay(row) }}%
+                      </span>
                     </div>
                   </td>
                   <td>{{ row.tenSanPham }}</td>
                   <td>{{ row.mauSac }}</td>
                   <td>{{ row.kichCo }}</td>
-                  <td class="col-qty">{{ row.soLuong }}</td>
-                  <td class="col-price">{{ formatMoney(row.giaBan) }}</td>
+
+                  <td class="col-qty">{{ row.__available }}</td>
+
+                  <td class="col-price">
+                    <div v-if="showGiaGoc(row)" class="ss-price-old">{{ formatMoney(getGiaGoc(row)) }}</div>
+                    <div class="ss-price-now">{{ formatMoney(getGiaThucTe(row)) }}</div>
+                  </td>
+
                   <td class="col-action">
-                    <button
-                      class="btn ss-btn-outline ss-btn-mini"
-                      type="button"
-                      @click="pickCtsp(row)"
-                      :disabled="Number(row.soLuong || 0) <= 0"
-                      :title="Number(row.soLuong || 0) <= 0 ? 'Hết hàng' : 'Chọn'"
-                    >
-                      Chọn
-                    </button>
+                    <div class="ss-pick-wrap">
+                      <input
+                        class="form-control ss-input ss-pick-qty"
+                        type="text"
+                        :value="String(ctspPickQty[row.id] ?? 1)"
+                        :disabled="Number(row.__available || 0) <= 0"
+                        @input="onCtspPickQtyInput(row, $event)"
+                        :title="`Tối đa có thể thêm: ${Number(row.__available || 0)}`"
+                      />
+
+                      <button
+                        class="btn ss-btn-outline ss-btn-mini"
+                        type="button"
+                        @click="pickCtsp(row, ctspPickQty[row.id] ?? 1)"
+                        :disabled="Number(row.__available || 0) <= 0"
+                        :title="Number(row.__available || 0) <= 0 ? 'Hết hàng' : 'Thêm vào đơn'"
+                      >
+                        Thêm
+                      </button>
+                    </div>
                   </td>
                 </tr>
 
@@ -500,15 +540,10 @@
             <div class="ss-pageinfo">Trang {{ ctspPage }} / {{ ctspTotalPages }} · {{ filteredCtsp.length }} biến thể</div>
             <div class="ss-pagebtns">
               <button class="btn ss-btn-outline ss-btn-mini" type="button" :disabled="ctspPage <= 1" @click="ctspPage--">
-                Prev
+                Trước
               </button>
-              <button
-                class="btn ss-btn-outline ss-btn-mini"
-                type="button"
-                :disabled="ctspPage >= ctspTotalPages"
-                @click="ctspPage++"
-              >
-                Next
+              <button class="btn ss-btn-outline ss-btn-mini" type="button" :disabled="ctspPage >= ctspTotalPages" @click="ctspPage++">
+                Sau
               </button>
             </div>
           </div>
@@ -557,14 +592,8 @@
 
         <div class="ss-modal-body ss-kh-body">
           <div class="ss-kh-top">
-            <input
-              v-model.trim="khFilter.keyword"
-              class="form-control ss-kh-search"
-              placeholder="Tìm theo tên, SĐT, địa chỉ..."
-            />
-            <button class="btn ss-kh-reload" type="button" @click="reloadKh">
-              Tải lại
-            </button>
+            <input v-model.trim="khFilter.keyword" class="form-control ss-kh-search" placeholder="Tìm theo tên, SĐT, địa chỉ..." />
+            <button class="btn ss-kh-reload" type="button" @click="reloadKh">Tải lại</button>
           </div>
 
           <div v-if="khErr" class="ss-api-hint">{{ khErr }}</div>
@@ -586,9 +615,7 @@
                   <td class="kh-col-stt">{{ idx + 1 }}</td>
                   <td class="kh-col-name">{{ getKhName(k) }}</td>
                   <td class="kh-col-phone">{{ getKhPhone(k) }}</td>
-                  <td class="kh-col-addr">
-                    {{ khAddrCache[k.id] || renderKhDiaChi(k) || "—" }}
-                  </td>
+                  <td class="kh-col-addr">{{ khAddrCache[k.id] || renderKhDiaChi(k) || "—" }}</td>
                   <td class="kh-col-act">
                     <button class="btn ss-kh-pick" type="button" @click="pickKh(k)">Chọn</button>
                   </td>
@@ -645,7 +672,7 @@
       </div>
     </div>
 
-    <!-- ========================= MODAL: THANH TOÁN (gọn + có màu) ========================= -->
+    <!-- ========================= MODAL: THANH TOÁN ========================= -->
     <div v-if="showPayModal" class="ss-modal-backdrop">
       <div class="ss-modal ss-modal-pay">
         <div class="ss-modal-head ss-pay-head">
@@ -671,13 +698,7 @@
 
             <div class="ss-field">
               <div class="ss-label">Khách thanh toán</div>
-              <input
-                :value="payInputText"
-                type="text"
-                class="form-control ss-input"
-                placeholder="Nhập số tiền..."
-                @input="onPayInput"
-              />
+              <input :value="payInputText" type="text" class="form-control ss-input" placeholder="Nhập số tiền..." @input="onPayInput" />
             </div>
 
             <div class="ss-paybox-row">
@@ -705,6 +726,11 @@ export default {
   name: "SalesPage",
   data() {
     return {
+      maxOrderTabs: 10,
+
+      // người bán
+      nguoiBan: null,
+
       // Tabs
       tabs: [],
       activeTab: 0,
@@ -715,7 +741,7 @@ export default {
       // cart
       cartItems: [],
 
-      // Guest (khách vãng lai)
+      // Guest
       guest: {
         tenKhachHang: "",
         soDienThoai: "",
@@ -725,12 +751,11 @@ export default {
         xaPhuong: "",
       },
 
-      // gợi ý combobox (nếu bạn có file/API tỉnh/huyện/xã thì nhét vào đây)
       tinhOptions: [],
       huyenOptions: [],
       xaOptions: [],
 
-      // Phí vận chuyển (đ)
+      // Phí vận chuyển
       phiVanChuyen: 0,
       phiVanChuyenText: "0",
 
@@ -747,7 +772,13 @@ export default {
       ctspPage: 1,
       ctspPageSize: 5,
 
-      // QR modal
+      // map tồn gốc
+      ctspBaseQtyMap: {},
+
+      // input nhập nhanh số lượng khi thêm ở modal
+      ctspPickQty: {},
+
+      // QR
       showQrModal: false,
       qr: null,
       qrError: "",
@@ -798,6 +829,11 @@ export default {
   },
 
   computed: {
+    nguoiBanTen() {
+      const u = this.nguoiBan || {};
+      return u.hoTen || u.tenNhanVien || u.ten || u.username || "";
+    },
+
     hasOrders() {
       return Array.isArray(this.tabs) && this.tabs.length > 0;
     },
@@ -806,8 +842,27 @@ export default {
       return this.voucherManual || this.autoVoucher;
     },
 
-    // Giá thực tế (đợt giảm giá / sale campaign)
-    // Ưu tiên: giaSauGiam/giaKhuyenMai -> theo % -> giaBan
+    reservedByCtsp() {
+      const map = {};
+      const snapTabs = Array.isArray(this.tabs)
+        ? this.tabs.map((t, i) => {
+            if (i === this.activeTab) return { ...t, cartItems: this.cartItems };
+            return t;
+          })
+        : [];
+
+      for (const t of snapTabs) {
+        const items = Array.isArray(t?.cartItems) ? t.cartItems : [];
+        for (const it of items) {
+          const id = it?.id;
+          if (id == null) continue;
+          const qty = Math.max(0, Number(it?.qty || 0));
+          map[id] = (map[id] || 0) + qty;
+        }
+      }
+      return map;
+    },
+
     getTongTienHangCore() {
       let s = 0;
       for (const it of this.cartItems) {
@@ -827,7 +882,6 @@ export default {
       return Number.isFinite(n) && n >= 0 ? n : 0;
     },
 
-    // ✅ giảm theo voucher (manual ưu tiên)
     giamGia() {
       const v = this.effectiveVoucher;
       const tong = Number(this.tongTienHang || 0);
@@ -847,13 +901,13 @@ export default {
       if (start && today < start) return 0;
       if (end && today > end) return 0;
 
-      // loaiPhieuGiamGia: false=%, true=tiền
-      const isMoney = v.loaiPhieuGiamGia === true;
+      // true = giảm %, false = giảm tiền
+      const isPercent = v.loaiPhieuGiamGia === true;
       const giaTri = Number(v.giaTriGiamGia ?? v.giaTriGiam ?? 0);
 
       let discount = 0;
 
-      if (!isMoney) {
+      if (isPercent) {
         const pct = Math.max(0, Math.min(100, giaTri));
         discount = Math.round((tong * pct) / 100);
 
@@ -868,7 +922,6 @@ export default {
     },
 
     tongPhaiTra() {
-      // Tổng số tiền = tiền hàng - giảm + phí vận chuyển (chỉ giao hàng)
       const ship = this.isCounter ? 0 : this.phiVanChuyenNum;
       return Math.max(0, this.tongTienHang - this.giamGia + ship);
     },
@@ -882,26 +935,35 @@ export default {
       if (this.cartItems.length === 0) return false;
       if (this.submitting) return false;
 
-      // OFF = giao hàng
+      for (const it of this.cartItems) {
+        const qty = Number(it?.qty || 0);
+        if (!Number.isFinite(qty) || qty < 1) return false;
+        const max = this.getMaxQtyForItem(it);
+        if (qty > max) return false;
+      }
+
+      if (this.isCounter && this.payMethod === "TIEN_MAT") {
+        if (Number(this.khachThanhToan || 0) < Number(this.tongPhaiTra || 0)) return false;
+      }
+
       if (!this.isCounter) {
-        // có KH => cần địa chỉ
         if (this.selectedKh) {
           if (!this.selectedDiaChi) return false;
           return true;
         }
 
-        // khách vãng lai => cần đủ thông tin cơ bản
-        const sdt = (this.guest.soDienThoai || "").trim();
+        const sdt = String(this.guest.soDienThoai || "").replace(/\D/g, "");
         const dc = (this.guest.diaChiCuThe || "").trim();
         const tinh = (this.guest.tinhThanh || "").trim();
         const huyen = (this.guest.huyenQuan || "").trim();
         const xa = (this.guest.xaPhuong || "").trim();
-        if (!sdt || !dc || !tinh || !huyen || !xa) return false;
+
+        if (!/^\d{9,11}$/.test(sdt)) return false;
+        if (!dc || !tinh || !huyen || !xa) return false;
 
         return true;
       }
 
-      // ON = tại quầy => chỉ cần có sản phẩm
       return true;
     },
 
@@ -911,14 +973,19 @@ export default {
       const kc = this.ctspFilter.kichCo || "";
       const sp = this.ctspFilter.tenSanPham || "";
 
-      return this.ctspList.filter((x) => {
-        const s = `${x.maCtsp || ""} ${x.tenSanPham || ""} ${x.mauSac || ""} ${x.kichCo || ""}`.toLowerCase();
-        if (kw && !s.includes(kw)) return false;
-        if (ms && x.mauSac !== ms) return false;
-        if (kc && x.kichCo !== kc) return false;
-        if (sp && x.tenSanPham !== sp) return false;
-        return true;
-      });
+      return this.ctspList
+        .map((x) => ({
+          ...x,
+          __available: this.getAvailableQtyByCtspId(x.id),
+        }))
+        .filter((x) => {
+          const s = `${x.maCtsp || ""} ${x.tenSanPham || ""} ${x.mauSac || ""} ${x.kichCo || ""}`.toLowerCase();
+          if (kw && !s.includes(kw)) return false;
+          if (ms && x.mauSac !== ms) return false;
+          if (kc && x.kichCo !== kc) return false;
+          if (sp && x.tenSanPham !== sp) return false;
+          return true;
+        });
     },
 
     ctspTotalPages() {
@@ -962,9 +1029,10 @@ export default {
     voucherValueText() {
       const v = this.effectiveVoucher;
       if (!v) return "";
-      const isMoney = v.loaiPhieuGiamGia === true;
+
+      const isPercent = v.loaiPhieuGiamGia === true;
       const giaTri = Number(v.giaTriGiamGia ?? v.giaTriGiam ?? 0);
-      if (!isMoney) return `${Math.max(0, Math.min(100, giaTri))}%`;
+      if (isPercent) return `${Math.max(0, Math.min(100, giaTri))}%`;
       return this.formatMoney(giaTri);
     },
   },
@@ -994,23 +1062,18 @@ export default {
       this.persistActiveTab();
     },
 
-    // ✅ SỬA: không reset địa chỉ đã chọn khi chuyển tab / đổi giao hàng
     isCounter(val) {
-      // ON = tại quầy
       if (val) {
         this.selectedDiaChi = null;
         this.diaChiList = [];
         this.phiVanChuyen = 0;
         this.phiVanChuyenText = "0";
       } else {
-        // OFF = giao hàng
         const khId = this.selectedKh?.id;
         if (khId) {
-          // Nếu chưa có danh sách địa chỉ thì mới gọi API
           if (!Array.isArray(this.diaChiList) || this.diaChiList.length === 0) {
             this.loadDiaChiAndPickDefault(khId);
           } else if (!this.selectedDiaChi) {
-            // Có list rồi nhưng chưa chọn => tự pick mặc định
             let def = this.diaChiList.find((x) => x.macDinh === true || x.macDinh === 1);
             if (!def && this.diaChiList.length > 0) def = this.diaChiList[0];
             this.selectedDiaChi = def || null;
@@ -1021,7 +1084,11 @@ export default {
     },
   },
 
-  mounted() {
+  async mounted() {
+    this.nguoiBan = this.getNguoiBanDangNhap();
+
+    this.restoreCtspBaseQtyMap();
+
     const savedTabs = this.safeParse(localStorage.getItem("ss_pos_tabs") || "[]", []);
     if (Array.isArray(savedTabs) && savedTabs.length > 0) {
       this.tabs = savedTabs;
@@ -1029,15 +1096,75 @@ export default {
       if (this.activeTab < 0 || this.activeTab >= this.tabs.length) this.activeTab = 0;
       this.applyTabState(this.tabs[this.activeTab]);
     } else {
-      // ✅ đúng mẫu: mở trang lên KHÔNG tự tạo đơn
       this.resetPageState();
       this.persistTabs();
     }
 
+    await this.ensureBaseQtyIfCartHasItems();
+    await this.capNhatDotGiamGiaChoGioHang();
     this.scheduleAutoVoucher();
   },
 
   methods: {
+    // ================== base qty persist ==================
+    baseQtyKey() {
+      return "ss_pos_ctsp_base_qty_map";
+    },
+
+    restoreCtspBaseQtyMap() {
+      const raw = localStorage.getItem(this.baseQtyKey());
+      const map = this.safeParse(raw || "{}", {});
+      this.ctspBaseQtyMap = map && typeof map === "object" ? map : {};
+    },
+
+    persistCtspBaseQtyMap() {
+      try {
+        localStorage.setItem(this.baseQtyKey(), JSON.stringify(this.ctspBaseQtyMap || {}));
+      } catch (e) {}
+    },
+
+    async ensureBaseQtyIfCartHasItems() {
+      const hasCart = Array.isArray(this.cartItems) && this.cartItems.length > 0;
+      const mapSize =
+        this.ctspBaseQtyMap && typeof this.ctspBaseQtyMap === "object"
+          ? Object.keys(this.ctspBaseQtyMap).length
+          : 0;
+
+      if (!hasCart) return;
+
+      // chỉ cần load CTSP một lần để có tồn + đợt giảm giá (baseQtyMap có thể trống)
+      if (mapSize > 0 && Array.isArray(this.ctspList) && this.ctspList.length > 0) return;
+
+      try {
+        await this.loadCtspForPos();
+      } catch (e) {}
+    },
+
+    // ================== login user ==================
+    getNguoiBanDangNhap() {
+      const tryParse = (raw) => this.safeParse(raw || "null", null);
+      const prefer = tryParse(localStorage.getItem("ss_nguoi_ban"));
+      if (prefer) return prefer;
+
+      const u1 = tryParse(localStorage.getItem("user"));
+      if (u1) return this.normalizeNguoiBan(u1);
+
+      const u2 = tryParse(sessionStorage.getItem("ss_nguoi_ban"));
+      if (u2) return u2;
+
+      const u3 = tryParse(sessionStorage.getItem("user"));
+      if (u3) return this.normalizeNguoiBan(u3);
+
+      return null;
+    },
+
+    normalizeNguoiBan(u) {
+      if (!u || typeof u !== "object") return null;
+      const id = u.idNhanVien || u.nhanVienId || u.id || u.userId || u.nhanVien?.id || null;
+      const hoTen = u.hoTen || u.tenNhanVien || u.ten || u.fullName || u.name || u.username || "";
+      return { id, hoTen, role: u.role || u.quyen || null };
+    },
+
     // ================== toast ==================
     showToast(msg, type = "success") {
       if (this.toastTimer) clearTimeout(this.toastTimer);
@@ -1133,16 +1260,16 @@ export default {
       if (!t) return;
 
       t.isCounter = this.isCounter;
-      t.cartItems = this.cartItems;
+      t.cartItems = Array.isArray(this.cartItems) ? this.cartItems.map((x) => ({ ...x })) : [];
       t.selectedKh = this.selectedKh;
-      t.diaChiList = this.diaChiList;
+      t.diaChiList = Array.isArray(this.diaChiList) ? this.diaChiList.map((x) => ({ ...x })) : [];
       t.selectedDiaChi = this.selectedDiaChi;
       t.autoVoucher = this.autoVoucher;
       t.voucherManual = this.voucherManual;
       t.voucherCode = this.voucherCode;
       t.khachThanhToan = this.khachThanhToan;
       t.payMethod = this.payMethod;
-      t.guest = this.guest;
+      t.guest = { ...(this.guest || {}) };
       t.phiVanChuyen = this.phiVanChuyen;
       t.phiVanChuyenText = this.phiVanChuyenText;
 
@@ -1151,23 +1278,24 @@ export default {
 
     applyTabState(t) {
       this.isCounter = !!t.isCounter;
-      this.cartItems = Array.isArray(t.cartItems) ? t.cartItems : [];
+      this.cartItems = Array.isArray(t.cartItems) ? t.cartItems.map((x) => ({ ...x })) : [];
       this.selectedKh = t.selectedKh || null;
-      this.diaChiList = Array.isArray(t.diaChiList) ? t.diaChiList : [];
+      this.diaChiList = Array.isArray(t.diaChiList) ? t.diaChiList.map((x) => ({ ...x })) : [];
       this.selectedDiaChi = t.selectedDiaChi || null;
       this.autoVoucher = t.autoVoucher || null;
       this.voucherManual = t.voucherManual || null;
       this.voucherCode = t.voucherCode || "";
       this.khachThanhToan = Number(t.khachThanhToan || 0) || 0;
       this.payMethod = t.payMethod || "TIEN_MAT";
-      this.guest = t.guest || {
-        tenKhachHang: "",
-        soDienThoai: "",
-        diaChiCuThe: "",
-        tinhThanh: "",
-        huyenQuan: "",
-        xaPhuong: "",
-      };
+      this.guest =
+        t.guest || {
+          tenKhachHang: "",
+          soDienThoai: "",
+          diaChiCuThe: "",
+          tinhThanh: "",
+          huyenQuan: "",
+          xaPhuong: "",
+        };
       this.phiVanChuyen = Number(t.phiVanChuyen || 0) || 0;
       this.phiVanChuyenText = String(t.phiVanChuyenText || "0");
 
@@ -1178,17 +1306,30 @@ export default {
       }
     },
 
-    switchTab(idx) {
+    async switchTab(idx) {
       if (idx === this.activeTab) return;
       this.persistActiveTab();
       this.activeTab = idx;
       this.applyTabState(this.tabs[idx]);
       this.persistTabs();
+
+      await this.ensureBaseQtyIfCartHasItems();
+      await this.capNhatDotGiamGiaChoGioHang();
       this.scheduleAutoVoucher();
     },
 
     // ================== Tabs ==================
+    tabItemCount(t) {
+      const items = Array.isArray(t?.cartItems) ? t.cartItems : [];
+      return items.reduce((sum, it) => sum + Math.max(0, Number(it?.qty || 0)), 0);
+    },
+
     createOrderTab() {
+      if (this.tabs.length >= this.maxOrderTabs) {
+        this.showToast(`Chỉ được tạo tối đa ${this.maxOrderTabs} đơn để tránh spam.`, "error");
+        return;
+      }
+
       this.persistActiveTab();
 
       const n = this.tabs.length + 1;
@@ -1200,22 +1341,25 @@ export default {
       this.applyTabState(tab);
       this.persistTabs();
 
-      // ✅ toast theo mẫu
       this.showToast(`Đã tạo đơn hàng: HD-${hdCode}`, "success");
-
-      // ✅ tạo đơn xong vẫn No Data Found vì chưa có SP
       this.scheduleAutoVoucher();
     },
 
-    // ✅ SỬA: đóng tab không làm nhảy sai activeTab
     closeTab(idx) {
       this.persistActiveTab();
+
+      const tab = this.tabs[idx];
+      const hasItems = Array.isArray(tab?.cartItems) && tab.cartItems.length > 0;
+
+      if (hasItems) {
+        const ok = window.confirm("Đơn hàng đang có sản phẩm. Bạn có chắc muốn hủy đơn này không? (Hệ thống sẽ hoàn lại tồn kho)");
+        if (!ok) return;
+      }
 
       const wasActive = idx === this.activeTab;
 
       this.tabs.splice(idx, 1);
 
-      // reindex
       this.tabs = this.tabs.map((t, i) => ({
         ...t,
         orderNo: i + 1,
@@ -1223,17 +1367,14 @@ export default {
       }));
 
       if (this.tabs.length === 0) {
-        // ✅ đúng mẫu: không còn đơn => về "Chưa có đơn hàng"
         this.resetPageState();
         this.persistTabs();
         return;
       }
 
       if (wasActive) {
-        // đóng tab đang active => ưu tiên tab trước đó, nếu không có thì tab đầu
         this.activeTab = idx > 0 ? idx - 1 : 0;
       } else if (idx < this.activeTab) {
-        // đóng tab phía trước => activeTab dịch trái 1
         this.activeTab = Math.max(0, this.activeTab - 1);
       }
 
@@ -1242,6 +1383,39 @@ export default {
       this.applyTabState(this.tabs[this.activeTab]);
       this.persistTabs();
       this.scheduleAutoVoucher();
+    },
+
+    // ================== tồn khả dụng / validate qty ==================
+    getBaseQtyByCtspId(ctspId) {
+      const id = ctspId;
+      const base = Number(this.ctspBaseQtyMap?.[id] ?? 0);
+      return Number.isFinite(base) && base >= 0 ? base : 0;
+    },
+
+    getAvailableQtyByCtspId(ctspId) {
+      const id = ctspId;
+      const base = this.getBaseQtyByCtspId(id);
+      const reserved = Number(this.reservedByCtsp?.[id] ?? 0);
+      const avail = base - reserved;
+      return Math.max(0, Number.isFinite(avail) ? avail : 0);
+    },
+
+    getMaxQtyForItem(it) {
+      const id = it?.id;
+      const base = this.getBaseQtyByCtspId(id);
+      const reservedAll = Number(this.reservedByCtsp?.[id] ?? 0);
+      const cur = Math.max(0, Number(it?.qty || 0));
+      const max = base - (reservedAll - cur);
+      return Math.max(0, Number.isFinite(max) ? max : 0);
+    },
+
+    clampInt(n, min, max) {
+      let x = Number(n);
+      if (!Number.isFinite(x)) x = min;
+      x = Math.floor(x);
+      if (x < min) x = min;
+      if (x > max) x = max;
+      return x;
     },
 
     // ================== Format ==================
@@ -1329,6 +1503,12 @@ export default {
       return k.email || k.mail || "";
     },
 
+    onGuestPhoneInput(e) {
+      const raw = String(e?.target?.value || "");
+      const digits = raw.replace(/\D/g, "");
+      this.guest.soDienThoai = digits;
+    },
+
     renderKhDiaChi(k) {
       if (!k) return "";
 
@@ -1369,50 +1549,448 @@ export default {
     getVoucherLabel(v) {
       if (!v) return "";
       const code = v.maPhieuGiamGia || v.ma || v.code || "";
-      const isMoney = v.loaiPhieuGiamGia === true;
-      const giaTri = Number(v.giaTriGiamGia ?? 0);
 
-      if (code && !isMoney) return `${code} (${Math.max(0, Math.min(100, giaTri))}%)`;
-      if (code && isMoney) return `${code} (${this.formatMoney(giaTri)})`;
+      const isPercent = v.loaiPhieuGiamGia === true;
+      const giaTri = Number(v.giaTriGiamGia ?? v.giaTriGiam ?? 0);
+
+      if (code && isPercent) return `${code} (${Math.max(0, Math.min(100, giaTri))}%)`;
+      if (code && !isPercent) return `${code} (${this.formatMoney(giaTri)})`;
       if (code) return code;
 
-      if (!isMoney) return `${Math.max(0, Math.min(100, giaTri))}%`;
+      if (isPercent) return `${Math.max(0, Math.min(100, giaTri))}%`;
       return this.formatMoney(giaTri);
     },
 
-    // ================== Giá giảm theo đợt giảm giá ==================
+    // ================== ĐỢT GIẢM GIÁ: lấy best theo CTSP (FIX CHÍNH) ==================
+    async fetchBestDotGiamGiaByCtspIds(ids) {
+      const list = [...new Set((ids || []).map((x) => Number(x)).filter((x) => Number.isFinite(x)))];
+      if (!list.length) return [];
+
+      const tries = [
+        "/api/admin/chi-tiet-dot-giam-gia/ban-hang/best-by-ctsp-ids",
+        "/api/chi-tiet-dot-giam-gia/ban-hang/best-by-ctsp-ids",
+      ];
+
+      let lastErr = null;
+      for (const url of tries) {
+        try {
+          const res = await apiClient.post(url, list);
+          const data = res?.data;
+          return Array.isArray(data) ? data : [];
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+
+      // không throw để POS không crash
+      console.error("Không lấy được đợt giảm giá theo CTSP:", lastErr);
+      return [];
+    },
+
+    getCtspIdFromDotBestRow(x) {
+      if (!x || typeof x !== "object") return null;
+      const v =
+        x.idChiTietSanPham ??
+        x.idCtsp ??
+        x.idChiTietSanPhamApDung ??
+        x.idChiTietSanPhamId ??
+        x.chiTietSanPhamId ??
+        x.ctspId ??
+        null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    },
+
+    getLoaiGiamGiaFromDotBestRow(x) {
+      if (!x || typeof x !== "object") return true; // mặc định: giảm %
+      const v =
+        x.loaiGiamGia ??
+        x.loaiGiam ??
+        x.isPercent ??
+        x.laPhanTram ??
+        x.phanTram ??
+        true;
+      return v === true || v === 1 || String(v).toLowerCase() === "true";
+    },
+
+    getGiaTriGiamFromDotBestRow(x) {
+      if (!x || typeof x !== "object") return 0;
+      const raw =
+        x.giaTriGiamApDung ??
+        x.giaTriGiam ??
+        x.phanTramGiam ??
+        x.phanTramGiamGia ??
+        x.giaTri ??
+        x.soTienGiam ??
+        x.tienGiam ??
+        0;
+      return this.toNumberSafe(raw);
+    },
+
+    getDotInfoFromDotBestRow(x) {
+      const dot = x?.dotGiamGia || x?.dot || x?.dotKhuyenMai || null;
+
+      const idDot =
+        x?.idDotGiamGia ??
+        dot?.id ??
+        x?.dotGiamGiaId ??
+        x?.idDot ??
+        null;
+
+      const maDot =
+        x?.maDotGiamGia ??
+        dot?.maDotGiamGia ??
+        dot?.maDot ??
+        dot?.ma ??
+        x?.maDot ??
+        null;
+
+      const tenDot =
+        x?.tenDotGiamGia ??
+        dot?.tenDotGiamGia ??
+        dot?.tenDot ??
+        dot?.ten ??
+        x?.tenDot ??
+        null;
+
+      return { idDot, maDot, tenDot };
+    },
+
+    async ganDotGiamGiaChoDanhSachCtsp(dsCtsp) {
+      const list = Array.isArray(dsCtsp) ? dsCtsp : [];
+      const ids = [...new Set(list.map((x) => x?.id).filter((x) => x != null))];
+      if (!ids.length) return;
+
+      const dsBest = await this.fetchBestDotGiamGiaByCtspIds(ids);
+
+      const map = new Map();
+      for (const x of dsBest) {
+        const idCtsp = this.getCtspIdFromDotBestRow(x);
+        if (idCtsp != null) map.set(idCtsp, x);
+      }
+
+      for (const sp of list) {
+        if (!sp || sp.id == null) continue;
+
+        const best = map.get(Number(sp.id));
+
+        // base price
+        const giaBase =
+          this.toNumberSafe(sp.giaGoc ?? 0) > 0
+            ? Math.round(this.toNumberSafe(sp.giaGoc))
+            : Math.round(this.toNumberSafe(sp.giaBan ?? 0));
+
+        if (!best) {
+          // không có giảm
+          sp.phanTramGiam = 0;
+          sp.idDotGiamGia = null;
+          sp.maDotGiamGia = null;
+          sp.tenDotGiamGia = null;
+
+          // để không hiện giá gốc gạch, set giaGoc = 0 (getGiaGoc sẽ fallback giaBan)
+          sp.giaGoc = 0;
+          sp.giaBan = giaBase > 0 ? giaBase : Math.round(this.toNumberSafe(sp.giaBan ?? 0));
+          continue;
+        }
+
+        const loaiPercent = this.getLoaiGiamGiaFromDotBestRow(best);
+        let giaTri = this.getGiaTriGiamFromDotBestRow(best);
+
+        // BE đôi khi trả 0.1 = 10%
+        if (loaiPercent) {
+          if (giaTri > 0 && giaTri <= 1) giaTri = giaTri * 100;
+          giaTri = Math.max(0, Math.min(100, Math.round(giaTri)));
+        } else {
+          giaTri = Math.max(0, Math.round(giaTri));
+        }
+
+        const { idDot, maDot, tenDot } = this.getDotInfoFromDotBestRow(best);
+
+        let giaSau = giaBase;
+        if (giaBase > 0 && giaTri > 0) {
+          if (loaiPercent) {
+            giaSau = Math.round((giaBase * (100 - giaTri)) / 100);
+          } else {
+            giaSau = Math.round(Math.max(0, giaBase - giaTri));
+          }
+        }
+
+        sp.giaGoc = giaBase > 0 ? giaBase : 0;
+        sp.giaBan = giaSau > 0 ? giaSau : 0;
+
+        sp.phanTramGiam =
+          loaiPercent
+            ? giaTri
+            : giaBase > 0 && giaTri > 0
+            ? Math.round(Math.min(100, (giaTri / giaBase) * 100))
+            : 0;
+
+        sp.idDotGiamGia = idDot ?? null;
+        sp.maDotGiamGia = maDot ?? null;
+        sp.tenDotGiamGia = tenDot ?? null;
+      }
+    },
+
+    async capNhatDotGiamGiaChoGioHang() {
+      if (!Array.isArray(this.cartItems) || this.cartItems.length === 0) return;
+      await this.ganDotGiamGiaChoDanhSachCtsp(this.cartItems);
+    },
+
+    // ================== NORMALIZE ĐỢT GIẢM GIÁ (giữ lại để fallback) ==================
+    toNumberSafe(v) {
+      if (v == null) return 0;
+      const n = Number(String(v).replace("%", "").trim());
+      return Number.isFinite(n) ? n : 0;
+    },
+
+    normalizePercent(raw) {
+      let n = this.toNumberSafe(raw);
+      if (!Number.isFinite(n) || n <= 0) return 0;
+
+      // BE hay trả 0.1 = 10%
+      if (n > 0 && n <= 1) n = n * 100;
+
+      n = Math.round(n);
+      if (n < 0) n = 0;
+      if (n > 100) n = 100;
+      return n;
+    },
+
+    extractDotInfo(x) {
+      const dot = x?.dotGiamGia || x?.dot_giam_gia || x?.dot || x?.dotKhuyenMai || null;
+      const ct = x?.chiTietDotGiamGia || x?.chi_tiet_dot_giam_gia || x?.chiTietDot || null;
+
+      const idDot =
+        x?.idDotGiamGia ??
+        dot?.id ??
+        ct?.idDotGiamGia ??
+        ct?.dotGiamGia?.id ??
+        null;
+
+      const maDot =
+        x?.maDotGiamGia ??
+        dot?.maDotGiamGia ??
+        dot?.maDot ??
+        dot?.ma ??
+        ct?.maDotGiamGia ??
+        ct?.dotGiamGia?.maDotGiamGia ??
+        ct?.dotGiamGia?.maDot ??
+        null;
+
+      const tenDot =
+        x?.tenDotGiamGia ??
+        dot?.tenDotGiamGia ??
+        dot?.tenDot ??
+        dot?.ten ??
+        ct?.tenDotGiamGia ??
+        ct?.dotGiamGia?.tenDotGiamGia ??
+        ct?.dotGiamGia?.tenDot ??
+        null;
+
+      return { idDot, maDot, tenDot, dot, ct };
+    },
+
+    extractDiscountPercent(x) {
+      const { dot, ct } = this.extractDotInfo(x);
+
+      const raw =
+        x?.phanTramGiam ??
+        x?.phanTramGiamGia ??
+        x?.phanTramKhuyenMai ??
+        x?.phanTram ??
+        x?.giaTriGiamPhanTram ??
+        x?.giaTriGiam ??
+        ct?.phanTramGiam ??
+        ct?.phanTramGiamGia ??
+        ct?.giaTriGiam ??
+        dot?.phanTramGiam ??
+        dot?.phanTramGiamGia ??
+        dot?.giaTriGiam ??
+        0;
+
+      return this.normalizePercent(raw);
+    },
+
+    extractDiscountAmount(x) {
+      const { dot, ct } = this.extractDotInfo(x);
+      const raw =
+        x?.soTienGiam ??
+        x?.tienGiam ??
+        x?.giaTriGiamTien ??
+        x?.soTienGiamGia ??
+        x?.giaGiam ??
+        ct?.soTienGiam ??
+        ct?.tienGiam ??
+        ct?.giaTriGiamTien ??
+        ct?.soTienGiamGia ??
+        ct?.giaGiam ??
+        dot?.soTienGiam ??
+        dot?.tienGiam ??
+        dot?.giaTriGiamTien ??
+        dot?.soTienGiamGia ??
+        dot?.giaGiam ??
+        0;
+
+      const n = this.toNumberSafe(raw);
+      return n > 0 ? Math.round(n) : 0;
+    },
+
+    extractGiaGoc(x) {
+      const raw =
+        x?.giaGoc ??
+        x?.giaBanGoc ??
+        x?.giaNiemYet ??
+        x?.giaGocSanPham ??
+        x?.donGiaGoc ??
+        0;
+      const n = this.toNumberSafe(raw);
+      if (n > 0) return Math.round(n);
+
+      const gb = this.toNumberSafe(x?.giaBan ?? 0);
+      return gb > 0 ? Math.round(gb) : 0;
+    },
+
+    extractGiaSauGiam(x) {
+      const raw =
+        x?.giaSauGiam ??
+        x?.giaSauGiamGia ??
+        x?.giaKhuyenMai ??
+        x?.giaDaGiam ??
+        x?.giaBanSauGiam ??
+        x?.giaSauKhuyenMai ??
+        x?.donGiaSauGiam ??
+        0;
+
+      const n = this.toNumberSafe(raw);
+      return n > 0 ? Math.round(n) : 0;
+    },
+
+    normalizeCtspRow(x) {
+      if (!x || typeof x !== "object") return x;
+
+      const { idDot, maDot, tenDot } = this.extractDotInfo(x);
+
+      const giaGoc = this.extractGiaGoc(x);
+      const pct = this.extractDiscountPercent(x);
+      const amt = pct > 0 ? 0 : this.extractDiscountAmount(x);
+
+      let giaSau = this.extractGiaSauGiam(x);
+
+      if (!(giaSau > 0)) {
+        if (giaGoc > 0 && pct > 0) {
+          giaSau = Math.round((giaGoc * (100 - pct)) / 100);
+        } else if (giaGoc > 0 && amt > 0) {
+          giaSau = Math.round(Math.max(0, giaGoc - amt));
+        } else {
+          const gb = this.toNumberSafe(x?.giaBan ?? 0);
+          giaSau = gb > 0 ? Math.round(gb) : giaGoc;
+        }
+      }
+
+      if (giaGoc > 0 && pct > 0) {
+        const expect = Math.round((giaGoc * (100 - pct)) / 100);
+        const gb = this.toNumberSafe(x?.giaBan ?? 0);
+        if (gb > 0 && Math.round(gb) === giaGoc) giaSau = expect;
+      }
+
+      const pctDisplay =
+        pct > 0 ? pct : giaGoc > 0 && amt > 0 ? Math.round(Math.min(100, (amt / giaGoc) * 100)) : 0;
+
+      return {
+        ...x,
+
+        idDotGiamGia: idDot ?? x?.idDotGiamGia ?? null,
+        maDotGiamGia: maDot ?? x?.maDotGiamGia ?? null,
+        tenDotGiamGia: tenDot ?? x?.tenDotGiamGia ?? null,
+
+        giaGoc: giaGoc || 0,
+        giaBan: giaSau || giaGoc || 0,
+
+        phanTramGiam: pctDisplay,
+      };
+    },
+
+    // ================== Giá bán (khớp BE mới) ==================
+    getGiaGoc(it) {
+      if (!it) return 0;
+
+      const goc = Number(it.giaGoc);
+      if (Number.isFinite(goc) && goc > 0) return goc;
+
+      const giaBanOld = Number(it.giaBan || 0);
+      return Number.isFinite(giaBanOld) && giaBanOld > 0 ? giaBanOld : 0;
+    },
+
     getGiaThucTe(it) {
       if (!it) return 0;
 
-      const giaBan = Number(it.giaBan || 0);
-      const giaSauGiam =
-        Number(it.giaSauGiam ?? it.giaKhuyenMai ?? it.giaDaGiam ?? it.giaSauKhuyenMai ?? NaN);
+      const gb = Number(it.giaBan ?? 0);
+      if (Number.isFinite(gb) && gb > 0) return Math.round(gb);
 
-      if (Number.isFinite(giaSauGiam) && giaSauGiam > 0 && giaSauGiam <= giaBan) return giaSauGiam;
+      const giaGoc = this.getGiaGoc(it);
+      const pct = this.normalizePercent(it.phanTramGiam ?? it.phanTramKhuyenMai ?? 0);
+      if (giaGoc > 0 && pct > 0) return Math.round((giaGoc * (100 - pct)) / 100);
 
-      const pct = Number(it.phanTramGiam ?? it.phanTramKhuyenMai ?? 0);
-      if (Number.isFinite(pct) && pct > 0 && pct < 100) {
-        return Math.round((giaBan * (100 - pct)) / 100);
-      }
-
-      return giaBan;
+      return Math.round(giaGoc || 0);
     },
 
     showGiaGoc(it) {
-      const giaBan = Number(it?.giaBan || 0);
+      const giaGoc = Number(this.getGiaGoc(it) || 0);
       const giaThuc = Number(this.getGiaThucTe(it) || 0);
-      return giaBan > 0 && giaThuc > 0 && giaThuc < giaBan;
+      return giaGoc > 0 && giaThuc > 0 && giaThuc < giaGoc;
+    },
+
+    getPhanTramGiamDisplay(it) {
+      const p = this.normalizePercent(it?.phanTramGiam ?? it?.phanTramKhuyenMai ?? 0);
+      if (!Number.isFinite(p) || p <= 0) return 0;
+      return Math.round(p);
+    },
+
+    getGiamGiaTitle(it) {
+      const pct = this.getPhanTramGiamDisplay(it);
+      const tenDot = it?.tenDotGiamGia || it?.tenDot || "";
+      const maDot = it?.maDotGiamGia || it?.maDot || "";
+      if (maDot || tenDot) return `Đợt giảm giá: ${[maDot, tenDot].filter(Boolean).join(" - ")} · Giảm ${pct}%`;
+      return `Giảm ${pct}%`;
     },
 
     // ================== Cart ==================
     incQty(it) {
-      const max = Number(it.soLuong || 0);
-      if (max <= 0) return;
-      if (it.qty < max) it.qty++;
+      const max = this.getMaxQtyForItem(it);
+      const cur = Number(it.qty || 1);
+      if (cur >= max) {
+        this.showToast("Số lượng mua không được vượt tồn kho.", "error");
+        it.qty = Math.max(1, max);
+        return;
+      }
+      it.qty = cur + 1;
     },
 
     decQty(it) {
-      if (it.qty > 1) it.qty--;
+      const cur = Number(it.qty || 1);
+      if (cur > 1) it.qty = cur - 1;
+    },
+
+    onQtyInput(it, e) {
+      const raw = String(e?.target?.value || "");
+      const digits = raw.replace(/\D/g, "");
+      const n = digits ? Number(digits) : 0;
+
+      const max = this.getMaxQtyForItem(it);
+      const next = this.clampInt(n, 1, Math.max(1, max));
+      it.qty = next;
+
+      if (next > max) this.showToast("Số lượng mua không được vượt tồn kho.", "error");
+    },
+
+    onQtyBlur(it) {
+      const max = this.getMaxQtyForItem(it);
+      const cur = Number(it.qty || 0);
+      if (!Number.isFinite(cur) || cur < 1) it.qty = 1;
+      if (cur > max) {
+        it.qty = Math.max(1, max);
+        this.showToast("Số lượng mua đã được tự điều chỉnh theo tồn kho.", "info");
+      }
     },
 
     removeItem(id) {
@@ -1420,30 +1998,82 @@ export default {
       this.scheduleAutoVoucher();
     },
 
-    pickCtsp(row) {
-      if (Number(row.soLuong || 0) <= 0) return;
+    onCtspPickQtyInput(row, e) {
+      const id = row?.id;
+      if (id == null) return;
 
-      const exist = this.cartItems.find((x) => x.id === row.id);
+      const raw = String(e?.target?.value || "");
+      const digits = raw.replace(/\D/g, "");
+      const n = digits ? Number(digits) : 0;
+
+      const max = Math.max(0, Number(row.__available || 0));
+      const next = this.clampInt(n, 1, Math.max(1, max));
+
+      this.ctspPickQty = { ...this.ctspPickQty, [id]: next };
+    },
+
+    pickCtsp(row, qtyToAdd = 1) {
+      if (!row) return;
+
+      // ✅ luôn normalize để không rơi case đợt giảm giá trả nested/0.1
+      const nx = this.normalizeCtspRow(row);
+
+      const id = nx?.id;
+      if (id == null) return;
+
+      const available = this.getAvailableQtyByCtspId(id);
+      if (available <= 0) {
+        this.showToast("Sản phẩm đã hết hàng.", "error");
+        return;
+      }
+
+      const want = this.clampInt(qtyToAdd, 1, Math.max(1, available));
+      const exist = this.cartItems.find((x) => x.id === id);
+
       if (exist) {
-        this.incQty(exist);
-      } else {
-        this.cartItems.unshift({
-          id: row.id,
-          maCtsp: row.maCtsp,
-          tenSanPham: row.tenSanPham,
-          mauSac: row.mauSac,
-          kichCo: row.kichCo,
-          soLuong: row.soLuong,
-          giaBan: row.giaBan,
-          // các field giảm giá (nếu BE trả)
-          giaSauGiam: row.giaSauGiam ?? row.giaKhuyenMai ?? null,
-          phanTramGiam: row.phanTramGiam ?? row.phanTramKhuyenMai ?? 0,
+        const max = this.getMaxQtyForItem(exist);
+        const newQty = Math.min(max, Number(exist.qty || 1) + want);
 
-          anhUrl: row.anhUrl,
-          qty: 1,
+        if (newQty <= Number(exist.qty || 1)) {
+          this.showToast("Số lượng mua không được vượt tồn kho.", "error");
+          return;
+        }
+
+        exist.giaGoc = nx.giaGoc ?? exist.giaGoc ?? exist.giaBan;
+        exist.giaBan = nx.giaBan ?? exist.giaBan;
+        exist.phanTramGiam = nx.phanTramGiam ?? exist.phanTramGiam ?? 0;
+        exist.idDotGiamGia = nx.idDotGiamGia ?? exist.idDotGiamGia ?? null;
+        exist.maDotGiamGia = nx.maDotGiamGia ?? exist.maDotGiamGia ?? null;
+        exist.tenDotGiamGia = nx.tenDotGiamGia ?? exist.tenDotGiamGia ?? null;
+
+        exist.qty = newQty;
+        exist.checked = true;
+      } else {
+        const addQty = Math.min(want, available);
+
+        this.cartItems.unshift({
+          id: nx.id,
+          maCtsp: nx.maCtsp,
+          tenSanPham: nx.tenSanPham,
+          mauSac: nx.mauSac,
+          kichCo: nx.kichCo,
+
+          giaGoc: nx.giaGoc ?? nx.giaBan,
+          giaBan: nx.giaBan,
+
+          phanTramGiam: nx.phanTramGiam ?? 0,
+          idDotGiamGia: nx.idDotGiamGia ?? null,
+          maDotGiamGia: nx.maDotGiamGia ?? null,
+          tenDotGiamGia: nx.tenDotGiamGia ?? null,
+
+          anhUrl: nx.anhUrl,
+
+          qty: addQty,
           checked: true,
         });
       }
+
+      this.ctspPickQty = { ...this.ctspPickQty, [id]: 1 };
 
       this.scheduleAutoVoucher();
     },
@@ -1452,6 +2082,7 @@ export default {
     async openCtspModal() {
       this.showCtspModal = true;
       this.ctspPage = 1;
+      this.ctspPickQty = {};
       await this.loadCtspForPos();
     },
 
@@ -1469,7 +2100,29 @@ export default {
       this.ctspErr = "";
       try {
         const data = await SalesService.getCtspBanHang();
-        this.ctspList = Array.isArray(data) ? data : [];
+        const rawList = Array.isArray(data) ? data : [];
+
+        // 1) normalize cơ bản (fallback)
+        const list = rawList.map((x) => this.normalizeCtspRow(x));
+
+        // 2) FIX CHÍNH: gọi API best đợt giảm giá theo CTSP IDs và merge vào list
+        await this.ganDotGiamGiaChoDanhSachCtsp(list);
+
+        this.ctspList = list;
+
+        const map = { ...(this.ctspBaseQtyMap || {}) };
+        for (const x of list) {
+          const id = x?.id;
+          if (id == null) continue;
+          const base = Math.max(0, Number(x?.soLuong || 0));
+          map[id] = base;
+        }
+        this.ctspBaseQtyMap = map;
+        this.persistCtspBaseQtyMap();
+
+        // đồng bộ giảm giá cho giỏ hàng (nếu giỏ có item từ localStorage)
+        await this.capNhatDotGiamGiaChoGioHang();
+
         this.ctspPage = 1;
       } catch (e) {
         this.ctspErr = "Không tải được danh sách biến thể (API đang lỗi).";
@@ -1519,7 +2172,7 @@ export default {
           }
 
           if (row) {
-            this.pickCtsp(row);
+            this.pickCtsp({ ...row, __available: this.getAvailableQtyByCtspId(row.id) }, 1);
             await this.stopQr();
             this.showQrModal = false;
           }
@@ -1572,7 +2225,6 @@ export default {
       this.selectedKh = k;
       this.showKhModal = false;
 
-      // khi chọn KH => không còn dùng guest
       this.guest = {
         tenKhachHang: "",
         soDienThoai: "",
@@ -1694,7 +2346,6 @@ export default {
     },
 
     async loadBestVoucher() {
-      // nếu user nhập mã thì không tự override
       if (this.voucherManual) {
         this.persistActiveTab();
         return;
@@ -1816,11 +2467,11 @@ export default {
       if (start && today < start) return 0;
       if (end && today > end) return 0;
 
-      const isMoney = v.loaiPhieuGiamGia === true;
-      const giaTri = Number(v.giaTriGiamGia ?? 0);
+      const isPercent = v.loaiPhieuGiamGia === true;
+      const giaTri = Number(v.giaTriGiamGia ?? v.giaTriGiam ?? 0);
       let discount = 0;
 
-      if (!isMoney) {
+      if (isPercent) {
         const pct = Math.max(0, Math.min(100, giaTri));
         discount = Math.round((tong * pct) / 100);
 
@@ -1834,7 +2485,7 @@ export default {
       return discount > 0 ? discount : 0;
     },
 
-    // ================== Voucher manual (nhập mã) ==================
+    // ================== Voucher manual ==================
     async applyVoucherCode() {
       const code = (this.voucherCode || "").trim();
       if (!code) {
@@ -1867,7 +2518,6 @@ export default {
           return;
         }
 
-        // kiểm tra áp dụng có ra giảm > 0 không
         const disc = this.calcVoucherDiscount(found, Math.round(this.tongTienHang || 0));
         if (disc <= 0) {
           this.voucherManual = null;
@@ -1876,7 +2526,7 @@ export default {
         }
 
         this.voucherManual = found;
-        this.autoVoucher = null; // ưu tiên manual
+        this.autoVoucher = null;
         this.showToast(`Đã áp dụng mã: ${code}`, "success");
         this.persistActiveTab();
       } catch (e) {
@@ -1916,88 +2566,157 @@ export default {
       this.phiVanChuyenText = n > 0 ? n.toLocaleString("vi-VN") : "0";
     },
 
-    // ================== Submit ==================
-    async submitOrder() {
-      if (!this.canSubmit) return;
-
-      for (const it of this.cartItems) {
-        const max = Number(it.soLuong || 0);
-        const qty = Number(it.qty || 0);
-        if (max <= 0) {
-          alert(`Sản phẩm ${it.maCtsp || ""} đã hết hàng.`);
-          return;
-        }
-        if (qty > max) {
-          alert(`Sản phẩm ${it.maCtsp || ""} vượt tồn kho. Tồn: ${max}.`);
-          return;
-        }
-      }
-
-      // dữ liệu khách
+    // ================== Submit helpers ==================
+    buildHoaDonPayload() {
       const isShipping = !this.isCounter;
 
-      const tenKh = this.selectedKh
-        ? this.getKhName(this.selectedKh)
-        : (this.guest.tenKhachHang || "Khách vãng lai").trim();
+      let tenKh = "";
+      if (this.selectedKh) tenKh = this.getKhName(this.selectedKh);
+      else if (this.isCounter) tenKh = "Khách lẻ";
+      else tenKh = (this.guest.tenKhachHang || "Khách vãng lai").trim();
 
-      const sdtKh = this.selectedKh
-        ? (this.getKhPhone(this.selectedKh) || "0000000000")
-        : (this.guest.soDienThoai || "0000000000").trim();
+      const sdtDigits = this.selectedKh
+        ? String(this.getKhPhone(this.selectedKh) || "").replace(/\D/g, "")
+        : String(this.guest.soDienThoai || "").replace(/\D/g, "");
+      const sdtKh = sdtDigits || "0000000000";
 
       let diaChi = "Tại quầy";
       if (isShipping) {
         if (this.selectedKh) {
           diaChi = this.selectedDiaChi ? this.renderDiaChi(this.selectedDiaChi) : "";
         } else {
-          const parts = [
-            this.guest.diaChiCuThe,
-            this.guest.xaPhuong,
-            this.guest.huyenQuan,
-            this.guest.tinhThanh,
-          ].filter((x) => String(x || "").trim());
+          const parts = [this.guest.diaChiCuThe, this.guest.xaPhuong, this.guest.huyenQuan, this.guest.tinhThanh].filter((x) => String(x || "").trim());
           diaChi = parts.join(", ");
         }
       }
 
-      const emailKh = this.selectedKh ? (this.getKhEmail(this.selectedKh) || null) : null;
+      const emailKh = this.selectedKh ? this.getKhEmail(this.selectedKh) || null : null;
 
-      // loaiDon: false=tại quầy, true=giao hàng
       const loaiDon = this.isCounter ? false : true;
-
       const shipFee = this.isCounter ? 0 : this.phiVanChuyenNum;
 
-      const payload = {
-        idKhachHang: this.selectedKh?.id || null,
-        idNhanVien: null,
+      const idNhanVien = this.nguoiBan?.id ?? null;
 
-        idPhieuGiamGia: (this.effectiveVoucher?.id) || null,
+      return {
+        idKhachHang: this.selectedKh?.id || null,
+        idNhanVien,
+
+        idPhieuGiamGia: this.effectiveVoucher?.id || null,
         idPhieuGiamGiaCaNhan: this.effectiveVoucher?.__pggcnId || null,
 
         loaiDon,
         phiVanChuyen: Math.round(shipFee),
+
         tongTien: Math.round(this.tongTienHang + shipFee),
         tongTienSauGiam: Math.round(this.tongPhaiTra),
 
         tenKhachHang: tenKh,
         diaChiKhachHang: diaChi || (this.isCounter ? "Tại quầy" : ""),
-        soDienThoaiKhachHang: sdtKh || "0000000000",
+        soDienThoaiKhachHang: sdtKh,
         emailKhachHang: emailKh,
 
         ghiChu: null,
       };
+    },
+
+    buildHoaDonChiTietPayloadList(idHoaDon) {
+      return (this.cartItems || []).map((it) => ({
+        idHoaDon,
+        idChiTietSanPham: it.id,
+        soLuong: Number(it.qty || 1),
+        donGia: Number(this.getGiaThucTe(it) || 0),
+        ghiChu: null,
+        xoaMem: false,
+      }));
+    },
+
+    async saveHoaDonChiTiet(idHoaDon) {
+      const list = this.buildHoaDonChiTietPayloadList(idHoaDon);
+      if (!Array.isArray(list) || list.length === 0) return;
+
+      const tries = [
+        { url: `/api/admin/hoa-don/${idHoaDon}/chi-tiet`, data: list },
+        { url: `/api/admin/hoa-don-chi-tiet`, data: list },
+      ];
+
+      let lastErr = null;
+      for (const t of tries) {
+        try {
+          await apiClient.post(t.url, t.data);
+          return;
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      throw lastErr || new Error("SAVE_CT_FAIL");
+    },
+
+    async rollbackHoaDonNeuCan(idHoaDon) {
+      try {
+        await apiClient.delete(`/api/admin/hoa-don/${idHoaDon}`);
+      } catch (e) {}
+    },
+
+    // ================== Submit ==================
+    async submitOrder() {
+      if (!this.canSubmit) return;
+
+      for (const it of this.cartItems) {
+        const qty = Number(it.qty || 0);
+        if (!Number.isFinite(qty) || qty < 1) {
+          this.showToast("Số lượng mua không hợp lệ.", "error");
+          return;
+        }
+
+        const max = this.getMaxQtyForItem(it);
+        if (qty > max) {
+          this.showToast(`Sản phẩm ${it.maCtsp || ""} vượt tồn kho.`, "error");
+          it.qty = Math.max(1, max);
+          return;
+        }
+      }
+
+      const payload = this.buildHoaDonPayload();
 
       this.submitting = true;
       try {
         const res = await apiClient.post("/api/admin/hoa-don", payload);
         const created = res?.data;
+        const hdId = created?.id;
 
-        // chuyển sang trang hóa đơn
-        this.goToHoaDon(created);
+        if (hdId == null) {
+          this.showToast("Tạo hóa đơn thất bại (không nhận được id).", "error");
+          return;
+        }
 
-        // reset tab hiện tại sau khi tạo xong
+        try {
+          await this.saveHoaDonChiTiet(hdId);
+        } catch (e) {
+          await this.rollbackHoaDonNeuCan(hdId);
+          this.showToast("Không lưu được chi tiết hóa đơn. Đã hủy hóa đơn vừa tạo.", "error");
+          return;
+        }
+
+        if (this.isCounter && this.payMethod === "TIEN_MAT") {
+          try {
+            const note = "Chốt đơn tại quầy - tiền mặt";
+            const done = await apiClient.put(`/api/admin/hoa-don/${hdId}/confirm-tai-quay-tien-mat`, { ghiChu: note });
+            const finalHd = done?.data || created;
+            this.goToHoaDon(finalHd);
+          } catch (e) {
+            this.showToast("Chốt tiền mặt thất bại. Vẫn đã tạo hóa đơn và chi tiết.", "error");
+            this.goToHoaDon(created);
+          }
+        } else {
+          if (this.isCounter && this.payMethod === "CHUYEN_KHOAN") {
+            this.showToast("Chưa có endpoint chốt chuyển khoản. Đã tạo hóa đơn và chi tiết.", "info");
+          }
+          this.goToHoaDon(created);
+        }
+
         this.resetActiveTabAfterSubmit();
       } catch (e) {
-        alert("Tạo hóa đơn thất bại. Kiểm tra API /api/admin/hoa-don hoặc dữ liệu bắt buộc.");
+        this.showToast("Tạo hóa đơn thất bại. Kiểm tra API /api/admin/hoa-don hoặc dữ liệu bắt buộc.", "error");
       } finally {
         this.submitting = false;
       }
@@ -2005,7 +2724,6 @@ export default {
 
     goToHoaDon(created) {
       const id = created?.id;
-      // ưu tiên /admin/hoa-don/{id}, fallback /admin/hoa-don
       try {
         if (id != null) {
           this.$router.push(`/admin/hoa-don/${id}`);
@@ -2013,7 +2731,6 @@ export default {
           this.$router.push(`/admin/hoa-don`);
         }
       } catch (e) {
-        // nếu router chưa có route chi tiết thì fallback
         try {
           this.$router.push(`/admin/hoa-don`);
         } catch (e2) {}
@@ -2059,6 +2776,40 @@ export default {
   padding-bottom: 18px;
 }
 
+/* ======= Badge giảm giá (đồng bộ) ======= */
+/* ✅ Badge -% trên ảnh (đồng nhất theo AddDiscountPage) */
+.thumb-wrap {
+  position: relative;
+  display: inline-block;
+  vertical-align: middle;
+  overflow: visible; /* quan trọng: để badge không bị cắt */
+}
+
+.discount-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 999px;
+  border: 1.5px solid #fff;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+  pointer-events: none;
+  white-space: nowrap;
+  line-height: 1.3;
+  z-index: 2;
+}
+
+.discount-badge.sm {
+  font-size: 8px;
+  padding: 1px 3px;
+  top: -3px;
+  right: -3px;
+}
+
 .ss-head {
   display: flex;
   align-items: center;
@@ -2066,9 +2817,24 @@ export default {
   margin-bottom: 10px;
 }
 
+.ss-head-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .ss-title {
   font-size: 20px;
   font-weight: 500;
+}
+
+.ss-subtitle {
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.62);
+}
+.ss-seller-name {
+  color: rgba(17, 24, 39, 0.82);
+  font-weight: 600;
 }
 
 /* Toast */
@@ -2141,6 +2907,22 @@ export default {
   display: inline-flex;
   align-items: center;
   gap: 10px;
+}
+.ss-tab-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.ss-tab-badge {
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: rgba(153, 27, 27, 0.92);
+  color: #fff;
+  font-size: 11px;
+  display: inline-grid;
+  place-items: center;
 }
 .ss-tab.active {
   border-color: rgba(153, 27, 27, 0.35);
@@ -2242,7 +3024,7 @@ export default {
 }
 .ss-cart-item {
   display: grid;
-  grid-template-columns: 24px 48px 1fr 140px 120px 40px;
+  grid-template-columns: 24px 48px 1fr 140px 140px 40px;
   gap: 10px;
   align-items: center;
   padding: 10px;
@@ -2266,12 +3048,28 @@ export default {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
+
+  /* FIX: chặn mọi rule làm ảnh tròn (rounded-circle / border-radius:50%...) */
+  border-radius: 12px !important;
 }
 .ss-thumb-ph {
   width: 100%;
   height: 100%;
   background: rgba(153, 27, 27, 0.06);
+
+  /* FIX: placeholder cũng bo góc như ảnh */
+  border-radius: 12px;
 }
+
+/* FIX: nếu bạn đang gắn thumb-wrap trực tiếp lên ss-cart-thumb/ss-thumb
+   thì overflow hidden của thumb bị override ngược lại hoặc làm badge bị cắt.
+   Ưu tiên để badge không bị cắt. */
+.ss-cart-thumb.thumb-wrap,
+.ss-thumb.thumb-wrap {
+  overflow: visible;
+}
+
 .ss-cart-name {
   font-size: 13px;
   color: rgba(17, 24, 39, 0.82);
@@ -2304,6 +3102,7 @@ export default {
   font-size: 13px;
   color: rgba(17, 24, 39, 0.82);
 }
+
 .ss-cart-qty {
   display: inline-flex;
   align-items: center;
@@ -2323,11 +3122,17 @@ export default {
   opacity: 0.55;
   cursor: not-allowed;
 }
-.ss-qty-num {
-  width: 24px;
+.ss-qty-input {
+  width: 56px;
+  height: 32px;
+  border-radius: 12px;
+  border: 1px solid rgba(17, 24, 39, 0.14);
   text-align: center;
   font-size: 13px;
+  color: rgba(17, 24, 39, 0.82);
+  outline: none;
 }
+
 .ss-trash {
   width: 36px;
   height: 36px;
@@ -2573,7 +3378,6 @@ export default {
   transition: 0.2s;
   border-radius: 50%;
 }
-/* ON = tại quầy */
 .ss-switch input:checked + .ss-slider {
   background: rgba(153, 27, 27, 0.55);
 }
@@ -2704,7 +3508,7 @@ export default {
   text-align: right;
 }
 .col-action {
-  width: 120px;
+  width: 180px;
   text-align: center;
 }
 
@@ -2717,6 +3521,21 @@ export default {
   border: 1px solid rgba(17, 24, 39, 0.1);
   background: rgba(17, 24, 39, 0.03);
   margin: 0 auto;
+}
+
+/* pick qty input */
+.ss-pick-wrap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.ss-pick-qty {
+  width: 70px;
+  height: 32px;
+  text-align: center;
+  border-radius: 10px;
+  font-size: 12px;
 }
 
 /* Pagination */

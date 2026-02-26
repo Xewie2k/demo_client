@@ -1,5 +1,19 @@
 <template>
   <div class="about-page">
+    <!-- Breadcrumb -->
+    <div class="bg-light py-3 border-bottom">
+      <div class="container">
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb mb-0 small">
+            <li class="breadcrumb-item">
+              <router-link to="/client" class="text-decoration-none" style="color: var(--ss-accent);">Trang chủ</router-link>
+            </li>
+            <li class="breadcrumb-item active">Giới thiệu</li>
+          </ol>
+        </nav>
+      </div>
+    </div>
+
     <!-- Hero Banner -->
     <section class="hero-banner position-relative d-flex align-items-center justify-content-center text-white text-center" style="min-height: 340px;">
       <div class="hero-overlay position-absolute top-0 start-0 w-100 h-100"></div>

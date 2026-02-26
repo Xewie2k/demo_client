@@ -65,7 +65,7 @@ public class HoaDon {
     @Column(name = "email_khach_hang", length = 255)
     private String emailKhachHang;
 
-    // CHỐT: int code (1..7)
+    // int code
     @Column(name = "trang_thai_hien_tai", nullable = false)
     private Integer trangThaiHienTai;
 

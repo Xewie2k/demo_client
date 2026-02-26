@@ -128,14 +128,10 @@ import { useRouter } from "vue-router";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { addNhanVien } from "@/services/tai_khoan/nhan_vien/nhan_vienService";
 import vnAddressService from "@/services/vnAddressService";
-import emailjs from "@emailjs/browser";
 
 const router = useRouter();
 const saving = ref(false);
 const fileRef = ref(null);
-
-const EMAILJS_PUBLIC_KEY = "D-LHcLlAo_N5Vc5Kc";
-emailjs.init(EMAILJS_PUBLIC_KEY);
 
 /** ✅ Map mã quyền -> text hiển thị */
 const mapTenQuyenHan = (raw) => {
@@ -276,7 +272,6 @@ const CCCDScan = async (text) => {
   const parts = text.split("|");
   if (parts.length < 6) throw new Error("Format CCCD không đúng");
 
-  // parts[2]: Họ tên, parts[3]: DOB ddMMyyyy, parts[5]: địa chỉ
   form.value.tenNhanVien = parts[2] || form.value.tenNhanVien;
   form.value.tenTaiKhoan = buildUsername(form.value.tenNhanVien);
 
@@ -394,26 +389,6 @@ onBeforeUnmount(() => {
   stopScanner();
 });
 
-/* ===== EMAIL ===== */
-const sendEmail = async ({ tenNhanVien, tenTaiKhoan, matKhau, email }) => {
-  try {
-    const serviceID = "service_n03lqrf";
-    const templateID = "template_1gy88ic";
-
-    const templateParams = {
-      to_email: email,
-      to_name: tenNhanVien,
-      username: tenTaiKhoan,
-      password: matKhau,
-    };
-
-    const response = await emailjs.send(serviceID, templateID, templateParams);
-    console.log("Email gửi thành công!", response.status, response.text);
-  } catch (error) {
-    console.error("Lỗi gửi email:", error);
-  }
-};
-
 const validate = () => {
   if (!form.value.tenNhanVien) return "Chưa nhập tên nhân viên";
   if (!form.value.email) return "Chưa nhập email";
@@ -445,13 +420,6 @@ const submit = async () => {
     };
 
     await addNhanVien(payload);
-
-    await sendEmail({
-      tenNhanVien: form.value.tenNhanVien,
-      tenTaiKhoan: form.value.tenTaiKhoan,
-      matKhau: form.value.matKhau,
-      email: form.value.email,
-    });
 
     alert("Thêm nhân viên thành công!");
     back();

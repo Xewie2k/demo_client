@@ -1,4 +1,3 @@
-<!-- File: src/pages/khuyen_mai/dot_giam_gia/DetailDiscountPage.vue -->
 <template>
   <div class="discount-page">
     <div class="header-section">
@@ -59,10 +58,11 @@
               class="form-control"
               placeholder="Nhập giá trị..."
               :disabled="isEnded"
+              min="1"
+              max="100"
             />
           </div>
 
-          <!-- ✅ NEW: Mức ưu tiên -->
           <div class="form-group">
             <label class="label">Mức ưu tiên:</label>
             <input
@@ -183,10 +183,18 @@
                         :disabled="isEnded"
                       />
                     </td>
+
+                    <!-- ✅ BADGE “SỐ MŨ” giống file thêm -->
                     <td class="text-center" @click="toggleExpand(group.idSanPham)" style="cursor: pointer">
-                      <img :src="group.variants[0]?.anh || 'https://via.placeholder.com/40'" class="product-thumb" />
+                      <div class="thumb-wrap">
+                        <img :src="getGroupThumb(group)" class="product-thumb" @error="onImgError" alt="thumb" />
+                        <span v-if="badgeTheoDot" class="discount-badge">{{ badgeTheoDot }}</span>
+                      </div>
                     </td>
-                    <td class="text-center" @click="toggleExpand(group.idSanPham)" style="cursor: pointer">{{ group.maSanPham }}</td>
+
+                    <td class="text-center" @click="toggleExpand(group.idSanPham)" style="cursor: pointer">
+                      {{ group.maSanPham }}
+                    </td>
                     <td class="text-center" @click="toggleExpand(group.idSanPham)" style="cursor: pointer">
                       {{ group.tenSanPham }}
                     </td>
@@ -212,9 +220,15 @@
                         @change="onSourceCheckboxChange"
                       />
                     </td>
+
+                    <!-- ✅ BADGE “SỐ MŨ” giống file thêm -->
                     <td class="text-center">
-                      <img :src="v.anh || 'https://via.placeholder.com/40'" class="product-thumb-sm" />
+                      <div class="thumb-wrap">
+                        <img :src="getVariantThumb(v)" class="product-thumb-sm" @error="onImgError" alt="thumb" />
+                        <span v-if="badgeTheoDot" class="discount-badge discount-badge--sm">{{ badgeTheoDot }}</span>
+                      </div>
                     </td>
+
                     <td class="text-center text-muted small">{{ v.maChiTietSanPham }}</td>
                     <td class="small">{{ v.tenMauSac }} - {{ v.tenKichThuoc }} - {{ v.tenLoaiSan }}</td>
                   </tr>
@@ -344,26 +358,33 @@
                 <td class="text-center">
                   {{ (currentDetailPage - 1) * detailItemsPerPage + index + 1 }}
                 </td>
+
+                <!-- ✅ BADGE “SỐ MŨ” giống file thêm -->
                 <td class="text-center">
-                  <img :src="item.anh || 'https://via.placeholder.com/40'" class="product-thumb-sm" />
+                  <div class="thumb-wrap">
+                    <img :src="getVariantThumb(item)" class="product-thumb-sm" @error="onImgError" alt="thumb" />
+                    <span v-if="badgeTheoDot" class="discount-badge discount-badge--sm">{{ badgeTheoDot }}</span>
+                  </div>
                 </td>
+
                 <td class="text-primary">{{ item.maChiTietSanPham }}</td>
                 <td class="text-wrap-name text-center">{{ item.tenSanPham }}</td>
 
+                <!-- ✅ FIX: hiển thị GIÁ THEO ĐỢT ĐANG XEM (KHÔNG bị “dính” đợt khác) -->
                 <td class="text-center">
-                  <div v-if="getProductDisplay(item).hasDiscount">
+                  <div v-if="getHienThiGiaTheoDot(item).hasDiscount">
                     <div class="old-price">
-                      {{ formatCurrency(getProductDisplay(item).originalPrice) }}
+                      {{ formatCurrency(getHienThiGiaTheoDot(item).originalPrice) }}
                     </div>
                     <div class="new-price">
-                      {{ formatCurrency(getProductDisplay(item).finalPrice) }}
+                      {{ formatCurrency(getHienThiGiaTheoDot(item).finalPrice) }}
                       <span class="discount-tag">
-                        {{ getProductDisplay(item).badge }}
+                        {{ getHienThiGiaTheoDot(item).badge }}
                       </span>
                     </div>
                   </div>
                   <div v-else>
-                    {{ formatCurrency(item.giaNiemYet) }}
+                    {{ formatCurrency(getGiaBienThe(item)) }}
                   </div>
                 </td>
 
@@ -399,7 +420,6 @@
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { discountService } from "@/services/khuyen_mai/dot_giam_gia/discountService.js";
-import { sortDotGiamGia } from "@/services/khuyen_mai/dot_giam_gia/dotGiamGiaSort";
 
 const route = useRoute();
 const router = useRouter();
@@ -417,6 +437,55 @@ const goBack = async () => {
   }
 };
 
+/* =========================
+   FIX ẢNH: normalize + fallback
+   ========================= */
+const API_BASE = (import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || "http://localhost:8080").replace(/\/$/, "");
+const IMG_PLACEHOLDER =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='6' fill='%23F3F4F6'/%3E%3Cpath d='M12 26l6-6 4 4 6-6 4 4' stroke='%239CA3AF' stroke-width='2' fill='none'/%3E%3Ccircle cx='16' cy='16' r='2' fill='%239CA3AF'/%3E%3C/svg%3E";
+
+const normalizeImgUrl = (raw) => {
+  if (!raw) return "";
+  const s = String(raw).trim();
+  if (!s) return "";
+  if (s.startsWith("data:image/")) return s;
+  if (s.startsWith("http://") || s.startsWith("https://")) return s;
+  if (s.startsWith("/")) return `${API_BASE}${s}`;
+  if (s.startsWith("uploads/")) return `${API_BASE}/${s}`;
+  return `${API_BASE}/uploads/${s}`;
+};
+
+const extractRawImg = (v) => {
+  return (
+    v?.anh ||
+    v?.urlAnh ||
+    v?.duongDanAnh ||
+    v?.anhDaiDien ||
+    v?.anhSanPham ||
+    v?.hinhAnh ||
+    v?.image ||
+    v?.imageUrl ||
+    v?.thumbnail ||
+    ""
+  );
+};
+
+const getVariantThumb = (v) => normalizeImgUrl(extractRawImg(v)) || IMG_PLACEHOLDER;
+
+const getGroupThumb = (group) => {
+  if (!group?.variants?.length) return IMG_PLACEHOLDER;
+  const pick = group.variants.find((x) => normalizeImgUrl(extractRawImg(x))) || group.variants[0];
+  return getVariantThumb(pick);
+};
+
+const onImgError = (e) => {
+  const img = e?.target;
+  if (!img) return;
+  if (img.src === IMG_PLACEHOLDER) return;
+  img.src = IMG_PLACEHOLDER;
+};
+/* ========================= */
+
 const formData = reactive({
   maDotGiamGia: "",
   tenDotGiamGia: "",
@@ -424,8 +493,19 @@ const formData = reactive({
   giaTriGiamGia: null,
   ngayBatDau: "",
   ngayKetThuc: "",
-  mucUuTien: 0, // ✅ NEW
+  mucUuTien: 0,
   trangThai: true,
+});
+
+/* ✅ BADGE “SỐ MŨ” dùng chung giống file thêm */
+const badgeTheoDot = computed(() => {
+  const val = Number(formData.giaTriGiamGia ?? 0);
+  if (!Number.isFinite(val) || val <= 0) return null;
+
+  const isMoney = !!formData.loaiGiamGia; // hiện đang khóa %, nhưng để sẵn
+  return isMoney
+    ? `-${new Intl.NumberFormat("vi-VN").format(val)}đ`
+    : `-${Math.round(val)}%`;
 });
 
 const currentPage = ref(1);
@@ -473,8 +553,6 @@ const fillSourceFilters = (item) => {
 const onSourceCheckboxChange = (e) => {
   if (!e.target.checked) clearSourceFilters();
 };
-
-const activeDiscountsMap = ref({});
 
 const productGroups = computed(() => {
   const groups = {};
@@ -633,16 +711,46 @@ const formatDateForInput = (dateInput) => {
   return date.toISOString().split("T")[0];
 };
 
-const parseDate = (input) => {
-  if (Array.isArray(input)) return new Date(input[0], input[1] - 1, input[2]);
-  return new Date(input);
-};
-
 const formatCurrency = (value) => {
   return new Intl.NumberFormat("vi-VN", {
     style: "currency",
     currency: "VND",
   }).format(value ?? 0);
+};
+
+/* ✅ GIÁ THỰC TẾ (variant) */
+const getGiaBienThe = (v) => {
+  const raw =
+    v?.giaBan ??
+    v?.gia_ban ??
+    v?.giaNiemYet ??
+    v?.gia_niem_yet ??
+    v?.donGia ??
+    v?.don_gia ??
+    v?.gia ??
+    v?.price ??
+    0;
+
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+};
+
+/* ✅ FIX: hiển thị giá theo ĐỢT ĐANG XEM */
+const getHienThiGiaTheoDot = (variant) => {
+  const price = getGiaBienThe(variant);
+
+  const val = Number(formData.giaTriGiamGia ?? 0);
+  if (!Number.isFinite(val) || val <= 0) {
+    return { hasDiscount: false, originalPrice: price, finalPrice: price, badge: null };
+  }
+
+  const isMoney = !!formData.loaiGiamGia; // hiện đang khóa %, nhưng để sẵn
+  const discountAmount = isMoney ? val : (price * val) / 100;
+  const finalPrice = Math.max(0, price - discountAmount);
+
+  const badge = isMoney ? `-${new Intl.NumberFormat("vi-VN").format(val)}đ` : `-${Math.round(val)}%`;
+
+  return { hasDiscount: true, originalPrice: price, finalPrice, badge };
 };
 
 const toggleExpand = (groupId) => {
@@ -651,187 +759,6 @@ const toggleExpand = (groupId) => {
   } else {
     expandedGroupIds.value.push(groupId);
   }
-};
-
-const loadData = async () => {
-  isLoading.value = true;
-  try {
-    const [variants, discountInfo, allDiscounts] = await Promise.all([
-      discountService.getAllProductDetails(),
-      discountService.getOne(discountId),
-      discountService.getAll(),
-    ]);
-
-    rawVariants.value = Array.isArray(variants) ? variants : [];
-
-    if (discountInfo) {
-      Object.assign(formData, discountInfo);
-      formData.ngayBatDau = formatDateForInput(discountInfo.ngayBatDau);
-      formData.ngayKetThuc = formatDateForInput(discountInfo.ngayKetThuc);
-      if (typeof discountInfo.mucUuTien !== "undefined" && discountInfo.mucUuTien !== null) {
-        formData.mucUuTien = discountInfo.mucUuTien;
-      }
-    }
-
-    const appliedDetails = await discountService.getDiscountDetails(discountId);
-
-    if (Array.isArray(appliedDetails) && appliedDetails.length > 0) {
-      const filteredDetails = appliedDetails.filter((d) => {
-        const dId = d.idDotGiamGia || (d.dotGiamGia ? d.dotGiamGia.id : null);
-        return dId == discountId;
-      });
-
-      selectedVariantIds.value = filteredDetails
-        .map(
-          (item) =>
-            item.idChiTietSanPham ||
-            item.id_chi_tiet_san_pham ||
-            (item.chiTietSanPham ? item.chiTietSanPham.id : null)
-        )
-        .filter((id) => id != null);
-    }
-
-    await loadActiveDiscounts(Array.isArray(allDiscounts) ? allDiscounts : []);
-  } catch (e) {
-    console.error("Lỗi tải dữ liệu chi tiết: ", e);
-    alert("Lỗi: Không thể tải dữ liệu đợt giảm giá.");
-  } finally {
-    isLoading.value = false;
-  }
-};
-
-const loadActiveDiscounts = async (allDiscounts) => {
-  const now = new Date();
-
-  // ✅ sort list trước cho ổn định (không bắt buộc nhưng sạch)
-  const sorted = sortDotGiamGia(allDiscounts);
-
-  const active = sorted.filter((d) => {
-    if (!d.trangThai) return false;
-    const start = parseDate(d.ngayBatDau);
-    const end = parseDate(d.ngayKetThuc);
-    start.setHours(0, 0, 0, 0);
-    end.setHours(23, 59, 59, 999);
-    return now >= start && now <= end;
-  });
-
-  const map = {};
-  for (const d of active) {
-    const details = await discountService.getDiscountDetails(d.id);
-    (Array.isArray(details) ? details : []).forEach((det) => {
-      const ctspId =
-        det.idChiTietSanPham ||
-        det.id_chi_tiet_san_pham ||
-        (det.chiTietSanPham ? det.chiTietSanPham.id : null);
-
-      if (!ctspId) return;
-
-      if (!map[ctspId]) map[ctspId] = [];
-      map[ctspId].push({
-        id: d.id,
-        mucUuTien: d.mucUuTien ?? 0,
-        value: d.giaTriGiamGia,
-        isMoney: d.loaiGiamGia,
-      });
-    });
-  }
-  activeDiscountsMap.value = map;
-};
-
-// ✅ chọn “đợt tốt nhất” theo ưu tiên trước, rồi mới xét giảm giá
-const pickBestDiscount = (price, list) => {
-  if (!Array.isArray(list) || list.length === 0) return null;
-
-  const calcFinal = (d) => {
-    const val = Number(d.value ?? 0);
-    const discountAmount = d.isMoney ? val : (price * val) / 100;
-    return Math.max(0, price - discountAmount);
-  };
-
-  let best = null;
-  let bestFinal = price;
-
-  for (const d of list) {
-    const final = calcFinal(d);
-
-    if (!best) {
-      best = d;
-      bestFinal = final;
-      continue;
-    }
-
-    const pBest = Number(best.mucUuTien ?? 0);
-    const pCur = Number(d.mucUuTien ?? 0);
-
-    // 1) ưu tiên desc
-    if (pCur > pBest) {
-      best = d;
-      bestFinal = final;
-      continue;
-    }
-    if (pCur < pBest) continue;
-
-    // 2) nếu ưu tiên bằng nhau -> giá sau giảm thấp hơn thì tốt hơn
-    if (final < bestFinal) {
-      best = d;
-      bestFinal = final;
-      continue;
-    }
-    if (final > bestFinal) continue;
-
-    // 3) tie-break: value desc, rồi id desc
-    const vBest = Number(best.value ?? 0);
-    const vCur = Number(d.value ?? 0);
-    if (vCur > vBest) {
-      best = d;
-      bestFinal = final;
-      continue;
-    }
-    if (vCur < vBest) continue;
-
-    if (Number(d.id ?? 0) > Number(best.id ?? 0)) {
-      best = d;
-      bestFinal = final;
-    }
-  }
-
-  return { best, bestFinal };
-};
-
-const getProductDisplay = (variant) => {
-  const price = variant.giaNiemYet || 0;
-  const discounts = activeDiscountsMap.value[variant.id];
-
-  if (!discounts || discounts.length === 0) {
-    return {
-      hasDiscount: false,
-      finalPrice: price,
-      originalPrice: price,
-      badge: null,
-    };
-  }
-
-  const picked = pickBestDiscount(price, discounts);
-  if (!picked?.best) {
-    return { hasDiscount: false, finalPrice: price, originalPrice: price, badge: null };
-  }
-
-  const best = picked.best;
-  const finalPrice = picked.bestFinal;
-
-  let badge = "";
-  if (best.isMoney) {
-    badge = price > 0 ? `-${Math.round((best.value / price) * 100)}%` : `-${best.value}đ`;
-  } else {
-    badge = `-${best.value}%`;
-  }
-
-  return {
-    hasDiscount: true,
-    finalPrice,
-    originalPrice: price,
-    badge,
-  };
 };
 
 const isGroupSelected = (parentId) => {
@@ -930,6 +857,50 @@ const mapColor = (colorName) => {
   return "#ccc";
 };
 
+const loadData = async () => {
+  isLoading.value = true;
+  try {
+    const [variants, discountInfo] = await Promise.all([
+      discountService.getAllProductDetails(),
+      discountService.getOne(discountId),
+    ]);
+
+    rawVariants.value = Array.isArray(variants) ? variants : [];
+
+    if (discountInfo) {
+      Object.assign(formData, discountInfo);
+      formData.ngayBatDau = formatDateForInput(discountInfo.ngayBatDau);
+      formData.ngayKetThuc = formatDateForInput(discountInfo.ngayKetThuc);
+      if (typeof discountInfo.mucUuTien !== "undefined" && discountInfo.mucUuTien !== null) {
+        formData.mucUuTien = discountInfo.mucUuTien;
+      }
+    }
+
+    const appliedDetails = await discountService.getDiscountDetails(discountId);
+
+    if (Array.isArray(appliedDetails) && appliedDetails.length > 0) {
+      const filteredDetails = appliedDetails.filter((d) => {
+        const dId = d.idDotGiamGia || (d.dotGiamGia ? d.dotGiamGia.id : null);
+        return dId == discountId;
+      });
+
+      selectedVariantIds.value = filteredDetails
+        .map(
+          (item) =>
+            item.idChiTietSanPham ||
+            item.id_chi_tiet_san_pham ||
+            (item.chiTietSanPham ? item.chiTietSanPham.id : null)
+        )
+        .filter((id) => id != null);
+    }
+  } catch (e) {
+    console.error("Lỗi tải dữ liệu chi tiết: ", e);
+    alert("Lỗi: Không thể tải dữ liệu đợt giảm giá.");
+  } finally {
+    isLoading.value = false;
+  }
+};
+
 onMounted(() => loadData());
 </script>
 
@@ -940,7 +911,6 @@ onMounted(() => loadData());
   box-sizing: border-box;
 }
 
-/* ✅ FIX QUAN TRỌNG: đặt biến màu TRÊN .discount-page (scoped vẫn ăn) */
 .discount-page {
   --ss-red: #ff4d4f;
   --ss-black: #111827;
@@ -954,7 +924,6 @@ onMounted(() => loadData());
   color: rgba(17, 24, 39, 0.86);
 }
 
-/* Header */
 .header-section {
   display: flex;
   justify-content: space-between;
@@ -974,7 +943,6 @@ onMounted(() => loadData());
   color: var(--ss-sub);
 }
 
-/* ✅ Back button: KHÔNG TRẮNG, chữ rõ */
 .btn-back {
   background: linear-gradient(90deg, var(--ss-black) 0%, #374151 100%);
   color: #ffffff;
@@ -993,7 +961,6 @@ onMounted(() => loadData());
   filter: brightness(0.98);
 }
 
-/* Layout */
 .content-wrapper {
   display: grid;
   grid-template-columns: 1fr 2fr;
@@ -1001,7 +968,6 @@ onMounted(() => loadData());
   margin-bottom: 24px;
 }
 
-/* Card + border đỏ nhạt */
 .card {
   background: #fff;
   border-radius: 14px;
@@ -1035,7 +1001,6 @@ onMounted(() => loadData());
   height: 100%;
 }
 
-/* Form */
 .form-group {
   margin-bottom: 16px;
 }
@@ -1070,16 +1035,7 @@ onMounted(() => loadData());
   display: flex;
   gap: 20px;
 }
-.radio-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 14px;
-  cursor: pointer;
-  font-weight: 500;
-}
 
-/* Buttons */
 .action-buttons {
   display: flex;
   gap: 10px;
@@ -1141,7 +1097,6 @@ onMounted(() => loadData());
   background: rgba(255, 77, 79, 0.06);
 }
 
-/* Search */
 .search-bar {
   margin-bottom: 16px;
 }
@@ -1172,7 +1127,6 @@ onMounted(() => loadData());
   color: rgba(17, 24, 39, 0.45);
 }
 
-/* Table Mini */
 .table-wrapper-mini {
   height: 450px;
   overflow-y: auto;
@@ -1180,7 +1134,6 @@ onMounted(() => loadData());
   border-radius: 12px;
 }
 
-/* Pagination */
 .pagination {
   display: flex;
   justify-content: center;
@@ -1216,7 +1169,6 @@ onMounted(() => loadData());
   cursor: not-allowed;
 }
 
-/* Table */
 .table-responsive {
   overflow-x: auto;
   border: 1px solid rgba(17, 24, 39, 0.10);
@@ -1248,7 +1200,6 @@ onMounted(() => loadData());
   background-color: rgba(17, 24, 39, 0.03);
 }
 
-/* Price / tags */
 .discount-tag {
   display: inline-block;
   background-color: #ef4444;
@@ -1270,7 +1221,6 @@ onMounted(() => loadData());
   font-weight: 600;
 }
 
-/* Detail header */
 .detail-header {
   display: flex;
   justify-content: space-between;
@@ -1293,7 +1243,6 @@ onMounted(() => loadData());
   font-weight: 500;
 }
 
-/* Filters */
 .filter-grid {
   display: flex;
   gap: 10px;
@@ -1309,10 +1258,6 @@ onMounted(() => loadData());
   background-color: #fff;
   min-width: 120px;
   color: rgba(17, 24, 39, 0.86);
-}
-.form-select-sm:focus {
-  border-color: rgba(255, 77, 79, 0.45);
-  box-shadow: 0 0 0 0.18rem var(--ss-focus);
 }
 
 .btn-clear-filter {
@@ -1334,18 +1279,16 @@ onMounted(() => loadData());
   border-color: rgba(255, 77, 79, 0.35);
 }
 
-/* Utilities */
 .text-center {
   text-align: center;
 }
 .text-primary {
-  color: #ef4444; /* đỏ chủ đạo */
+  color: #ef4444;
 }
 .text-muted {
   color: rgba(17, 24, 39, 0.45);
 }
 
-/* Checkbox accent theo palette (đỏ) */
 .custom-checkbox {
   width: 16px;
   height: 16px;
@@ -1379,15 +1322,13 @@ onMounted(() => loadData());
   }
 }
 
-/* Thumbnails */
 .product-thumb {
-  width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;
+  width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; background:#fff;
 }
 .product-thumb-sm {
-  width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #eee;
+  width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; background:#fff;
 }
 
-/* Expand button */
 .btn-expand {
   background: none; border: none; cursor: pointer; color: #64748b; width: 24px; height: 24px;
 }
@@ -1403,4 +1344,26 @@ onMounted(() => loadData());
 .bg-white {
   background-color: #fff !important;
 }
+
+/* ✅ BADGE “SỐ MŨ” giống file thêm */
+.thumb-wrap { position: relative; display: inline-block; vertical-align: middle; }
+.discount-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 4px;
+  border-radius: 999px;
+  border: 1.5px solid #fff;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+  pointer-events: none;
+  white-space: nowrap;
+  line-height: 1.3;
+  z-index: 2;
+}
+.discount-badge.sm { font-size: 8px; padding: 1px 3px; top: -3px; right: -3px; }
+
 </style>

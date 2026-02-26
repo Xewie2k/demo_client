@@ -2,11 +2,7 @@
 <template>
   <div class="container-fluid login-page p-0">
     <div class="row g-0 h-100">
-      <!-- LEFT: giống mẫu (nền xám nhạt + hình trang trí + icon trung tâm) -->
-      <div
-        class="col-md-6 d-none d-md-flex left-section justify-content-center align-items-center position-relative"
-      >
-        <!-- Decor shapes -->
+      <div class="col-md-6 d-none d-md-flex left-section justify-content-center align-items-center position-relative">
         <div class="left-decor">
           <span class="deco deco-circle deco-circle-lg"></span>
           <span class="deco deco-circle deco-circle-sm"></span>
@@ -15,7 +11,6 @@
           <span class="deco deco-diamond deco-diamond-2"></span>
         </div>
 
-        <!-- Center badge -->
         <div class="left-hero">
           <div class="hero-badge">
             <i class="bi bi-laptop hero-main"></i>
@@ -23,23 +18,15 @@
           </div>
         </div>
 
-        <!-- Icon trang trí cùng chủ đề -->
         <div class="left-icon">
           <i class="ph-soccer-ball-bold"></i>
         </div>
       </div>
 
-      <!-- RIGHT -->
-      <div
-        class="col-12 col-md-6 right-section d-flex justify-content-center align-items-center"
-      >
+      <div class="col-12 col-md-6 right-section d-flex justify-content-center align-items-center">
         <div class="login-card w-100 p-4">
           <div class="text-center mb-5">
-            <img
-              src="@/assets/images/logo/Logo_SevenStrike.png"
-              alt="Small Logo"
-              class="small-logo"
-            />
+            <img src="@/assets/images/logo/Logo_SevenStrike.png" alt="Small Logo" class="small-logo" />
           </div>
 
           <form @submit.prevent="handleLogin">
@@ -85,26 +72,12 @@
 
             <div class="mb-4">
               <div class="form-check">
-                <input
-                  class="form-check-input"
-                  type="checkbox"
-                  v-model="rememberMe"
-                  id="rememberMe"
-                />
-                <label
-                  class="form-check-label small text-secondary"
-                  for="rememberMe"
-                >
-                  Ghi nhớ tôi
-                </label>
+                <input class="form-check-input" type="checkbox" v-model="rememberMe" id="rememberMe" />
+                <label class="form-check-label small text-secondary" for="rememberMe">Ghi nhớ tôi</label>
               </div>
             </div>
 
-            <button
-              type="submit"
-              class="btn btn-danger w-100 fw-bold py-2"
-              :disabled="loading"
-            >
+            <button type="submit" class="btn btn-danger w-100 fw-bold py-2" :disabled="loading">
               {{ loading ? "Đang đăng nhập..." : "Đăng Nhập" }}
             </button>
           </form>
@@ -133,9 +106,15 @@ export default {
       this.showPassword = !this.showPassword;
     },
 
+    normalizeRole(role) {
+      const r = String(role || "").trim().toUpperCase();
+      if (r === "STAFF") return "NHAN_VIEN";
+      if (r === "NHANVIEN" || r === "NHÂN_VIÊN" || r === "NHÂN VIÊN") return "NHAN_VIEN";
+      return r;
+    },
+
     clearAuth() {
-      // ✅ dọn sạch cả 2 nơi để tránh trạng thái “nửa đăng nhập”
-      const keys = ["user", "accessToken", "token", "jwt", "ss_token", "nguoiDung"];
+      const keys = ["user", "accessToken", "token", "jwt", "ss_token", "nguoiDung", "ss_nguoi_ban"];
       keys.forEach((k) => {
         localStorage.removeItem(k);
         sessionStorage.removeItem(k);
@@ -146,10 +125,8 @@ export default {
       const status = error?.response?.status;
       const data = error?.response?.data;
 
-      // ✅ backend controller của bạn trả body là String
       if (typeof data === "string" && data.trim()) return data;
 
-      // nếu lỡ backend có trả object
       if (data && typeof data === "object") {
         const m = data.message || data.error || data.title;
         if (typeof m === "string" && m.trim()) return m;
@@ -165,9 +142,31 @@ export default {
       return error?.message || "Máy chủ đang gặp lỗi, vui lòng thử lại.";
     },
 
+    normalizeNguoiBan(user) {
+      const u = user || {};
+      const id = u.idNhanVien || u.nhanVienId || u.id || u.userId || u.nhanVien?.id || null;
+      const hoTen = u.hoTen || u.tenNhanVien || u.ten || u.fullName || u.name || u.username || "";
+      return { id, hoTen, role: this.normalizeRole(u.role || u.quyen || u.vaiTro || u.tenVaiTro) || null };
+    },
+
     saveUser(user) {
       const store = this.rememberMe ? localStorage : sessionStorage;
       store.setItem("user", JSON.stringify(user));
+      store.setItem("ss_nguoi_ban", JSON.stringify(this.normalizeNguoiBan(user)));
+    },
+
+    resolveRedirect(userRole) {
+      const role = this.normalizeRole(userRole);
+
+      const qRedirect = this.$route?.query?.redirect;
+      if (qRedirect && typeof qRedirect === "string" && qRedirect.startsWith("/admin")) {
+        return qRedirect;
+      }
+
+      // ✅ mặc định: luôn về trang chủ để không bị “từ chối” do redirect nhầm /admin/san-pham
+      if (role === "ADMIN" || role === "NHAN_VIEN") return "/admin/trang-chu";
+
+      return "/dang-nhap";
     },
 
     async handleLogin() {
@@ -185,34 +184,39 @@ export default {
       this.loading = true;
 
       try {
-        const payload = {
-          username: this.username.trim(),
-          password: this.password,
-        };
-
-        const response = await axios.post(
-          "http://localhost:8080/api/auth/login",
-          payload
-        );
+        const payload = { username: this.username.trim(), password: this.password };
+        const response = await axios.post("http://localhost:8080/api/auth/login", payload);
 
         const user = response?.data || {};
+        const role = this.normalizeRole(
+          user?.role || user?.vaiTro || user?.tenVaiTro || user?.tenQuyenHan || user?.quyenHan?.tenQuyenHan
+        );
 
-        // ✅ dọn auth cũ rồi lưu auth mới
+        // ✅ nếu backend không trả role rõ ràng -> coi như lỗi
+        if (!role) {
+          this.clearAuth();
+          await Swal.fire({
+            icon: "error",
+            title: "Thất bại",
+            text: "Không xác định được quyền tài khoản. Vui lòng đăng nhập lại.",
+            confirmButtonColor: "#ff4d4f",
+          });
+          return;
+        }
+
         this.clearAuth();
-        this.saveUser(user);
+        this.saveUser({ ...user, role }); // ✅ ép role về chuẩn
 
         await Swal.fire({
           icon: "success",
           title: "Đăng nhập thành công",
           text: user.message || `Xin chào ${user.hoTen || this.username}`,
-          timer: 1200,
+          timer: 900,
           showConfirmButton: false,
         });
 
-        // ✅ Ưu tiên quay về route được guard đẩy sang
-        const redirect = this.$route.query.redirect || "/admin/san-pham";
-
-        if (user.role === "ADMIN" || user.role === "STAFF") {
+        if (role === "ADMIN" || role === "NHAN_VIEN") {
+          const redirect = this.resolveRedirect(role);
           this.$router.replace(redirect);
         } else {
           await Swal.fire({
@@ -225,11 +229,10 @@ export default {
         }
       } catch (error) {
         const errorMsg = this.pickErrorMessage(error);
-
         await Swal.fire({
           icon: "error",
           title: "Thất bại",
-          text: errorMsg, // ✅ luôn là string
+          text: errorMsg,
           confirmButtonColor: "#ff4d4f",
         });
       } finally {
@@ -237,12 +240,25 @@ export default {
       }
     },
   },
+
   mounted() {
-    // ✅ nếu đã có user thì đá vào admin luôn
-    const user =
-      localStorage.getItem("user") || sessionStorage.getItem("user");
-    if (user) {
-      this.$router.replace("/admin");
+    // ✅ đã có user + role hợp lệ thì về trang chủ
+    try {
+      const raw = localStorage.getItem("user") || sessionStorage.getItem("user");
+      if (!raw) return;
+
+      const u = JSON.parse(raw);
+      const role = this.normalizeRole(
+        u?.role || u?.vaiTro || u?.tenVaiTro || u?.tenQuyenHan || u?.quyenHan?.tenQuyenHan
+      );
+
+      if (role === "ADMIN" || role === "NHAN_VIEN") {
+        this.$router.replace("/admin/trang-chu");
+      } else {
+        this.clearAuth();
+      }
+    } catch (e) {
+      this.clearAuth();
     }
   },
 };
@@ -255,11 +271,10 @@ export default {
 }
 
 .left-section {
-  background: #f6f7f9; /* nền xám nhạt như mẫu */
+  background: #f6f7f9;
   overflow: hidden;
 }
 
-/* Decor shapes */
 .left-decor .deco {
   position: absolute;
   z-index: 1;
@@ -311,7 +326,6 @@ export default {
   left: 70%;
 }
 
-/* Center badge */
 .left-hero {
   position: relative;
   z-index: 2;
@@ -335,13 +349,12 @@ export default {
 
 .hero-mini {
   position: absolute;
-  top: 56px; /* chỉnh để giống mẫu */
-  left: 102px; /* chỉnh để nằm góc phải icon laptop */
+  top: 56px;
+  left: 102px;
   font-size: 14px;
   color: #6c757d;
 }
 
-/* Icon trang trí chủ đề */
 .left-icon {
   position: absolute;
   bottom: 30px;

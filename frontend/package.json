@@ -21,6 +21,7 @@
     "chart.js": "^4.5.1",
     "html5-qrcode": "^2.3.8",
     "jsqr": "^1.4.0",
+    "jszip": "^3.10.1",
     "material-icons": "^1.13.14",
     "nouislider": "^15.8.1",
     "primeicons": "^7.0.0",

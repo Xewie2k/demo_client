@@ -1,30 +1,32 @@
 <template>
-  <div class="order-timeline w-100">
-    <div class="d-flex justify-content-between position-relative">
-      <!-- Background Line -->
-      <div class="position-absolute top-0 start-0 w-100 mt-3" style="height: 4px; background-color: #e9ecef; z-index: 0;"></div>
-      
-      <!-- Progress Line (approximate based on active step) -->
-      <div class="position-absolute top-0 start-0 mt-3" :style="{ width: progressPercentage + '%', height: '4px', backgroundColor: '#198754', zIndex: 0 }"></div>
+  <div class="order-timeline w-100 px-2">
+    <div class="d-flex justify-content-between position-relative" style="padding-top: 20px;">
+      <!-- Background line -->
+      <div class="position-absolute w-100" style="height:4px; background:#e9ecef; top:20px; left:0; z-index:0;"></div>
+      <!-- Progress line -->
+      <div
+        class="position-absolute"
+        :style="{ width: progressPercentage + '%', height: '4px', backgroundColor: 'var(--ss-accent, #e53935)', top: '20px', left: 0, zIndex: 0, transition: 'width 0.5s ease' }"
+      ></div>
 
       <!-- Steps -->
-      <div v-for="(step, index) in steps" :key="index" class="text-center position-relative z-1" style="flex: 1;">
-        <div 
-          class="rounded-circle mx-auto d-flex align-items-center justify-content-center border"
-          :class="[
-            step.active ? 'bg-success text-white border-success' : (step.completed ? 'bg-success text-white border-success' : 'bg-white text-muted border-light')
-          ]"
-          style="width: 40px; height: 40px; font-size: 1.2rem;"
+      <div v-for="step in allSteps" :key="step.code" class="text-center position-relative" style="flex:1; z-index:1;">
+        <!-- Circle -->
+        <div
+          class="rounded-circle mx-auto d-flex align-items-center justify-content-center border shadow-sm"
+          :style="circleStyle(step.code)"
+          style="width:40px; height:40px; font-size:1.1rem; transition:all 0.3s;"
         >
-           <i v-if="step.active" class="bi bi-clock-history"></i>
-           <i v-else-if="step.completed" class="bi bi-check-lg"></i>
-           <div v-else class="rounded-circle bg-secondary" style="width: 10px; height: 10px;"></div>
+          <i v-if="step.code < statusCode" class="bi bi-check-lg"></i>
+          <i v-else :class="step.icon"></i>
         </div>
-        <div class="mt-2 small fw-bold" :class="step.active ? 'text-success' : 'text-muted'">
-          {{ step.status }}
+        <!-- Label -->
+        <div class="mt-2 fw-bold" :style="step.code <= statusCode ? { color: 'var(--ss-accent, #e53935)' } : { color: '#bbb' }" style="font-size:0.72rem; line-height:1.3;">
+          {{ step.label }}
         </div>
-        <div v-if="step.time" class="text-muted" style="font-size: 0.75rem;">
-          {{ formatDate(step.time) }}
+        <!-- Timestamp (nếu có) -->
+        <div v-if="getStepTime(step.code)" class="text-muted" style="font-size:0.68rem; margin-top:2px;">
+          {{ formatDate(getStepTime(step.code)) }}
         </div>
       </div>
     </div>
@@ -32,38 +34,54 @@
 </template>
 
 <script>
+const ALL_STEPS = [
+  { code: 1, label: 'Chờ xác nhận',    icon: 'bi bi-clipboard' },
+  { code: 2, label: 'Chờ giao hàng',   icon: 'bi bi-box-seam' },
+  { code: 3, label: 'Đang vận chuyển', icon: 'bi bi-truck' },
+  { code: 4, label: 'Đã giao hàng',    icon: 'bi bi-truck-front' },
+  { code: 5, label: 'Hoàn thành',      icon: 'bi bi-check-circle' },
+];
+
+// Map status label → code (for when only string labels available in timeline)
+const LABEL_TO_CODE = {
+  'chờ xác nhận': 1, 'chờ giao hàng': 2, 'đang vận chuyển': 3, 'đã giao hàng': 4, 'hoàn thành': 5
+};
+
 export default {
-  name: "OrderTimeline",
+  name: 'OrderTimeline',
   props: {
-    timeline: {
-      type: Array,
-      default: () => []
-    }
+    statusCode: { type: Number, default: 1 },
+    timeline: { type: Array, default: () => [] },
   },
   computed: {
-    steps() {
-        // If we want a fixed set of steps (Confirmed -> Shipping -> Delivered), we should map the timeline to it.
-        // Or if the timeline ITSELF is the list of events.
-        // The DTO returns the history of what happened. 
-        // But a timeline usually shows what IS GOING TO happen too.
-        // For now, I'll just display the provided timeline events. 
-        // To make it look like a full progress bar, I might need to merge with "Expected" steps.
-        // For this task, I will just display what I have.
-        return this.timeline;
-    },
+    allSteps() { return ALL_STEPS; },
     progressPercentage() {
-        if (!this.steps.length) return 0;
-        const activeIndex = this.steps.findIndex(s => s.active);
-        if (activeIndex === -1) return 100; // All done?
-        return (activeIndex / (this.steps.length - 1)) * 100;
-    }
+      const st = this.statusCode || 1;
+      return Math.max(0, (st - 1) / (ALL_STEPS.length - 1) * 100);
+    },
   },
   methods: {
+    circleStyle(code) {
+      if (code <= this.statusCode) {
+        return { backgroundColor: 'var(--ss-accent, #e53935)', borderColor: 'var(--ss-accent, #e53935)', color: '#fff' };
+      }
+      return { backgroundColor: '#fff', borderColor: '#dee2e6', color: '#bbb' };
+    },
+    getStepTime(code) {
+      if (!this.timeline || !this.timeline.length) return null;
+      const step = ALL_STEPS.find(s => s.code === code);
+      if (!step) return null;
+      const match = this.timeline.find(t => {
+        const label = (t.status || '').toLowerCase().trim();
+        return LABEL_TO_CODE[label] === code || label === step.label.toLowerCase();
+      });
+      return match?.time || null;
+    },
     formatDate(value) {
       if (!value) return '';
-      const date = new Date(value);
-      return date.toLocaleDateString('vi-VN') + ' ' + date.toLocaleTimeString('vi-VN', {hour: '2-digit', minute:'2-digit'});
-    }
-  }
-}
+      const d = new Date(value);
+      return d.toLocaleDateString('vi-VN') + ' ' + d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    },
+  },
+};
 </script>

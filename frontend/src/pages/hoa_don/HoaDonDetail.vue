@@ -19,13 +19,24 @@
       <!-- CỘT TRÁI -->
       <div class="col-lg-8">
         <!-- TRẠNG THÁI -->
+
         <div class="card ss-card mb-4">
           <div class="card-body">
-            <h6 class="fw-bold mb-4">
-              <i class="bi bi-truck me-1"></i> Trạng thái đơn hàng
-            </h6>
+            <!-- HEADER + BUTTON -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="fw-bold mb-0">
+                <i class="bi bi-truck me-1"></i>
+                Trạng thái đơn hàng
+              </h6>
 
-            <div class="ss-status">
+              <button class="btn btn-history" @click="moModalLichSu">
+                <i class="bi bi-clock-history me-1"></i>
+                Lịch sử thao tác
+              </button>
+            </div>
+
+            <!-- TIMELINE -->
+            <div class="ss-status mt-3">
               <div
                 v-for="st in trangThaiHienThi"
                 :key="st.value"
@@ -43,6 +54,7 @@
             </div>
           </div>
         </div>
+
         <!-- THÔNG TIN KHÁCH HÀNG -->
         <div class="row g-4 mb-4">
           <div class="col-md-6">
@@ -105,23 +117,45 @@
               Danh sách sản phẩm ({{ selectedHD.sanPham.length }})
             </h6>
 
-            <table class="table align-middle">
-              <thead class="table-light">
+            <table class="table table-bordered align-middle">
+              <thead class="table-light text-center">
                 <tr>
-                  <th>STT</th>
+                  <th style="width: 60px">STT</th>
+                  <th>Mã sản phẩm</th>
                   <th>Tên sản phẩm</th>
+                  <th>Kích cỡ</th>
+                  <th>Màu sắc</th>
                   <th>Số lượng</th>
                   <th>Đơn giá</th>
                   <th>Thành tiền</th>
                 </tr>
               </thead>
+
               <tbody>
-                <tr v-for="(sp, index) in selectedHD.sanPham" :key="sp.id">
+                <tr
+                  v-for="(sp, index) in selectedHD.sanPham"
+                  :key="sp.id"
+                  class="text-center"
+                >
                   <td>{{ index + 1 }}</td>
-                  <td>{{ sp.tenSanPham }}</td>
+
+                  <td class="fw-medium">
+                    {{ sp.maSanPham }}
+                  </td>
+
+                  <td class="text-start">
+                    {{ sp.tenSanPham }}
+                  </td>
+
+                  <td>{{ sp.size }}</td>
+
+                  <td>{{ sp.mauSac }}</td>
+
                   <td>{{ sp.soLuong }}</td>
+
                   <td>{{ sp.donGia.toLocaleString("vi-VN") }} đ</td>
-                  <td class="fw-bold text-danger">
+
+                  <td class="text-danger fw-medium">
                     {{ sp.thanhTien.toLocaleString("vi-VN") }} đ
                   </td>
                 </tr>
@@ -129,7 +163,7 @@
                 <tr
                   v-if="!selectedHD.sanPham || selectedHD.sanPham.length === 0"
                 >
-                  <td colspan="5" class="text-center text-muted">
+                  <td colspan="8" class="text-center text-muted">
                     Không có sản phẩm
                   </td>
                 </tr>
@@ -191,9 +225,7 @@
                 class="d-flex justify-content-between border-bottom py-2"
               >
                 <!-- Cột bên trái: loại thanh toán -->
-                <div class="fw-bold">
-                  {{ item.loai }}+
-                </div>
+                <div class="fw-bold">{{ item.loai }}</div>
 
                 <!-- Cột bên phải: số tiền + thời gian ở dưới -->
                 <div class="text-end">
@@ -204,17 +236,6 @@
                     {{ item.thoiGian }}
                   </div>
                 </div>
-              </div>
-
-              <!-- NÚT THANH TOÁN - chỉ hiện khi trạng thái = ĐÃ GIAO HÀNG -->
-              <div class="payment-action">
-                <button
-                  v-if="selectedHD.trangThai === 4"
-                  class="btn btn-success btn-sm"
-                  @click="moModalThanhToan"
-                >
-                  Thanh toán
-                </button>
               </div>
             </div>
           </div>
@@ -424,6 +445,48 @@
       </div>
     </div>
   </div>
+
+  <!-- MODAL LỊCH SỬ THAO TÁC -->
+  <div class="modal fade" id="modalLichSu" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content history-modal">
+        <div class="modal-header border-0">
+          <h5 class="modal-title">
+            <i class="bi bi-clock-history me-2"></i>
+            Lịch sử thao tác
+          </h5>
+          <button class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body history-body">
+          <div
+            v-if="lichSuThaoTac.length === 0"
+            class="text-muted text-center py-4"
+          >
+            Chưa có lịch sử thao tác
+          </div>
+
+          <div
+            v-for="(item, index) in lichSuThaoTac"
+            :key="index"
+            class="history-item"
+          >
+            <div class="history-dot"></div>
+
+            <div class="history-content">
+              <div class="history-time">
+                {{ item.thoiGian }}
+              </div>
+
+              <div class="history-text">
+                {{ item.noiDung }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -456,9 +519,7 @@ const trangThaiList = [
   { value: 2, label: "Chờ giao hàng", icon: "bi-box" },
   { value: 3, label: "Đang vận chuyển", icon: "bi-truck" },
   { value: 4, label: "Đã giao hàng", icon: "bi-check-circle" },
-  { value: 5, label: "Đã thanh toán", icon: "bi-cash" },
-  { value: 6, label: "Hoàn thành", icon: "bi-flag" },
-  { value: 7, label: "Giao thất bại", icon: "bi-x-circle" },
+  { value: 5, label: "Hoàn thành", icon: "bi-flag" },
 ];
 
 const selectedHD = ref({
@@ -478,11 +539,9 @@ const danhSachTrangThaiHopLe = computed(() => {
       case 2:
         return st.value === 3;
       case 3:
-        return st.value === 4 || st.value === 7;
+        return st.value === 4;
       case 4:
-        return st.value === 5;
-      case 5:
-        return st.value === 6;
+        return st.value === 5; // giao xong -> hoàn thành
       default:
         return false;
     }
@@ -522,14 +581,28 @@ const updateHoaDon = async () => {
       ghiChu: "Cập nhật trạng thái từ giao diện",
     });
 
+    selectedHD.value.trangThai = form.value.trangThai;
+
+    const trangThaiText = trangThaiList.find(
+      (s) => s.value === form.value.trangThai,
+    )?.label;
+
+    const newItem = {
+      thoiGian: layThoiGianHienTai(),
+      noiDung: "Cập nhật trạng thái: " + (trangThaiText || ""),
+    };
+
+    const oldHistory = loadLichSuLocal(id);
+    oldHistory.unshift(newItem);
+
+    saveLichSuLocal(id, oldHistory);
+
+    lichSuThaoTac.value = oldHistory;
+
     alert("Lưu thay đổi thành công!");
-
     modal.hide();
-
-    loadChiTiet(id);
   } catch (error) {
     console.error("Update error:", error);
-
     alert(
       "Lỗi khi cập nhật: " + (error.response?.data?.message || error.message),
     );
@@ -540,6 +613,24 @@ const phuongThuc = ref("TM");
 const tienKhachDua = ref(0);
 const tienKhachDuaHienThi = ref("");
 const lichSuThanhToan = ref([]);
+const lichSuThaoTac = ref([]);
+
+const getStorageKey = (id) => `lich_su_hd_${id}`;
+
+const saveLichSuLocal = (id, data) => {
+  localStorage.setItem(getStorageKey(id), JSON.stringify(data));
+};
+
+const loadLichSuLocal = (id) => {
+  const data = localStorage.getItem(getStorageKey(id));
+  return data ? JSON.parse(data) : [];
+};
+
+const moModalLichSu = () => {
+  const el = document.getElementById("modalLichSu");
+  const modal = Modal.getOrCreateInstance(el);
+  modal.show();
+};
 
 const layThoiGianHienTai = () => {
   const now = new Date();
@@ -594,6 +685,18 @@ const xacNhanThanhToan = async () => {
 
   lichSuThanhToan.value.unshift(banGhiMoi);
 
+  const id = route.params.id;
+
+  const newItem = {
+    thoiGian: layThoiGianHienTai(),
+    noiDung: "Thanh toán bằng " + loaiThanhToan,
+  };
+
+  const oldHistory = loadLichSuLocal(id);
+  oldHistory.unshift(newItem);
+  saveLichSuLocal(id, oldHistory);
+  lichSuThaoTac.value = oldHistory;
+
   try {
     const id = route.params.id;
 
@@ -631,11 +734,16 @@ const loaiDonText = computed(() => {
 const loadChiTiet = async (id) => {
   const { data } = await axios.get(`${API_HD}/${id}`);
 
+  // =========================
+  // MAP HÓA ĐƠN
+  // =========================
   selectedHD.value = {
     maHD: data.maHoaDon,
     ngayTao: data.ngayTao
       ? new Date(data.ngayTao).toLocaleString("vi-VN")
       : "—",
+
+    ngayThanhToan: data.ngayThanhToan ?? null,
 
     tenKhachHang: data.tenKhachHang ?? "",
     sdt: data.soDienThoaiKhachHang ?? "",
@@ -646,8 +754,8 @@ const loadChiTiet = async (id) => {
 
     loaiDon: data.loaiDon,
 
-    tongTien: data.tongTienSauGiam ?? 0,
-    giamGia: data.tongTienGiam ?? 0,
+    tongTien: data.tongTien ?? 0, // tiền hàng gốc
+    giamGia: data.tongTienGiam ?? 0, // tiền giảm
     phiVanChuyen: data.phiVanChuyen ?? 0,
 
     trangThai: data.trangThaiHienTai ?? 1,
@@ -655,16 +763,50 @@ const loadChiTiet = async (id) => {
     sanPham: Array.isArray(data.chiTietHoaDon)
       ? data.chiTietHoaDon.map((sp) => ({
           id: sp.id,
-          tenSanPham:
-            sp.tenSanPham ||
-            sp.chiTietSanPham?.sanPham?.tenSanPham ||
-            "Không xác định",
+          maSanPham: sp.maSanPham || "—",
+          tenSanPham: sp.tenSanPham || "Không xác định",
+          size: sp.kichCo || "—",
+          mauSac: sp.mauSac || "—",
           soLuong: sp.soLuong ?? 0,
           donGia: sp.donGia ?? 0,
           thanhTien: (sp.soLuong ?? 0) * (sp.donGia ?? 0),
         }))
       : [],
   };
+
+  // =========================
+  // MAP LỊCH SỬ THANH TOÁN
+  // =========================
+  lichSuThanhToan.value = [];
+
+  if (data.ngayThanhToan) {
+    lichSuThanhToan.value.push({
+      loai: "Thanh toán",
+      soTien: hoaDon.value.canThanhToan,
+      thoiGian: new Date(data.ngayThanhToan).toLocaleString("vi-VN"),
+    });
+  }
+
+  // =========================
+  // MAP LỊCH SỬ THAO TÁC
+  // =========================
+  lichSuThaoTac.value = loadLichSuLocal(id);
+
+  // Tạo đơn
+  if (data.ngayTao) {
+    lichSuThaoTac.value.push({
+      thoiGian: new Date(data.ngayTao).toLocaleString("vi-VN"),
+      noiDung: "Tạo đơn hàng",
+    });
+  }
+
+  // Thanh toán
+  if (data.ngayThanhToan) {
+    lichSuThaoTac.value.unshift({
+      thoiGian: new Date(data.ngayThanhToan).toLocaleString("vi-VN"),
+      noiDung: "Đơn hàng đã thanh toán",
+    });
+  }
 };
 
 watch(
@@ -1036,5 +1178,87 @@ button.btn-warning:hover {
 .btn-method,
 .payment-table th {
   font-weight: 400 !important;
+}
+
+/* Nút lịch sử */
+.ss-card .card-body {
+  padding-bottom: 60px; /* 👈 tạo khoảng trống dưới */
+}
+
+.btn-history {
+  position: absolute;
+  bottom: 15px;
+  right: 20px;
+
+  background: #16a34a;
+  color: white;
+  border: none;
+
+  font-size: 12px;
+  border-radius: 20px;
+  padding: 6px 16px;
+
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(22, 163, 74, 0.25);
+}
+
+.btn-history:hover {
+  background: #15803d;
+  transform: translateY(-2px);
+}
+
+/* Modal */
+.history-modal {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.history-body {
+  max-height: 400px;
+  overflow-y: auto;
+  position: relative;
+  padding-left: 30px;
+}
+
+/* Timeline */
+.history-body::before {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #e5e7eb;
+}
+
+.history-item {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.history-dot {
+  position: absolute;
+  left: -17px;
+  top: 5px;
+  width: 10px;
+  height: 10px;
+  background: #28a745;
+  border-radius: 50%;
+}
+
+.history-content {
+  background: #f9fafb;
+  padding: 10px 14px;
+  border-radius: 10px;
+}
+
+.history-time {
+  font-size: 11px;
+  color: rgba(17, 24, 39, 0.55);
+  margin-bottom: 4px;
+}
+
+.history-text {
+  font-size: 13px;
 }
 </style>

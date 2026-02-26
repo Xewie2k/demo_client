@@ -1,8 +1,8 @@
 package com.example.datn_sevenstrike.controller.client;
 
+import com.example.datn_sevenstrike.dto.client.ClientLoginResponse;
 import com.example.datn_sevenstrike.dto.client.ClientRegisterRequest;
 import com.example.datn_sevenstrike.dto.request.LoginRequest;
-import com.example.datn_sevenstrike.dto.response.LoginResponse;
 import com.example.datn_sevenstrike.service.client.ClientAuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,7 +19,7 @@ public class ClientAuthController {
     @PostMapping("/login")
     public ResponseEntity<?> clientLogin(@RequestBody LoginRequest req) {
         try {
-            LoginResponse response = clientAuthService.authenticateClient(req);
+            ClientLoginResponse response = clientAuthService.authenticateClient(req);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             String msg = e.getMessage();
@@ -36,7 +36,7 @@ public class ClientAuthController {
     @PostMapping("/register")
     public ResponseEntity<?> clientRegister(@RequestBody ClientRegisterRequest req) {
         try {
-            LoginResponse response = clientAuthService.registerClient(req);
+            ClientLoginResponse response = clientAuthService.registerClient(req);
             return ResponseEntity.ok(response);
         } catch (RuntimeException e) {
             String msg = e.getMessage();

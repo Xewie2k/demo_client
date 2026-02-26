@@ -1,31 +1,67 @@
 <!-- File: src/pages/thong_ke/ThongKePage.vue -->
 <template>
   <div class="thong-ke-page container-fluid p-4">
-    <h4 class="title mb-4">Bộ Lọc Thống Kê</h4>
+    <h4 class="title mb-2">BÁO CÁO THỐNG KÊ KINH DOANH</h4>
+
+    <!-- Badge trạng thái -->
+    <div class="mb-3">
+      <span v-if="filterType === 'TODAY'" class="badge bg-success">
+        Đang hiển thị dữ liệu của HÔM NAY ({{ todayString }})
+      </span>
+      <span v-else class="badge bg-primary">
+        Khoảng thời gian đang xem: {{ currentRange.from }} →
+        {{ currentRange.to }}
+      </span>
+    </div>
 
     <!-- Filter Bar -->
     <div class="card p-3 mb-4 filter-bar">
       <div class="row align-items-center">
         <div class="col-md-6 text-muted">
-          Chọn khoảng thời gian và kiểu biểu đồ để xem nhanh số liệu
+          Lựa chọn khoảng thời gian để xem thống kê doanh thu và đơn hàng
         </div>
 
         <div class="col-md-6 text-end">
-          <input
-            type="date"
-            class="form-control d-inline w-auto me-2"
-            v-model="selectedDate"
-          />
-
           <select class="form-select d-inline w-auto me-2" v-model="filterType">
-            <option value="MONTH">Tháng này</option>
-            <option value="WEEK">Tuần này</option>
             <option value="TODAY">Hôm nay</option>
+            <option value="WEEK">Tuần này</option>
+            <option value="MONTH">Tháng này</option>
             <option value="CUSTOM">Tùy chọn</option>
           </select>
 
-          <button class="btn btn-outline-success me-2">Đường</button>
-          <button class="btn btn-outline-success">Cột</button>
+          <!-- FROM -->
+          <input
+            v-if="filterType === 'CUSTOM'"
+            type="date"
+            class="form-control d-inline w-auto me-2"
+            v-model="fromDate"
+          />
+
+          <!-- TO -->
+          <input
+            v-if="filterType === 'CUSTOM'"
+            type="date"
+            class="form-control d-inline w-auto me-2"
+            v-model="toDate"
+          />
+
+          <button
+            class="btn me-2"
+            :class="
+              chartType === 'line' ? 'btn-success' : 'btn-outline-success'
+            "
+            @click="chartType = 'line'"
+          >
+            Biểu đồ đường
+          </button>
+
+          <button
+            class="btn"
+            :class="chartType === 'bar' ? 'btn-success' : 'btn-outline-success'"
+            @click="chartType = 'bar'"
+          >
+            Biểu đồ cột
+          </button>
         </div>
       </div>
     </div>
@@ -35,7 +71,7 @@
       <div class="row text-center">
         <div class="col-md-4">
           <div class="stat-box">
-            <div class="stat-title">Số đơn hàng</div>
+            <div class="stat-title">Tổng số đơn hàng</div>
             <div class="stat-value">{{ totalOrders }}</div>
           </div>
         </div>
@@ -60,16 +96,14 @@
       </div>
     </div>
 
-    <!-- 4 Cards Dynamic -->
+    <!-- 4 Cards -->
     <div class="row mb-4">
       <div class="col-md-3" v-for="(card, index) in miniCards" :key="index">
         <div class="card p-3 mini-card">
           <div class="mini-title">{{ card.label }}</div>
-
           <div class="mini-value">
             {{ formatMoney(card.revenue) }}
           </div>
-
           <div class="mini-desc">
             Sản phẩm: {{ card.totalProducts }} | Đơn hàng:
             {{ card.totalOrders }}
@@ -78,14 +112,14 @@
       </div>
     </div>
 
-    <!-- Chart Area -->
+    <!-- Chart -->
     <div class="row">
       <div class="col-md-8">
         <div class="card p-3 chart-card">
-          <h6>Biểu đồ doanh thu</h6>
-
+          <h6>Biểu đồ doanh thu theo thời gian</h6>
           <div style="height: 300px">
-            <RevenueChart :chart="revenueChart" />
+            <RevenueChart :chart="revenueChart" :type="chartType" />
+
           </div>
         </div>
       </div>
@@ -93,7 +127,6 @@
       <div class="col-md-4">
         <div class="card p-3 chart-card">
           <h6>Phân bố trạng thái đơn hàng</h6>
-
           <div style="height: 300px">
             <OrderStatusChart :statusData="orderStatus" />
           </div>
@@ -101,11 +134,11 @@
       </div>
     </div>
 
-    <!-- Bottom Table -->
+    <!-- Bottom -->
     <div class="row mt-4">
       <div class="col-md-8">
         <div class="card p-3">
-          <h6>Bảng Thống Kê Chi Tiết</h6>
+          <h6>Bảng thống kê chi tiết theo thời gian</h6>
 
           <table class="table table-bordered mt-3">
             <thead>
@@ -113,21 +146,17 @@
                 <th>Thời gian</th>
                 <th>Doanh thu</th>
                 <th>Số đơn</th>
-                <th>Giá trị TB/đơn</th>
-                <th>Tăng trưởng</th>
+                <th>Giá trị trung bình/đơn</th>
+                <th>Tăng trưởng (%)</th>
               </tr>
             </thead>
 
             <tbody>
               <tr v-for="(item, index) in detailTable" :key="index">
                 <td>{{ item.time }}</td>
-
                 <td>{{ formatMoney(item.revenue) }}</td>
-
                 <td>{{ item.totalOrders }}</td>
-
                 <td>{{ formatMoney(item.avgPerOrder) }}</td>
-
                 <td :class="item.growth >= 0 ? 'text-success' : 'text-danger'">
                   {{ item.growth.toFixed(2) }}%
                 </td>
@@ -137,16 +166,23 @@
         </div>
       </div>
 
+      <!-- TOP 30 NGÀY -->
       <div class="col-md-4">
         <div class="card p-3">
-          <h6>Top sản phẩm bán chạy</h6>
+          <h6>
+            Top sản phẩm bán chạy trong 30 ngày gần nhất
+            <br />
+            <small class="text-muted">
+              (Từ {{ lastMonthRange.from }} đến {{ lastMonthRange.to }})
+            </small>
+          </h6>
 
           <table class="table table-bordered mt-3">
             <thead>
               <tr>
                 <th>#</th>
-                <th>Tên SP</th>
-                <th>Số lượng</th>
+                <th>Tên sản phẩm</th>
+                <th>Số lượng bán</th>
               </tr>
             </thead>
 
@@ -165,7 +201,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import axios from "axios";
 import RevenueChart from "./RevenueChart.vue";
 import OrderStatusChart from "./OrderStatusChart.vue";
@@ -177,128 +213,136 @@ const realRevenue = ref(0);
 const revenueChart = ref([]);
 const orderStatus = ref([]);
 const topProducts = ref([]);
-
 const miniCards = ref([]);
-
 const detailTable = ref([]);
 
-const selectedDate = ref("");
-const filterType = ref("MONTH");
+const filterType = ref("TODAY");
+const fromDate = ref("");
+const toDate = ref("");
+
+const today = ref(new Date());
+
+const chartType = ref("line");
+
+setInterval(() => {
+  today.value = new Date();
+}, 60000);
+
+const formatDate = (date) => {
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const todayString = computed(() => formatDate(today.value));
 
 const formatMoney = (money) => {
   if (!money) return "0 đ";
   return new Intl.NumberFormat("vi-VN").format(money) + " đ";
 };
 
-const getDateRange = () => {
+const currentRange = computed(() => {
   let from = "";
   let to = "";
+  const now = today.value;
 
-  const today = new Date();
-
-  if (filterType.value === "TODAY") {
-    from = to = today.toISOString().split("T")[0];
-  } else if (filterType.value === "WEEK") {
-    const current = new Date();
-
-    const first = current.getDate() - current.getDay() + 1;
-    const last = first + 6;
-
-    const startWeek = new Date(current);
-    startWeek.setDate(first);
-
-    const endWeek = new Date(current);
-    endWeek.setDate(last);
-
-    from = startWeek.toISOString().split("T")[0];
-    to = endWeek.toISOString().split("T")[0];
-  } else {
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-
-    from = firstDay.toISOString().split("T")[0];
-    to = lastDay.toISOString().split("T")[0];
+  if (filterType.value === "CUSTOM") {
+    return { from: fromDate.value, to: toDate.value };
   }
 
-  if (selectedDate.value) {
-    from = to = selectedDate.value;
+  if (filterType.value === "TODAY") {
+    from = to = formatDate(now);
+  } else if (filterType.value === "WEEK") {
+    const start = new Date(now);
+    start.setDate(now.getDate() - now.getDay() + 1);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    from = formatDate(start);
+    to = formatDate(end);
+  } else if (filterType.value === "MONTH") {
+    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    from = formatDate(firstDay);
+    to = formatDate(lastDay);
   }
 
   return { from, to };
-};
+});
+
+const lastMonthRange = computed(() => {
+  const current = today.value;
+  const to = formatDate(current);
+  const fromDateObj = new Date(current);
+  fromDateObj.setDate(current.getDate() - 30);
+  const from = formatDate(fromDateObj);
+  return { from, to };
+});
 
 const loadStatistics = async () => {
   try {
-    const { from, to } = getDateRange();
+    const params = {
+      fromDate: currentRange.value.from,
+      toDate: currentRange.value.to,
+    };
 
-    const params = { fromDate: from, toDate: to };
+    const [ordersRes, revenueRes, realRevenueRes, chartRes, statusRes] =
+      await Promise.all([
+        axios.get("http://localhost:8080/api/statistic/total-orders", {
+          params,
+        }),
+        axios.get("http://localhost:8080/api/statistic/total-revenue", {
+          params,
+        }),
+        axios.get("http://localhost:8080/api/statistic/real-revenue", {
+          params,
+        }),
+        axios.get("http://localhost:8080/api/statistic/revenue-chart", {
+          params,
+        }),
+        axios.get("http://localhost:8080/api/statistic/order-status", {
+          params,
+        }),
+      ]);
 
-    const [
-      ordersRes,
-      revenueRes,
-      realRevenueRes,
-      chartRes,
-      statusRes,
-      topProductRes,
-    ] = await Promise.all([
-      axios.get("http://localhost:8080/api/statistic/total-orders", { params }),
-      axios.get("http://localhost:8080/api/statistic/total-revenue", {
-        params,
-      }),
-      axios.get("http://localhost:8080/api/statistic/real-revenue", { params }),
-      axios.get("http://localhost:8080/api/statistic/revenue-chart", {
-        params,
-      }),
-      axios.get("http://localhost:8080/api/statistic/order-status", { params }),
-      axios.get("http://localhost:8080/api/statistic/top-products", { params }),
-    ]);
+    totalOrders.value = ordersRes.data || 0;
+    totalRevenue.value = revenueRes.data || 0;
+    realRevenue.value = realRevenueRes.data || 0;
+    revenueChart.value = chartRes.data || [];
+    orderStatus.value = statusRes.data || [];
 
-    totalOrders.value = ordersRes.data;
-    totalRevenue.value = revenueRes.data;
-    realRevenue.value = realRevenueRes.data;
+    const topRes = await axios.get(
+      "http://localhost:8080/api/statistic/top-products",
+      {
+        params: {
+          fromDate: lastMonthRange.value.from,
+          toDate: lastMonthRange.value.to,
+        },
+      },
+    );
 
-    revenueChart.value = chartRes.data;
-    orderStatus.value = statusRes.data;
-    topProducts.value = topProductRes.data;
+    topProducts.value = topRes.data || [];
 
-    // load riêng mini cards
-    try {
-      // load bảng chi tiết
-      const detailRes = await axios.get(
-        "http://localhost:8080/api/statistic/detail-table",
-      );
+    const detailRes = await axios.get(
+      "http://localhost:8080/api/statistic/detail-table",
+      { params },
+    );
+    detailTable.value = detailRes.data || [];
 
-      detailTable.value = detailRes.data;
-
-      // load mini cards
-      const miniCardRes = await axios.get(
-        "http://localhost:8080/api/statistic/mini-cards",
-      );
-
-      miniCards.value = miniCardRes.data;
-    } catch (e) {
-      console.warn("Mini cards API chưa sẵn sàng:", e);
-
-      // fallback hiển thị tạm
-      miniCards.value = [
-        { label: "Hôm nay", revenue: 0, totalProducts: 0, totalOrders: 0 },
-        { label: "Tuần này", revenue: 0, totalProducts: 0, totalOrders: 0 },
-        { label: "Tháng này", revenue: 0, totalProducts: 0, totalOrders: 0 },
-        { label: "Năm này", revenue: 0, totalProducts: 0, totalOrders: 0 },
-      ];
-    }
+    const miniCardRes = await axios.get(
+      "http://localhost:8080/api/statistic/mini-cards",
+      { params },
+    );
+    miniCards.value = miniCardRes.data || [];
   } catch (error) {
     console.error("Lỗi load thống kê:", error);
   }
 };
 
-watch([selectedDate, filterType], () => {
-  loadStatistics();
-});
+watch([filterType, fromDate, toDate, today], loadStatistics);
 
-onMounted(() => {
-  loadStatistics();
-});
+onMounted(loadStatistics);
 </script>
 
 <style scoped>

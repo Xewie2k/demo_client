@@ -71,8 +71,15 @@ public class EmailService {
     private String buildHtmlInvoice(HoaDon hd, List<HoaDonChiTiet> details) {
         NumberFormat vnFormat = NumberFormat.getCurrencyInstance(new Locale("vi", "VN"));
         String maHD = hd.getMaHoaDon() != null ? hd.getMaHoaDon() : String.valueOf(hd.getId());
-        String trackingLink = String.format("%s/client/tracking?id=%d&email=%s",
-                frontendUrl, hd.getId(), hd.getEmailKhachHang());
+        String trackingLink;
+        try {
+            trackingLink = String.format("%s/client/tracking?maHoaDon=%s&email=%s",
+                    frontendUrl,
+                    java.net.URLEncoder.encode(maHD, java.nio.charset.StandardCharsets.UTF_8.name()),
+                    java.net.URLEncoder.encode(hd.getEmailKhachHang(), java.nio.charset.StandardCharsets.UTF_8.name()));
+        } catch (Exception e) {
+            trackingLink = frontendUrl + "/client/tracking";
+        }
 
         int totalItems = details.stream().mapToInt(HoaDonChiTiet::getSoLuong).sum();
 

@@ -1,4 +1,3 @@
-<!-- File: src/pages/khuyen_mai/dot_giam_gia/DiscountPage.vue -->
 <template>
   <div class="discount-page">
     <h2 class="page-title">Quản lý giảm giá/ Đợt giảm giá</h2>
@@ -181,7 +180,6 @@
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import { discountService } from "@/services/khuyen_mai/dot_giam_gia/discountService";
-import { sortDotGiamGia } from "@/services/khuyen_mai/dot_giam_gia/dotGiamGiaSort";
 
 const router = useRouter();
 const rawDiscounts = ref([]);
@@ -216,6 +214,34 @@ const formatDate = (dateArrOrStr) => {
   return d.toLocaleDateString("vi-VN");
 };
 
+/* ✅ SORT “đợt tốt nhất” lên trước:
+   - Active > Upcoming > Ended
+   - Trong cùng nhóm: mucUuTien desc -> giaTriGiamGia desc -> ngayBatDau desc -> id desc
+*/
+const sortDiscountsForList = (arr) => {
+  const order = { active: 0, upcoming: 1, ended: 2 };
+
+  return [...arr].sort((a, b) => {
+    const oa = order[a.statusKey] ?? 9;
+    const ob = order[b.statusKey] ?? 9;
+    if (oa !== ob) return oa - ob;
+
+    const pa = Number(a.mucUuTien ?? 0);
+    const pb = Number(b.mucUuTien ?? 0);
+    if (pa !== pb) return pb - pa;
+
+    const va = Number(a.giaTriGiamGia ?? 0);
+    const vb = Number(b.giaTriGiamGia ?? 0);
+    if (va !== vb) return vb - va;
+
+    const sa = parseDateAny(a.ngayBatDau)?.getTime() ?? 0;
+    const sb = parseDateAny(b.ngayBatDau)?.getTime() ?? 0;
+    if (sa !== sb) return sb - sa;
+
+    return Number(b.id ?? 0) - Number(a.id ?? 0);
+  });
+};
+
 const fetchDiscounts = async () => {
   try {
     const data = await discountService.getAll();
@@ -223,12 +249,7 @@ const fetchDiscounts = async () => {
 
     const parseDateBoundary = (d, isEnd) => {
       const dateObj = parseDateAny(d) || new Date();
-      dateObj.setHours(
-        isEnd ? 23 : 0,
-        isEnd ? 59 : 0,
-        isEnd ? 59 : 0,
-        isEnd ? 999 : 0
-      );
+      dateObj.setHours(isEnd ? 23 : 0, isEnd ? 59 : 0, isEnd ? 59 : 0, isEnd ? 999 : 0);
       return dateObj;
     };
 
@@ -288,8 +309,7 @@ const filteredList = computed(() => {
     return keywordMatch && startMatch && endMatch && statusMatch;
   });
 
-  // ✅ SORT theo rule mới (ưu tiên trong cùng khoảng thời gian)
-  return sortDotGiamGia(filtered);
+  return sortDiscountsForList(filtered);
 });
 
 const totalPages = computed(() =>

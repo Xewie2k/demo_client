@@ -15,7 +15,8 @@ public class ClientOrderDetailDTO {
     private Integer id;
     private String maHoaDon;
     private LocalDateTime ngayTao;
-    private String trangThai; // Label
+    private String trangThai;        // Label (vd: "Đang vận chuyển")
+    private Integer trangThaiHienTai; // Numeric code 1–5
     
     // Receiver Info
     private String tenNguoiNhan;

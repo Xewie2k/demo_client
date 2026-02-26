@@ -24,7 +24,7 @@
       <!-- Timeline -->
       <div class="mb-5 px-3">
         <h6 class="fw-bold mb-4 border-start border-4 ps-2" style="border-color: var(--ss-accent) !important;">Trạng thái đơn hàng</h6>
-        <OrderTimeline :timeline="order.timeline" />
+        <OrderTimeline :status-code="order.trangThaiHienTai" :timeline="order.timeline" />
       </div>
 
       <!-- Receiver -->

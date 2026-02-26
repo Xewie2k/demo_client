@@ -31,6 +31,11 @@ public class ProductClientDTO {
     private BigDecimal giaSauGiamThapNhat;
     private Integer phanTramGiam;
 
+    // stock & sizes
+    private String maSanPham;
+    private boolean hangCoSan;
+    private List<String> kichThuocCoSan;
+
     // variants for quick add-to-cart
     private List<VariantClientDTO> variants;
 }

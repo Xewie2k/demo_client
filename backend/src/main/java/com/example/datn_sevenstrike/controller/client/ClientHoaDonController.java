@@ -26,9 +26,21 @@ public class ClientHoaDonController {
     private final ModelMapper mapper;
 
     @GetMapping("/tracking")
-    public HoaDonResponse trackOrder(@RequestParam Integer id, @RequestParam String email) {
-        HoaDon hd = repo.findByIdAndXoaMemFalse(id)
-                .orElseThrow(() -> new NotFoundEx("Không tìm thấy đơn hàng"));
+    public HoaDonResponse trackOrder(
+            @RequestParam(required = false) String maHoaDon,
+            @RequestParam(required = false) Integer id,
+            @RequestParam String email) {
+
+        HoaDon hd;
+        if (maHoaDon != null && !maHoaDon.isBlank()) {
+            hd = repo.findByMaHoaDonAndXoaMemFalse(maHoaDon.trim())
+                    .orElseThrow(() -> new NotFoundEx("Không tìm thấy đơn hàng"));
+        } else if (id != null) {
+            hd = repo.findByIdAndXoaMemFalse(id)
+                    .orElseThrow(() -> new NotFoundEx("Không tìm thấy đơn hàng"));
+        } else {
+            throw new BadRequestEx("Vui lòng cung cấp mã đơn hàng hoặc id");
+        }
 
         if (hd.getEmailKhachHang() == null || !hd.getEmailKhachHang().equalsIgnoreCase(email.trim())) {
             throw new BadRequestEx("Thông tin xác thực không chính xác (Email không khớp)");

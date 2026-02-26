@@ -1,8 +1,8 @@
 package com.example.datn_sevenstrike.service.client;
 
+import com.example.datn_sevenstrike.dto.client.ClientLoginResponse;
 import com.example.datn_sevenstrike.dto.client.ClientRegisterRequest;
 import com.example.datn_sevenstrike.dto.request.LoginRequest;
-import com.example.datn_sevenstrike.dto.response.LoginResponse;
 import com.example.datn_sevenstrike.entity.KhachHang;
 import com.example.datn_sevenstrike.repository.KhachHangRepository;
 import java.time.LocalDateTime;
@@ -17,7 +17,7 @@ public class ClientAuthService {
 
     private final KhachHangRepository khachHangRepo;
 
-    public LoginResponse authenticateClient(LoginRequest req) {
+    public ClientLoginResponse authenticateClient(LoginRequest req) {
         if (req == null) {
             throw new RuntimeException("Dữ liệu đăng nhập không hợp lệ!");
         }
@@ -43,18 +43,19 @@ public class ClientAuthService {
             throw new RuntimeException("Tài khoản này hiện đang bị khóa!");
         }
 
-        return LoginResponse.builder()
+        return ClientLoginResponse.builder()
                 .id(kh.getId())
                 .hoTen(kh.getTenKhachHang())
                 .email(kh.getEmail())
                 .soDienThoai(kh.getSoDienThoai())
+                .anhDaiDien(kh.getAnhDaiDien())
                 .role("CUSTOMER")
                 .message("Đăng nhập thành công!")
                 .build();
     }
 
     @Transactional
-    public LoginResponse registerClient(ClientRegisterRequest req) {
+    public ClientLoginResponse registerClient(ClientRegisterRequest req) {
         if (req == null) {
             throw new RuntimeException("Dữ liệu đăng ký không hợp lệ!");
         }
@@ -89,11 +90,12 @@ public class ClientAuthService {
 
         KhachHang saved = khachHangRepo.save(kh);
 
-        return LoginResponse.builder()
+        return ClientLoginResponse.builder()
                 .id(saved.getId())
                 .hoTen(saved.getTenKhachHang())
                 .email(saved.getEmail())
                 .soDienThoai(saved.getSoDienThoai())
+                .anhDaiDien(saved.getAnhDaiDien())
                 .role("CUSTOMER")
                 .message("Đăng ký thành công!")
                 .build();

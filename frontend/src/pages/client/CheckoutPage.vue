@@ -502,9 +502,10 @@ const submitOrder = async () => {
             }
 
         } else {
-            // COD
+            // COD — capture total BEFORE clearing cart (cart clear would reset finalPrice to 0)
+            const totalToShow = Math.round(finalPrice.value);
             removeOrderedItems();
-            router.push({ name: 'client-order-success', query: { id: orderData.id, maHoaDon: orderData.maHoaDon, tongTien: Math.round(finalPrice.value) } });
+            router.push({ name: 'client-order-success', query: { id: orderData.id, maHoaDon: orderData.maHoaDon, tongTien: totalToShow } });
         }
         
     } catch (err) {

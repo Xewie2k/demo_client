@@ -25,7 +25,7 @@
         </div>
 
         <div class="col">
-          <label class="label">Email</label>
+          <label class="label">Email <span class="req">*</span></label>
           <input v-model.trim="form.email" type="email" class="input" placeholder="example@gmail.com" />
         </div>
       </div>
@@ -150,16 +150,12 @@ import { useRouter } from "vue-router";
 import { addKhachHang } from "@/services/tai_khoan/khach_hang/khach_hangService";
 import { addDiaChiKhachHang } from "@/services/tai_khoan/khach_hang/diaChiKhachHangService";
 import vnAddressService from "@/services/vnAddressService";
-import emailjs from "@emailjs/browser";
 
 const router = useRouter();
 
 const saving = ref(false);
 const errorMsg = ref("");
 const successMsg = ref("");
-
-const EMAILJS_PUBLIC_KEY = "D-LHcLlAo_N5Vc5Kc";
-emailjs.init(EMAILJS_PUBLIC_KEY);
 
 const form = ref({
   tenKhachHang: "",
@@ -242,25 +238,6 @@ const generatePassword = (length = 8) => {
   return Array.from({ length }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
 };
 
-const sendEmail = async ({ tenKhachHang, tenTaiKhoan, matKhau, email }) => {
-  try {
-    const serviceID = "service_n03lqrf";
-    const templateID = "template_1gy88ic";
-
-    const templateParams = {
-      to_email: email,
-      to_name: tenKhachHang,
-      username: tenTaiKhoan,
-      password: matKhau,
-    };
-
-    const response = await emailjs.send(serviceID, templateID, templateParams);
-    console.log("Email gửi thành công!", response.status, response.text);
-  } catch (error) {
-    console.error("Lỗi gửi email:", error);
-  }
-};
-
 const previewAddress = (a) => {
   const tinhName = findName(provinces.value, a.tinhCode);
   const huyenName = findName(a.districts, a.huyenCode);
@@ -275,6 +252,7 @@ const previewAddress = (a) => {
 
 const validate = () => {
   if (!form.value.tenKhachHang) return "Vui lòng nhập Tên khách hàng";
+  if (!String(form.value.email || "").trim()) return "Vui lòng nhập Email";
   if (!form.value.tenTaiKhoan) return "Vui lòng nhập Tên tài khoản";
   if (!form.value.matKhau) return "Vui lòng nhập Mật khẩu";
 
@@ -307,19 +285,12 @@ const submit = async () => {
       tenKhachHang: form.value.tenKhachHang,
       tenTaiKhoan: form.value.tenTaiKhoan,
       matKhau: form.value.matKhau,
-      email: form.value.email || null,
+      email: String(form.value.email || "").trim(),
       soDienThoai: form.value.soDienThoai || null,
       gioiTinh: form.value.gioiTinh,
       ngaySinh: form.value.ngaySinh || null,
       trangThai: form.value.trangThai === true,
     };
-
-    await sendEmail({
-      tenKhachHang: form.value.tenKhachHang,
-      tenTaiKhoan: form.value.tenTaiKhoan,
-      matKhau: form.value.matKhau,
-      email: form.value.email,
-    });
 
     const created = await addKhachHang(payloadKh);
     const idKhachHang = created?.id;
@@ -359,10 +330,8 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ✅ Không import font ngoài – dùng font chung của dự án */
 @import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css");
 
-/* ✅ Ép chuẩn ss-font: 13px, không in đậm */
 .taikhoan-form {
   background: #fff;
   border-radius: 14px;
@@ -377,7 +346,6 @@ onMounted(async () => {
   font-weight: 400 !important;
 }
 
-/* ép tất cả về 400 */
 .taikhoan-form :deep(*) {
   font-family: inherit !important;
   font-weight: 400 !important;
@@ -392,7 +360,6 @@ onMounted(async () => {
   font-weight: 400 !important;
 }
 
-/* ===== toolbar ===== */
 .toolbar {
   display: flex;
   justify-content: space-between;
@@ -402,7 +369,6 @@ onMounted(async () => {
   margin-bottom: 14px;
 }
 
-/* Title: 20px fw 500 */
 .page-title {
   font-size: 20px;
   font-weight: 500;
@@ -410,7 +376,6 @@ onMounted(async () => {
   letter-spacing: 0.2px;
 }
 
-/* ===== buttons ===== */
 .toolbar-right {
   display: flex;
   gap: 10px;
@@ -457,7 +422,6 @@ onMounted(async () => {
   box-shadow: 0 10px 18px rgba(255, 77, 79, 0.16);
 }
 
-/* ===== card ===== */
 .card {
   border: 1px solid rgba(17, 24, 39, 0.12);
   border-radius: 14px;
@@ -465,7 +429,6 @@ onMounted(async () => {
   background: #fff;
 }
 
-/* ===== grid ===== */
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -478,7 +441,6 @@ onMounted(async () => {
   gap: 6px;
 }
 
-/* ===== labels & inputs ===== */
 .label {
   font-size: 13px;
   font-weight: 400;
@@ -504,7 +466,6 @@ onMounted(async () => {
   box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.12);
 }
 
-/* ===== address block ===== */
 .block {
   margin-top: 12px;
   padding-top: 12px;
@@ -517,7 +478,6 @@ onMounted(async () => {
   gap: 10px;
   margin-bottom: 10px;
 }
-/* card title: 14px fw 500 */
 .block-title {
   font-size: 14px;
   font-weight: 500;
@@ -564,7 +524,6 @@ onMounted(async () => {
   font-weight: 400;
 }
 
-/* hint: 12px */
 .hint {
   font-size: 12px;
   color: rgba(17, 24, 39, 0.55);
@@ -576,7 +535,6 @@ onMounted(async () => {
   font-weight: 400;
 }
 
-/* alerts */
 .alert {
   margin-top: 10px;
   border-radius: 12px;
@@ -598,7 +556,6 @@ onMounted(async () => {
   border: 1px solid rgba(34, 197, 94, 0.20);
 }
 
-/* responsive */
 @media (max-width: 900px) {
   .row {
     grid-template-columns: 1fr;

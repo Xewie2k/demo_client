@@ -1,7 +1,5 @@
-<!-- File: src/pages/khuyen_mai/phieu_giam_gia/VoucherFormPage.vue -->
 <template>
   <div class="p-4">
-    <!-- ✅ BỎ nút quay lại ở header (chỉ giữ tiêu đề) -->
     <div class="d-flex align-items-center gap-2 mb-4">
       <h2 class="h5 m-0 text-uppercase ss-page-title">
         {{ isLocked ? "Chi tiết phiếu (Đã kết thúc)" : form.id ? "Chi tiết phiếu giảm giá" : "Thêm phiếu giảm giá" }}
@@ -56,20 +54,9 @@
           <!-- DÒNG TRẠNG THÁI -->
           <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
             <div class="ss-muted">Đã chọn: {{ normalizeCustomerIds(selectedCustomerIds).length }} khách hàng</div>
-
-            <button
-              class="btn btn-outline-primary rounded-3 d-flex align-items-center gap-2 ss-btn-mail"
-              type="button"
-              @click="handleSendMail"
-              :disabled="isLocked || isSendingMail || normalizeCustomerIds(selectedCustomerIds).length === 0 || !form.id"
-              title="Cần lưu phiếu trước khi gửi mail"
-            >
-              <span class="material-icons" style="font-size: 18px">mail_outline</span>
-              {{ isSendingMail ? "Đang gửi..." : "Gửi mail cho khách đã chọn" }}
-            </button>
           </div>
 
-          <!-- FILTER BAR (GIỐNG MẪU) -->
+          <!-- FILTER BAR -->
           <div class="ss-kh-filter d-flex flex-wrap gap-2 align-items-center justify-content-between mb-2">
             <div class="d-flex flex-wrap gap-2 align-items-center">
               <button
@@ -107,11 +94,6 @@
               <button class="btn btn-secondary px-3 ss-btn-compact" type="button" @click="clearFilter" :disabled="isLocked">
                 Xóa lọc
               </button>
-
-              <label class="form-check d-flex align-items-center gap-2 m-0">
-                <input class="form-check-input" type="checkbox" v-model="onlyUnsent" :disabled="isLocked" />
-                <span class="ss-muted">Chỉ hiện chưa gửi</span>
-              </label>
             </div>
 
             <div class="d-flex align-items-center gap-2">
@@ -128,30 +110,28 @@
           <!-- TABLE -->
           <div class="table-responsive ss-kh-table-wrap">
             <table class="table table-hover align-middle mb-0 ss-kh-table">
-              <!-- ✅ chia đều cột + tránh tràn -->
+              <!-- ✅ chia đều cột + tránh tràn (bỏ cột "Gửi mail") -->
               <colgroup>
                 <col style="width: 40px" />
-                <col style="width: 12.5%" />
-                <col style="width: 12.5%" />
-                <col style="width: 12.5%" />
-                <col style="width: 12.5%" />
-                <col style="width: 12.5%" />
-                <col style="width: 12.5%" />
-                <col style="width: 12.5%" />
-                <col style="width: 12.5%" />
+                <col style="width: 14.2%" />
+                <col style="width: 14.2%" />
+                <col style="width: 14.2%" />
+                <col style="width: 14.2%" />
+                <col style="width: 14.2%" />
+                <col style="width: 14.2%" />
+                <col style="width: 14.2%" />
               </colgroup>
 
               <thead class="table-light">
                 <tr>
                   <th>
-                    <!-- ✅ select all chỉ áp dụng cho khách CHƯA gửi -->
                     <input
                       type="checkbox"
                       class="form-check-input"
                       :checked="isAllPageChecked"
                       @change="toggleAllInPage($event.target.checked)"
-                      :disabled="isLocked || selectablePagedIds.length === 0"
-                      title="Chỉ chọn khách chưa gửi"
+                      :disabled="isLocked || pagedCustomers.length === 0"
+                      title="Chọn tất cả trong trang"
                     />
                   </th>
                   <th>Tên</th>
@@ -161,25 +141,22 @@
                   <th>Tổng chi tiêu</th>
                   <th>Số đơn hàng</th>
                   <th>Đơn hàng gần nhất</th>
-                  <th>Gửi mail</th>
                 </tr>
               </thead>
 
               <tbody>
                 <tr v-if="pagedCustomers.length === 0">
-                  <td colspan="9" class="text-center text-muted py-4">Không có khách hàng phù hợp</td>
+                  <td colspan="8" class="text-center text-muted py-4">Không có khách hàng phù hợp</td>
                 </tr>
 
                 <tr v-for="kh in pagedCustomers" :key="kh.id">
                   <td>
-                    <!-- ✅ KHÓA checkbox nếu đã gửi -->
                     <input
                       type="checkbox"
                       class="form-check-input"
                       :checked="isSelected(kh.id)"
                       @change="toggleOne(kh.id, $event.target.checked)"
-                      :disabled="isLocked || isSent(kh.id)"
-                      :title="isSent(kh.id) ? 'Khách này đã được gửi mail, không thể chọn' : ''"
+                      :disabled="isLocked"
                     />
                   </td>
 
@@ -200,7 +177,7 @@
                   </td>
 
                   <td class="ss-ellipsis">
-                    {{ formatTien(getField(kh, ["tongChiTieu", "tong_chi_tieu", "tongTien", "tong_tien"], 0)) }}
+                    {{ formatTien(getField(kh, ["tongChiTieu", "tong_chi_tieu"], 0)) }}
                   </td>
 
                   <td class="ss-ellipsis">
@@ -213,11 +190,6 @@
                         getField(kh, ["donHangGanNhat", "don_hang_gan_nhat", "ngayDonGanNhat", "ngay_don_gan_nhat"], "")
                       ) || "Chưa có"
                     }}
-                  </td>
-
-                  <td>
-                    <span v-if="isSent(kh.id)" class="badge text-bg-success rounded-pill ss-badge">Đã gửi</span>
-                    <span v-else class="badge text-bg-secondary rounded-pill ss-badge">Chưa gửi</span>
                   </td>
                 </tr>
               </tbody>
@@ -283,7 +255,7 @@
               </div>
             </div>
 
-            <!-- ✅ NÚT HỦY + TẠO MỚI/CẬP NHẬT ĐƯA XUỐNG DƯỚI -->
+            <!-- ✅ NÚT HỦY + TẠO MỚI/CẬP NHẬT -->
             <div class="d-flex justify-content-end gap-2 mt-3">
               <button @click="goBack" class="btn ss-btn-outline px-4 rounded-3" type="button" :disabled="isSaving || isSendingMail">
                 Hủy
@@ -331,15 +303,12 @@ const loadingCustomers = ref(false);
 const customers = ref([]);
 
 const selectedCustomerIds = ref([]);
-const sentCustomerIds = ref([]);
-
 const isSendingMail = ref(false);
 
 // filter
 const keywordTen = ref("");
 const keywordSdt = ref("");
 const filterTrangThai = ref(""); // "" | VIP | THUONG_XUYEN | MOI
-const onlyUnsent = ref(false);
 
 // paging
 const pageNo = ref(1);
@@ -415,19 +384,13 @@ const getLoaiKhachHangKey = (kh) => {
   return "MOI";
 };
 
-// chọn/đã gửi
+// chọn
 const selectedSet = computed(() => new Set(normalizeCustomerIds(selectedCustomerIds.value)));
-const sentSet = computed(() => new Set(normalizeCustomerIds(sentCustomerIds.value)));
-
 const isSelected = (id) => selectedSet.value.has(Number(id));
-const isSent = (id) => sentSet.value.has(Number(id));
 
 const toggleOne = (id, checked) => {
   const n = Number(id);
   if (!Number.isFinite(n) || n <= 0) return;
-
-  // ✅ đã gửi => không cho tick lại
-  if (isSent(n)) return;
 
   if (checked) {
     selectedCustomerIds.value = normalizeCustomerIds([...selectedCustomerIds.value, n]);
@@ -457,9 +420,6 @@ const filteredCustomers = computed(() => {
   if (stt) {
     arr = arr.filter((kh) => getLoaiKhachHangKey(kh) === stt);
   }
-  if (onlyUnsent.value) {
-    arr = arr.filter((kh) => !isSent(kh.id));
-  }
 
   return arr;
 });
@@ -467,7 +427,7 @@ const filteredCustomers = computed(() => {
 const totalItems = computed(() => filteredCustomers.value.length);
 const pageCount = computed(() => Math.max(1, Math.ceil(totalItems.value / Math.max(1, pageSize.value))));
 
-watch([keywordTen, keywordSdt, filterTrangThai, onlyUnsent, pageSize], () => {
+watch([keywordTen, keywordSdt, filterTrangThai, pageSize], () => {
   pageNo.value = 1;
 });
 
@@ -491,23 +451,14 @@ const endIndex = computed(() => {
   return Math.min(pageNo.value * pageSize.value, totalItems.value);
 });
 
-// ✅ chỉ những khách CHƯA gửi trong trang hiện tại mới selectable
-const selectablePagedIds = computed(() =>
-  normalizeCustomerIds(
-    pagedCustomers.value
-      .filter((kh) => !isSent(kh.id))
-      .map((x) => x.id)
-  )
-);
-
+// ✅ select all trong trang hiện tại
 const isAllPageChecked = computed(() => {
-  const ids = selectablePagedIds.value;
-  if (ids.length === 0) return false;
-  return ids.every((id) => isSelected(id));
+  if (pagedCustomers.value.length === 0) return false;
+  return pagedCustomers.value.every((x) => isSelected(x.id));
 });
 
 const toggleAllInPage = (checked) => {
-  const ids = selectablePagedIds.value;
+  const ids = normalizeCustomerIds(pagedCustomers.value.map((x) => x.id));
   if (ids.length === 0) return;
 
   if (checked) {
@@ -548,14 +499,11 @@ const clearFilter = () => {
   keywordTen.value = "";
   keywordSdt.value = "";
   filterTrangThai.value = "";
-  onlyUnsent.value = false;
 };
 
-// ✅ selected list: chỉ hiển thị các khách CHƯA gửi (đỡ nhầm)
+// selected list
 const selectedCustomers = computed(() => {
-  const sent = new Set(normalizeCustomerIds(sentCustomerIds.value));
-  const ids = normalizeCustomerIds(selectedCustomerIds.value).filter((id) => !sent.has(Number(id)));
-
+  const ids = normalizeCustomerIds(selectedCustomerIds.value);
   const map = new Map((customers.value || []).map((x) => [Number(x.id), x]));
   return ids.map((id) => {
     const kh = map.get(id);
@@ -567,108 +515,44 @@ const selectedCustomers = computed(() => {
   });
 });
 
-// ✅ auto bỏ chọn những khách đã gửi (khi load/fetch hoặc sau khi gửi)
-watch(
-  sentCustomerIds,
-  () => {
-    const sent = new Set(normalizeCustomerIds(sentCustomerIds.value));
-    selectedCustomerIds.value = normalizeCustomerIds(selectedCustomerIds.value).filter((id) => !sent.has(Number(id)));
-  },
-  { deep: true }
-);
+// ========================= THỐNG KÊ 3 CỘT =========================
+const loadThongKeForCustomers = async (list) => {
+  const arr = Array.isArray(list) ? list : [];
+  const ids = normalizeCustomerIds(arr.map((x) => x.id));
+  if (ids.length === 0) return;
 
-// ====== CHỐNG GỬI TRÙNG: ưu tiên BE, fallback localStorage ======
-const sentKey = (voucherId) => `ss_voucher_sent_${voucherId}`;
+  // ✅ gọi theo từng KH (ít KH thì ổn, khỏi cần batch)
+  await Promise.all(
+    ids.map(async (id) => {
+      try {
+        const res = await axios.get(`${API_BASE}/khach-hang/${id}/tong-quan`);
+        const data = res.data || {};
 
-const loadSentLocal = (voucherId) => {
-  try {
-    const raw = localStorage.getItem(sentKey(voucherId));
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    return normalizeCustomerIds(arr);
-  } catch {
-    return [];
-  }
+        const idx = arr.findIndex((x) => Number(x.id) === Number(id));
+        if (idx < 0) return;
+
+        // BE trả BigDecimal có thể là string => để nguyên, formatTien sẽ Number(...) được
+        arr[idx].tongChiTieu = data.tongChiTieu ?? 0;
+        arr[idx].soDonHang = data.soDonHang ?? 0;
+        arr[idx].donHangGanNhat = data.donHangGanNhat ?? null;
+      } catch {
+        // ignore để không phá UI
+      }
+    })
+  );
 };
 
-const saveSentLocal = (voucherId, ids) => {
-  try {
-    localStorage.setItem(sentKey(voucherId), JSON.stringify(normalizeCustomerIds(ids)));
-  } catch {
-    // ignore
-  }
-};
-
-const fetchSentCustomerIds = async (voucherId) => {
-  if (!voucherId) return;
-
-  sentCustomerIds.value = loadSentLocal(voucherId);
-
-  try {
-    const res = await axios.get(`${API_BASE}/phieu-giam-gia/${voucherId}/khach-hang-da-gui-ids`);
-    sentCustomerIds.value = normalizeCustomerIds(res.data);
-    saveSentLocal(voucherId, sentCustomerIds.value);
-  } catch {
-    // giữ localStorage nếu BE lỗi/thiếu
-  }
-};
-
-const sendVoucherMailRaw = async (voucherId, ids) => {
+// ========================= GỬI MAIL (AUTO SAU KHI LƯU) =========================
+const sendVoucherMail = async (voucherId, ids) => {
   const uniqueIds = normalizeCustomerIds(ids);
-
-  await fetchSentCustomerIds(voucherId);
-
-  const sent = new Set(normalizeCustomerIds(sentCustomerIds.value));
-  const toSend = uniqueIds.filter((x) => !sent.has(x));
-
-  if (toSend.length === 0) {
-    return { sent: 0, skipped: uniqueIds.length };
-  }
-
   const res = await axios.post(`${API_BASE}/phieu-giam-gia/${voucherId}/gui-mail`, {
-    idKhachHangs: toSend,
+    idKhachHangs: uniqueIds,
   });
 
-  const beIds = res?.data?.danhSachDaGuiIds;
-  if (Array.isArray(beIds)) {
-    sentCustomerIds.value = normalizeCustomerIds(beIds);
-  } else {
-    sentCustomerIds.value = normalizeCustomerIds([...sentCustomerIds.value, ...toSend]);
-  }
+  const guiThanhCong = Number(res?.data?.soLuongGuiThanhCong || 0);
+  const boQua = Number(res?.data?.soLuongBoQua || 0);
 
-  saveSentLocal(voucherId, sentCustomerIds.value);
-
-  return { sent: toSend.length, skipped: uniqueIds.length - toSend.length };
-};
-
-const handleSendMail = async () => {
-  if (isLocked.value) return;
-
-  const voucherId = Number(form.value.id || 0);
-  if (!voucherId) {
-    return Swal.fire("Thông báo", "Vui lòng lưu phiếu trước khi gửi mail", "warning");
-  }
-
-  const ids = normalizeCustomerIds(selectedCustomerIds.value);
-  if (ids.length === 0) {
-    return Swal.fire("Thông báo", "Vui lòng chọn ít nhất một khách hàng", "warning");
-  }
-
-  isSendingMail.value = true;
-  try {
-    const rs = await sendVoucherMailRaw(voucherId, ids);
-    if (rs.sent === 0) {
-      await Swal.fire("Thông báo", "Tất cả khách hàng đã được gửi phiếu này trước đó", "info");
-    } else {
-      const extra = rs.skipped > 0 ? ` (Bỏ qua ${rs.skipped} khách đã gửi trước đó)` : "";
-      await Swal.fire("Thành công", `Đã gửi mail cho ${rs.sent} khách hàng.${extra}`, "success");
-    }
-  } catch (e) {
-    const msg = e?.response?.data?.detail || e?.response?.data?.message || "Gửi mail thất bại";
-    Swal.fire("Lỗi", msg, "error");
-  } finally {
-    isSendingMail.value = false;
-  }
+  return { guiThanhCong, boQua };
 };
 
 // ====== LOAD DATA ======
@@ -676,7 +560,11 @@ const reloadCustomers = async () => {
   loadingCustomers.value = true;
   try {
     const cRes = await axios.get(`${API_BASE}/khach-hang`);
-    customers.value = Array.isArray(cRes.data) ? cRes.data : cRes.data?.content || [];
+    const list = Array.isArray(cRes.data) ? cRes.data : cRes.data?.content || [];
+    customers.value = list;
+
+    // ✅ bơm 3 cột thống kê
+    await loadThongKeForCustomers(customers.value);
   } catch (e) {
     console.error("Lỗi load khách hàng:", e);
   } finally {
@@ -716,8 +604,6 @@ const loadData = async () => {
     if (form.value.loaiPhieuGiamGia) {
       const idsRes = await axios.get(`${API_BASE}/phieu-giam-gia/${form.value.id}/khach-hang-ids`);
       selectedCustomerIds.value = normalizeCustomerIds(idsRes.data);
-
-      await fetchSentCustomerIds(form.value.id);
     }
   } catch (e) {
     console.error("Lỗi load phiếu:", e);
@@ -776,16 +662,16 @@ const handleSave = async () => {
 
     if (savedId) form.value.id = savedId;
 
-    // ✅ tự gửi mail cho phiếu cá nhân (không gửi trùng)
+    // ✅ AUTO GỬI MAIL cho phiếu cá nhân (BE đã xử lý chống trùng + cho phép gửi lại nếu voucher thay đổi)
     if (form.value.loaiPhieuGiamGia && savedId) {
+      isSendingMail.value = true;
       try {
-        isSendingMail.value = true;
-        const rs = await sendVoucherMailRaw(savedId, uniqueCustomerIds);
-        const extra = rs.skipped > 0 ? ` (Bỏ qua ${rs.skipped} khách đã gửi trước đó)` : "";
+        const rs = await sendVoucherMail(savedId, uniqueCustomerIds);
+        const extra = rs.boQua > 0 ? ` (Bỏ qua ${rs.boQua} trường hợp: đã gửi trước đó / thiếu email / lỗi gửi)` : "";
         const msg =
-          rs.sent === 0
-            ? "Đã lưu phiếu. Tất cả khách hàng đã được gửi phiếu này trước đó."
-            : `Đã lưu phiếu và gửi mail cho ${rs.sent} khách hàng.${extra}`;
+          rs.guiThanhCong === 0
+            ? "Đã lưu phiếu. Không có khách hàng nào được gửi mail thêm."
+            : `Đã lưu phiếu và gửi mail cho ${rs.guiThanhCong} khách hàng.${extra}`;
 
         await Swal.fire("Thành công", msg, "success");
         router.push("/admin/giam-gia/phieu");
@@ -836,7 +722,6 @@ watch(
   (isCaNhan) => {
     if (!isCaNhan) {
       selectedCustomerIds.value = [];
-      sentCustomerIds.value = [];
       clearFilter();
     }
   }
@@ -905,12 +790,6 @@ onMounted(loadData);
   border-radius: 10px;
 }
 
-.ss-btn-mail {
-  height: 36px;
-  font-size: 14px;
-  border-radius: 10px;
-}
-
 /* filter inputs */
 .ss-kh-filter .ss-input {
   width: 210px;
@@ -950,13 +829,6 @@ onMounted(loadData);
 }
 .ss-kh-table thead th {
   font-weight: 400;
-}
-
-/* badge nhỏ gọn */
-.ss-badge {
-  font-weight: 400;
-  font-size: 12px;
-  padding: 6px 10px;
 }
 
 /* pagination gọn như mẫu */

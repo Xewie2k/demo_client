@@ -16,6 +16,8 @@ import PrimeVue from "primevue/config";
 import ToastService from "primevue/toastservice";
 import Toast from "primevue/toast";
 import "primeicons/primeicons.css";
+import "@/assets/styles/theme.css";
+
 
 import Aura from "@primeuix/themes/aura";
 

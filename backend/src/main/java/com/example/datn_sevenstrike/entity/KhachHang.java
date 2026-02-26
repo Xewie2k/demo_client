@@ -40,9 +40,6 @@ public class KhachHang {
     @Column(name = "ngay_sinh")
     private LocalDate ngaySinh;
 
-    @Column(name = "anh_dai_dien", length = 500)
-    private String anhDaiDien;
-
     @Column(name = "trang_thai", nullable = false)
     private Boolean trangThai;
 
@@ -60,4 +57,7 @@ public class KhachHang {
 
     @Column(name = "nguoi_cap_nhat")
     private Integer nguoiCapNhat;
+
+    @Column(name = "anh_dai_dien", length = 500)
+    private String anhDaiDien;
 }

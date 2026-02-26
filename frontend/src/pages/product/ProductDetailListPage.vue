@@ -10,7 +10,12 @@
       </div>
 
       <div class="ss-head-right d-flex gap-2">
-        <button class="btn ss-btn-outline" type="button" @click="back" :disabled="loading">
+        <button
+          class="btn ss-btn-outline"
+          type="button"
+          @click="back"
+          :disabled="loading"
+        >
           ← Quay lại danh sách
         </button>
       </div>
@@ -40,7 +45,11 @@
 
         <div class="ss-field ss-field-select">
           <div class="ss-filter-label">Trạng thái</div>
-          <select v-model="statusFilter" class="form-select ss-select" :disabled="loading">
+          <select
+            v-model="statusFilter"
+            class="form-select ss-select"
+            :disabled="loading"
+          >
             <option value="all">Tất cả</option>
             <option value="active">Kinh doanh</option>
             <option value="inactive">Ngừng kinh doanh</option>
@@ -99,15 +108,19 @@
         </div>
       </div>
 
-      <!-- Row 3: Range giá + ACTIONS (theo mẫu) -->
+      <!-- Row 3: Range giá + ACTIONS -->
       <div class="ss-filter-row3">
-        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1">
+        <div
+          class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-1"
+        >
           <div class="ss-filter-label mb-0">Khoảng giá</div>
           <div class="ss-price-hint">
             <span>{{ formatMoney(priceMin) }}</span>
             <span class="mx-1">-</span>
             <span>{{ formatMoney(priceMax) }}</span>
-            <span class="ms-2 ss-muted">(Max: {{ formatMoney(priceBoundMax) }})</span>
+            <span class="ms-2 ss-muted"
+              >(Max: {{ formatMoney(priceBoundMax) }})</span
+            >
           </div>
         </div>
 
@@ -139,14 +152,69 @@
           </div>
         </div>
 
-        <!-- ✅ 3 nút đặt dưới range -->
+        <!-- ✅ ĐỔI THỨ TỰ + ĐỒNG BỘ ICON -->
         <div class="ss-filter-actions-under">
-          <button class="btn ss-btn-warn" type="button" @click="openQrCamera" :disabled="loading">
-            <span class="material-icons-outlined ss-btn-ic">qr_code_scanner</span>
+          <!-- Excel (icon giống ProductManagePage) -->
+          <button
+            class="btn ss-btn-lite"
+            type="button"
+            @click="exportExcel"
+            :disabled="loading || zipDownloading"
+          >
+            <span class="material-icons-outlined ss-btn-ic">description</span>
+            Tải Excel
+          </button>
+
+          <!-- QR (đã chọn) -->
+          <button
+            class="btn ss-btn-lite"
+            type="button"
+            @click="downloadQrSelectedZip"
+            :disabled="loading || zipDownloading || selectedIds.size === 0"
+            :title="
+              selectedIds.size === 0
+                ? 'Vui lòng chọn ít nhất 1 dòng'
+                : 'Tải QR các dòng đã chọn'
+            "
+          >
+            <span class="material-icons-outlined ss-btn-ic">download</span>
+            Tải QR (Đã chọn)
+          </button>
+
+          <!-- QR (tất cả theo lọc hiện tại) -->
+          <button
+            class="btn ss-btn-lite"
+            type="button"
+            @click="downloadQrAllZip"
+            :disabled="
+              loading || zipDownloading || filteredDetails.length === 0
+            "
+            title="Tải QR của toàn bộ dữ liệu đang hiển thị theo bộ lọc"
+          >
+            <span class="material-icons-outlined ss-btn-ic">download</span>
+            Tải QR (Tất cả)
+          </button>
+
+          <!-- Quét QR (icon giống ProductManagePage) -->
+          <button
+            class="btn ss-btn-warn"
+            type="button"
+            @click="openQrCamera"
+            :disabled="loading || zipDownloading"
+          >
+            <span class="material-icons-outlined ss-btn-ic"
+              >qr_code_scanner</span
+            >
             Quét QR
           </button>
 
-          <button class="btn ss-btn-dark" type="button" @click="resetFilter" :disabled="loading">
+          <!-- Đặt lại (icon giống ProductManagePage) -->
+          <button
+            class="btn ss-btn-dark"
+            type="button"
+            @click="resetFilter"
+            :disabled="loading || zipDownloading"
+          >
             <span class="material-icons-outlined ss-btn-ic">restart_alt</span>
             Đặt lại bộ lọc
           </button>
@@ -156,7 +224,7 @@
             class="btn ss-btn-primary"
             type="button"
             @click="showAllVariants"
-            :disabled="loading"
+            :disabled="loading || zipDownloading"
             title="Hiển thị toàn bộ biến thể của tất cả sản phẩm"
           >
             <span class="material-icons-outlined ss-btn-ic">grid_view</span>
@@ -176,6 +244,19 @@
         <table class="table ss-table mb-0 align-middle">
           <thead>
             <tr>
+              <!-- ✅ Checkbox trước STT -->
+              <th class="col-check text-center">
+                <input
+                  ref="headerCheckRef"
+                  type="checkbox"
+                  class="ss-check"
+                  :checked="allSelected"
+                  :disabled="loading || filteredDetails.length === 0"
+                  @change="toggleSelectAll($event)"
+                  title="Chọn tất cả theo bộ lọc hiện tại"
+                />
+              </th>
+
               <th class="col-stt">STT</th>
               <th class="col-masp">Mã SP</th>
               <th class="col-ma">Mã CTSP</th>
@@ -193,19 +274,35 @@
 
           <tbody v-if="loading">
             <tr>
-              <td colspan="12" class="text-center py-4 ss-muted">Đang tải...</td>
+              <td colspan="13" class="text-center py-4 ss-muted">
+                Đang tải...
+              </td>
             </tr>
           </tbody>
 
           <tbody v-else-if="!pagedDetails.length">
             <tr>
-              <td colspan="12" class="text-center py-4 ss-muted">Không có dữ liệu</td>
+              <td colspan="13" class="text-center py-4 ss-muted">
+                Không có dữ liệu
+              </td>
             </tr>
           </tbody>
 
           <tbody v-else>
             <tr v-for="(d, idx) in pagedDetails" :key="d.id">
-              <td class="ss-td col-stt">{{ (page - 1) * pageSize + idx + 1 }}</td>
+              <!-- ✅ checkbox dòng -->
+              <td class="ss-td col-check text-center">
+                <input
+                  type="checkbox"
+                  class="ss-check"
+                  :checked="isSelected(d?.id)"
+                  @change="toggleSelectOne(d?.id, $event)"
+                />
+              </td>
+
+              <td class="ss-td col-stt">
+                {{ (page - 1) * pageSize + idx + 1 }}
+              </td>
 
               <td class="ss-td col-masp">{{ pickMaSp(d) }}</td>
 
@@ -213,7 +310,11 @@
 
               <td class="ss-td col-anh text-center">
                 <div class="ss-thumb">
-                  <img v-if="pickImageUrl(d)" :src="imgUrlWithVer(pickImageUrl(d))" alt="img" />
+                  <img
+                    v-if="pickImageUrl(d)"
+                    :src="imgUrlWithVer(pickImageUrl(d))"
+                    alt="img"
+                  />
                   <span v-else class="ss-muted">-</span>
                 </div>
               </td>
@@ -246,9 +347,11 @@
                 <span class="ss-money">{{ formatMoney(pickGia(d)) }} đ</span>
               </td>
 
-              <!-- ✅ Đồng bộ ProductManagePage: Kinh doanh đỏ, Ngừng xám -->
               <td class="col-tt text-center">
-                <span class="ss-badge" :class="getTrangThai(d) ? 'ss-badge-on' : 'ss-badge-off'">
+                <span
+                  class="ss-badge"
+                  :class="getTrangThai(d) ? 'ss-badge-on' : 'ss-badge-off'"
+                >
                   {{ getTrangThai(d) ? "Kinh doanh" : "Ngừng kinh doanh" }}
                 </span>
               </td>
@@ -272,7 +375,12 @@
     <!-- PAGINATION -->
     <div class="ss-pagination-bar">
       <div class="ss-pagination">
-        <button class="ss-pagebtn" :disabled="page <= 1" @click="page--" title="Trang trước">
+        <button
+          class="ss-pagebtn"
+          :disabled="page <= 1"
+          @click="page--"
+          title="Trang trước"
+        >
           ‹
         </button>
 
@@ -287,12 +395,19 @@
           {{ p }}
         </button>
 
-        <button class="ss-pagebtn" :disabled="page >= totalPages" @click="page++" title="Trang sau">
+        <button
+          class="ss-pagebtn"
+          :disabled="page >= totalPages"
+          @click="page++"
+          title="Trang sau"
+        >
           ›
         </button>
       </div>
 
-      <div class="ss-pageinfo">Trang <span>{{ page }}</span> / <span>{{ totalPages }}</span></div>
+      <div class="ss-pageinfo">
+        Trang <span>{{ page }}</span> / <span>{{ totalPages }}</span>
+      </div>
     </div>
 
     <!-- EDIT MODAL -->
@@ -316,7 +431,11 @@
               <label class="ss-input-label">
                 Mã sản phẩm chi tiết <span class="ss-required">*</span>
               </label>
-              <input class="form-control ss-input" v-model="editForm.maCtsp" disabled />
+              <input
+                class="form-control ss-input"
+                v-model="editForm.maCtsp"
+                disabled
+              />
             </div>
 
             <div class="ss-field">
@@ -389,7 +508,9 @@
                 <option
                   v-for="x in kichThuocOptions"
                   :key="`kt-${x.id}`"
-                  :value="pickTenFrom(x, ['tenKichThuoc', 'ten_kich_thuoc', 'ten'])"
+                  :value="
+                    pickTenFrom(x, ['tenKichThuoc', 'ten_kich_thuoc', 'ten'])
+                  "
                 />
               </datalist>
             </div>
@@ -423,7 +544,9 @@
                 <option
                   v-for="x in formChanOptions"
                   :key="`fc-${x.id}`"
-                  :value="pickTenFrom(x, ['tenFormChan', 'ten_form_chan', 'ten'])"
+                  :value="
+                    pickTenFrom(x, ['tenFormChan', 'ten_form_chan', 'ten'])
+                  "
                 />
               </datalist>
             </div>
@@ -440,16 +563,25 @@
                 @click="downloadQr"
                 :disabled="!editForm.maCtsp || !qrDataUrl"
               >
-                <span class="material-icons-outlined" style="font-size: 18px">download</span>
+                <span class="material-icons-outlined" style="font-size: 18px"
+                  >download</span
+                >
                 Tải QR
               </button>
             </div>
 
             <div class="ss-qr-wrap">
-              <img v-if="qrDataUrl" class="ss-qr-img" :src="qrDataUrl" alt="qr" />
+              <img
+                v-if="qrDataUrl"
+                class="ss-qr-img"
+                :src="qrDataUrl"
+                alt="qr"
+              />
               <div v-else class="ss-qr-empty ss-muted">Không tạo được QR</div>
 
-              <div class="ss-qr-hint">Nội dung QR: <span>{{ editForm.maCtsp }}</span></div>
+              <div class="ss-qr-hint">
+                Nội dung QR: <span>{{ editForm.maCtsp }}</span>
+              </div>
             </div>
           </div>
 
@@ -502,10 +634,20 @@
         </div>
 
         <div class="ss-modal-foot">
-          <button class="btn ss-btn-outline" type="button" @click="closeEdit" :disabled="editSaving">
+          <button
+            class="btn ss-btn-outline"
+            type="button"
+            @click="closeEdit"
+            :disabled="editSaving"
+          >
             Hủy bỏ
           </button>
-          <button class="btn ss-btn-primary" type="button" @click="saveEdit" :disabled="editSaving">
+          <button
+            class="btn ss-btn-primary"
+            type="button"
+            @click="saveEdit"
+            :disabled="editSaving"
+          >
             <span v-if="editSaving" class="ss-spin"></span>
             Cập nhật chi tiết
           </button>
@@ -514,11 +656,21 @@
     </div>
 
     <!-- QR CAMERA MODAL -->
-    <div v-if="qrCameraOpen" class="ss-modal-backdrop" @click.self="closeQrCamera">
+    <div
+      v-if="qrCameraOpen"
+      class="ss-modal-backdrop"
+      @click.self="closeQrCamera"
+    >
       <div class="ss-modal ss-modal-wide">
         <div class="d-flex align-items-center justify-content-between mb-2">
           <div class="ss-modal-title">Quét QR sản phẩm</div>
-          <button class="btn ss-btn-outline" type="button" @click="closeQrCamera">Đóng</button>
+          <button
+            class="btn ss-btn-outline"
+            type="button"
+            @click="closeQrCamera"
+          >
+            Đóng
+          </button>
         </div>
 
         <div class="ss-muted mb-2" style="font-size: 13px">
@@ -532,10 +684,21 @@
         <div v-if="qrError" class="ss-cam-error mt-2">{{ qrError }}</div>
 
         <div class="d-flex align-items-center justify-content-end gap-2 mt-3">
-          <button class="btn ss-btn-outline" type="button" @click="restartQrCamera" :disabled="loading">
+          <button
+            class="btn ss-btn-outline"
+            type="button"
+            @click="restartQrCamera"
+            :disabled="loading"
+          >
             Quét lại
           </button>
-          <button class="btn ss-btn-primary" type="button" @click="closeQrCamera">Xong</button>
+          <button
+            class="btn ss-btn-primary"
+            type="button"
+            @click="closeQrCamera"
+          >
+            Xong
+          </button>
         </div>
       </div>
     </div>
@@ -543,19 +706,25 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch, nextTick } from "vue";
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+  nextTick,
+} from "vue";
 import { useRouter, useRoute } from "vue-router";
 import MultiSelect from "primevue/multiselect";
 import { Html5Qrcode } from "html5-qrcode";
 import QRCode from "qrcode";
+import JSZip from "jszip";
 
 import productService from "@/services/productService";
 import productDetailService from "@/services/productDetailService";
 import anhChiTietSanPhamService from "@/services/anhChiTietSanPhamService";
 import { refDataService } from "@/services/refDataService";
-
-/* ====== (GIỮ NGUYÊN TOÀN BỘ SCRIPT CỦA BẠN) ====== */
-/* Script ở đây giống y hệt bản bạn đang dùng “rất ổn”, mình không thay đổi gì ngoài phần CSS + class badge ở template. */
 
 const router = useRouter();
 const route = useRoute();
@@ -580,7 +749,8 @@ const isProductScoped = computed(() => {
 });
 
 const headTitle = computed(() => {
-  if (isProductScoped.value) return `Quản lý sản phẩm/ Danh sách biến thể - Sản phẩm`;
+  if (isProductScoped.value)
+    return `Quản lý sản phẩm/ Danh sách biến thể - Sản phẩm`;
   return `Quản lý sản phẩm/ Danh sách chi tiết sản phẩm`;
 });
 
@@ -630,7 +800,9 @@ function unwrapList(v) {
   return [];
 }
 function lc(s) {
-  return String(s ?? "").trim().toLowerCase();
+  return String(s ?? "")
+    .trim()
+    .toLowerCase();
 }
 function ensureArray(v) {
   return Array.isArray(v) ? v : [];
@@ -660,8 +832,12 @@ function getTrangThai(obj) {
   if (typeof v === "number") return v === 1;
   if (typeof v === "string") {
     const s = v.trim().toLowerCase();
-    if (["true", "1", "active", "on", "kinhdoanh", "kinh_doanh"].includes(s)) return true;
-    if (["false", "0", "inactive", "off", "ngung", "ngung_kinh_doanh"].includes(s)) return false;
+    if (["true", "1", "active", "on", "kinhdoanh", "kinh_doanh"].includes(s))
+      return true;
+    if (
+      ["false", "0", "inactive", "off", "ngung", "ngung_kinh_doanh"].includes(s)
+    )
+      return false;
   }
   return true;
 }
@@ -679,7 +855,14 @@ function pickIdSanPham(d) {
   );
 }
 function pickIdMauSac(d) {
-  return d?.idMauSac ?? d?.id_mau_sac ?? d?.mauSacId ?? d?.mauSac?.id ?? d?.mau_sac?.id ?? null;
+  return (
+    d?.idMauSac ??
+    d?.id_mau_sac ??
+    d?.mauSacId ??
+    d?.mauSac?.id ??
+    d?.mau_sac?.id ??
+    null
+  );
 }
 function pickIdKichThuoc(d) {
   return (
@@ -692,10 +875,24 @@ function pickIdKichThuoc(d) {
   );
 }
 function pickIdLoaiSan(d) {
-  return d?.idLoaiSan ?? d?.id_loai_san ?? d?.loaiSanId ?? d?.loaiSan?.id ?? d?.loai_san?.id ?? null;
+  return (
+    d?.idLoaiSan ??
+    d?.id_loai_san ??
+    d?.loaiSanId ??
+    d?.loaiSan?.id ??
+    d?.loai_san?.id ??
+    null
+  );
 }
 function pickIdFormChan(d) {
-  return d?.idFormChan ?? d?.id_form_chan ?? d?.formChanId ?? d?.formChan?.id ?? d?.form_chan?.id ?? null;
+  return (
+    d?.idFormChan ??
+    d?.id_form_chan ??
+    d?.formChanId ??
+    d?.formChan?.id ??
+    d?.form_chan?.id ??
+    null
+  );
 }
 
 function pickMaSp(d) {
@@ -715,13 +912,17 @@ function pickMaSp(d) {
 }
 
 function pickMaCtsp(d) {
-  return d?.maChiTietSanPham ?? d?.ma_chi_tiet_san_pham ?? d?.maCtsp ?? d?.ma ?? "-";
+  return (
+    d?.maChiTietSanPham ?? d?.ma_chi_tiet_san_pham ?? d?.maCtsp ?? d?.ma ?? "-"
+  );
 }
 function pickSoLuong(d) {
   return d?.soLuong ?? d?.so_luong ?? 0;
 }
 function pickGia(d) {
-  return d?.giaBan ?? d?.gia_ban ?? d?.giaNiemYet ?? d?.gia_niem_yet ?? d?.gia ?? 0;
+  return (
+    d?.giaBan ?? d?.gia_ban ?? d?.giaNiemYet ?? d?.gia_niem_yet ?? d?.gia ?? 0
+  );
 }
 function pickTenSanPham(d) {
   return (
@@ -792,7 +993,9 @@ function pickMaMauHex(d) {
 
 function apiBase() {
   const raw =
-    import.meta?.env?.VITE_API_URL || import.meta?.env?.VITE_API_BASE_URL || "http://localhost:8080";
+    import.meta?.env?.VITE_API_URL ||
+    import.meta?.env?.VITE_API_BASE_URL ||
+    "http://localhost:8080";
   return String(raw).replace(/\/+$/, "");
 }
 function normalizeAnhPath(p) {
@@ -864,14 +1067,25 @@ function enrichCtspList(ctspList) {
       return id != null ? fcMap.get(id) : null;
     })();
 
-    const tenSpTmp = x?.tenSanPham ?? pickTenFrom(p, ["tenSanPham", "ten_san_pham", "ten", "name"]);
-    const tenMauSacTmp = x?.tenMauSac ?? pickTenFrom(ms, ["tenMauSac", "ten_mau_sac", "ten"]);
-    const tenKichThuocTmp = x?.tenKichThuoc ?? pickTenFrom(kt, ["tenKichThuoc", "ten_kich_thuoc", "ten"]);
-    const tenLoaiSanTmp = x?.tenLoaiSan ?? pickTenFrom(ls, ["tenLoaiSan", "ten_loai_san", "ten"]);
-    const tenFormChanTmp = x?.tenFormChan ?? pickTenFrom(fch, ["tenFormChan", "ten_form_chan", "ten"]);
+    const tenSpTmp =
+      x?.tenSanPham ??
+      pickTenFrom(p, ["tenSanPham", "ten_san_pham", "ten", "name"]);
+    const tenMauSacTmp =
+      x?.tenMauSac ?? pickTenFrom(ms, ["tenMauSac", "ten_mau_sac", "ten"]);
+    const tenKichThuocTmp =
+      x?.tenKichThuoc ??
+      pickTenFrom(kt, ["tenKichThuoc", "ten_kich_thuoc", "ten"]);
+    const tenLoaiSanTmp =
+      x?.tenLoaiSan ?? pickTenFrom(ls, ["tenLoaiSan", "ten_loai_san", "ten"]);
+    const tenFormChanTmp =
+      x?.tenFormChan ??
+      pickTenFrom(fch, ["tenFormChan", "ten_form_chan", "ten"]);
 
     const maMau =
-      x?.maMau ?? x?.ma_mau ?? pickTenFrom(ms, ["maMau", "ma_mau", "maHex", "ma_hex"]) ?? "";
+      x?.maMau ??
+      x?.ma_mau ??
+      pickTenFrom(ms, ["maMau", "ma_mau", "maHex", "ma_hex"]) ??
+      "";
 
     return {
       ...x,
@@ -897,16 +1111,28 @@ function toSelectOptions(arr, labelGetter) {
     .filter(Boolean);
 }
 const mauSacSelectOptions = computed(() =>
-  toSelectOptions(mauSacOptions.value, (x) => x?.tenMauSac ?? x?.ten_mau_sac ?? x?.ten ?? "-")
+  toSelectOptions(
+    mauSacOptions.value,
+    (x) => x?.tenMauSac ?? x?.ten_mau_sac ?? x?.ten ?? "-",
+  ),
 );
 const kichThuocSelectOptions = computed(() =>
-  toSelectOptions(kichThuocOptions.value, (x) => x?.tenKichThuoc ?? x?.ten_kich_thuoc ?? x?.ten ?? "-")
+  toSelectOptions(
+    kichThuocOptions.value,
+    (x) => x?.tenKichThuoc ?? x?.ten_kich_thuoc ?? x?.ten ?? "-",
+  ),
 );
 const loaiSanSelectOptions = computed(() =>
-  toSelectOptions(loaiSanOptions.value, (x) => x?.tenLoaiSan ?? x?.ten_loai_san ?? x?.ten ?? "-")
+  toSelectOptions(
+    loaiSanOptions.value,
+    (x) => x?.tenLoaiSan ?? x?.ten_loai_san ?? x?.ten ?? "-",
+  ),
 );
 const formChanSelectOptions = computed(() =>
-  toSelectOptions(formChanOptions.value, (x) => x?.tenFormChan ?? x?.ten_form_chan ?? x?.ten ?? "-")
+  toSelectOptions(
+    formChanOptions.value,
+    (x) => x?.tenFormChan ?? x?.ten_form_chan ?? x?.ten ?? "-",
+  ),
 );
 
 function getRouteProductKey() {
@@ -947,8 +1173,10 @@ function applyScopedProductById(id) {
   scopedProductId.value = pid;
 
   const p = unwrapList(productOptions.value).find((x) => Number(x?.id) === pid);
-  scopedProductName.value = p?.tenSanPham ?? p?.ten_san_pham ?? p?.ten ?? scopedProductName.value ?? "";
-  scopedProductMa.value = p?.maSanPham ?? p?.ma_san_pham ?? p?.ma ?? scopedProductMa.value ?? "";
+  scopedProductName.value =
+    p?.tenSanPham ?? p?.ten_san_pham ?? p?.ten ?? scopedProductName.value ?? "";
+  scopedProductMa.value =
+    p?.maSanPham ?? p?.ma_san_pham ?? p?.ma ?? scopedProductMa.value ?? "";
 }
 
 function applyScopedProductByMa(ma) {
@@ -1007,7 +1235,8 @@ const baseFilteredDetails = computed(() => {
     const maSp = lc(pickMaSp(d));
     const maCtsp = lc(pickMaCtsp(d));
     const tenSp = lc(pickTenSanPham(d));
-    const matchKw = !kw || maSp.includes(kw) || maCtsp.includes(kw) || tenSp.includes(kw);
+    const matchKw =
+      !kw || maSp.includes(kw) || maCtsp.includes(kw) || tenSp.includes(kw);
 
     const st = getTrangThai(d);
     const matchStatus =
@@ -1021,10 +1250,14 @@ const baseFilteredDetails = computed(() => {
     const idFormChan = Number(pickIdFormChan(d));
 
     const matchId =
-      (fMauSac.length === 0 || (Number.isFinite(idMauSac) && fMauSac.includes(idMauSac))) &&
-      (fKichThuoc.length === 0 || (Number.isFinite(idKichThuoc) && fKichThuoc.includes(idKichThuoc))) &&
-      (fLoaiSan.length === 0 || (Number.isFinite(idLoaiSan) && fLoaiSan.includes(idLoaiSan))) &&
-      (fFormChan.length === 0 || (Number.isFinite(idFormChan) && fFormChan.includes(idFormChan)));
+      (fMauSac.length === 0 ||
+        (Number.isFinite(idMauSac) && fMauSac.includes(idMauSac))) &&
+      (fKichThuoc.length === 0 ||
+        (Number.isFinite(idKichThuoc) && fKichThuoc.includes(idKichThuoc))) &&
+      (fLoaiSan.length === 0 ||
+        (Number.isFinite(idLoaiSan) && fLoaiSan.includes(idLoaiSan))) &&
+      (fFormChan.length === 0 ||
+        (Number.isFinite(idFormChan) && fFormChan.includes(idFormChan)));
 
     return matchKw && matchStatus && matchId;
   });
@@ -1050,13 +1283,18 @@ const priceMin = ref(0);
 const priceMax = ref(0);
 
 watch(
-  () => [keyword.value, statusFilter.value, JSON.stringify(filters), scopedProductId.value],
+  () => [
+    keyword.value,
+    statusFilter.value,
+    JSON.stringify(filters),
+    scopedProductId.value,
+  ],
   () => {
     priceMin.value = 0;
     priceMax.value = priceBoundMax.value;
     page.value = 1;
   },
-  { deep: true }
+  { deep: true },
 );
 watch(
   () => priceBoundMax.value,
@@ -1065,7 +1303,7 @@ watch(
     if (priceMin.value > priceMax.value) priceMin.value = priceMax.value;
     if (priceMax.value === 0 && mx > 0) priceMax.value = mx;
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 function onPriceMinInput(e) {
@@ -1098,14 +1336,16 @@ const filteredDetails = computed(() => {
   });
 });
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredDetails.value.length / pageSize.value)));
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredDetails.value.length / pageSize.value)),
+);
 const pagedDetails = computed(() => {
   const start = (page.value - 1) * pageSize.value;
   return filteredDetails.value.slice(start, start + pageSize.value);
 });
 watch(
   () => [pageSize.value, filteredDetails.value.length],
-  () => (page.value = 1)
+  () => (page.value = 1),
 );
 watch(totalPages, () => {
   if (page.value > totalPages.value) page.value = totalPages.value;
@@ -1137,6 +1377,65 @@ function goPage(p) {
   page.value = p;
 }
 
+/* =======================
+   ✅ CHECKBOX CHỌN DÒNG
+   ======================= */
+const selectedIds = reactive(new Set());
+const headerCheckRef = ref(null);
+
+const allSelected = computed(() => {
+  const arr = filteredDetails.value || [];
+  if (!arr.length) return false;
+  return arr.every((d) => selectedIds.has(Number(d?.id)));
+});
+const someSelected = computed(() => {
+  const arr = filteredDetails.value || [];
+  if (!arr.length) return false;
+  let hit = 0;
+  for (const d of arr) {
+    if (selectedIds.has(Number(d?.id))) hit++;
+    if (hit > 0) break;
+  }
+  return hit > 0;
+});
+
+watch([allSelected, someSelected], () => {
+  if (!headerCheckRef.value) return;
+  headerCheckRef.value.indeterminate = someSelected.value && !allSelected.value;
+});
+
+function isSelected(id) {
+  const n = Number(id);
+  if (!Number.isFinite(n)) return false;
+  return selectedIds.has(n);
+}
+
+function toggleSelectOne(id, e) {
+  const n = Number(id);
+  if (!Number.isFinite(n)) return;
+  const checked = !!e?.target?.checked;
+  if (checked) selectedIds.add(n);
+  else selectedIds.delete(n);
+}
+
+function toggleSelectAll(e) {
+  const checked = !!e?.target?.checked;
+  const arr = filteredDetails.value || [];
+  if (!arr.length) return;
+
+  if (checked) {
+    arr.forEach((d) => {
+      const n = Number(d?.id);
+      if (Number.isFinite(n)) selectedIds.add(n);
+    });
+  } else {
+    arr.forEach((d) => {
+      const n = Number(d?.id);
+      if (Number.isFinite(n)) selectedIds.delete(n);
+    });
+  }
+}
+
 function resetFilter() {
   keyword.value = "";
   statusFilter.value = "all";
@@ -1147,7 +1446,10 @@ function resetFilter() {
   priceMin.value = 0;
   priceMax.value = priceBoundMax.value;
   page.value = 1;
+
+  selectedIds.clear();
 }
+
 function back() {
   router.push("/admin/san-pham");
 }
@@ -1193,7 +1495,8 @@ async function loadData() {
       const ctspId = a?.idChiTietSanPham ?? a?.id_chi_tiet_san_pham ?? null;
       if (!ctspId) continue;
 
-      const raw = a?.duongDanAnh ?? a?.duong_dan_anh ?? a?.urlAnh ?? a?.imageUrl ?? "";
+      const raw =
+        a?.duongDanAnh ?? a?.duong_dan_anh ?? a?.urlAnh ?? a?.imageUrl ?? "";
       const url = normalizeAnhPath(raw);
       if (!url) continue;
 
@@ -1215,11 +1518,14 @@ async function loadData() {
     priceMin.value = 0;
     priceMax.value = priceBoundMax.value;
     page.value = 1;
+
+    selectedIds.clear();
   } catch (e) {
     console.error(e);
     details.value = [];
     priceMin.value = 0;
     priceMax.value = 0;
+    selectedIds.clear();
   } finally {
     loading.value = false;
   }
@@ -1232,9 +1538,157 @@ watch(
   () => {
     syncScopeFromRoute();
     resetFilter();
-  }
+  },
 );
 
+/* =======================
+   ✅ EXCEL + QR ZIP
+   ======================= */
+const zipDownloading = ref(false);
+
+function escapeCsvCell(v) {
+  const s = String(v ?? "");
+  const escaped = s.replace(/"/g, '""');
+  return `"${escaped}"`;
+}
+
+function exportExcel() {
+  const rows = filteredDetails.value || [];
+
+  const header = [
+    "STT",
+    "Mã SP",
+    "Mã CTSP",
+    "Tên sản phẩm",
+    "Màu sắc",
+    "Kích thước",
+    "Loại sân",
+    "SL tồn",
+    "Giá bán",
+    "Trạng thái",
+  ];
+
+  const lines = [header];
+
+  rows.forEach((d, i) => {
+    const tt = getTrangThai(d) ? "Kinh doanh" : "Ngừng kinh doanh";
+    lines.push([
+      String(i + 1),
+      pickMaSp(d),
+      pickMaCtsp(d),
+      pickTenSanPham(d),
+      pickTenMauSac(d),
+      pickTenKichThuoc(d),
+      pickTenLoaiSan(d),
+      String(Number(pickSoLuong(d) || 0)),
+      String(formatMoney(pickGia(d))),
+      tt,
+    ]);
+  });
+
+  const csv = lines.map((arr) => arr.map(escapeCsvCell).join(",")).join("\n");
+  const blob = new Blob(["\ufeff" + csv], { type: "text/csv;charset=utf-8;" });
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `chi_tiet_san_pham_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function dataUrlToBlob(dataUrl) {
+  const [header, base64] = String(dataUrl).split(",");
+  const mime = header.match(/data:(.*?);base64/)?.[1] || "image/png";
+  const bin = atob(base64);
+  const len = bin.length;
+  const arr = new Uint8Array(len);
+  for (let i = 0; i < len; i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], { type: mime });
+}
+
+async function makeQrDataUrl(text) {
+  const t = String(text || "").trim();
+  if (!t) return "";
+  return await QRCode.toDataURL(t, {
+    width: 320,
+    margin: 1,
+    errorCorrectionLevel: "M",
+  });
+}
+
+async function downloadQrZip(list, fileName) {
+  const arr = Array.isArray(list) ? list : [];
+  if (!arr.length) {
+    alert("Không có dữ liệu để tải QR.");
+    return;
+  }
+
+  zipDownloading.value = true;
+  try {
+    const zip = new JSZip();
+
+    for (const d of arr) {
+      const code = String(pickMaCtsp(d) || "").trim();
+      if (!code) continue;
+
+      const dataUrl = await makeQrDataUrl(code);
+      if (!dataUrl) continue;
+
+      const blob = dataUrlToBlob(dataUrl);
+      zip.file(`${code}_QR.png`, blob);
+    }
+
+    const zipBlob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(zipBlob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+  } catch (e) {
+    console.error(e);
+    alert("Tải QR (zip) chưa thành công. Vui lòng thử lại.");
+  } finally {
+    zipDownloading.value = false;
+  }
+}
+
+async function downloadQrSelectedZip() {
+  const rows = (filteredDetails.value || []).filter((d) =>
+    selectedIds.has(Number(d?.id)),
+  );
+  if (!rows.length) {
+    alert("Vui lòng chọn ít nhất 1 dòng để tải QR.");
+    return;
+  }
+  await downloadQrZip(
+    rows,
+    `qr_da_chon_${new Date().toISOString().slice(0, 10)}.zip`,
+  );
+}
+
+async function downloadQrAllZip() {
+  const rows = filteredDetails.value || [];
+  if (!rows.length) {
+    alert("Không có dữ liệu để tải QR.");
+    return;
+  }
+  await downloadQrZip(
+    rows,
+    `qr_tat_ca_${new Date().toISOString().slice(0, 10)}.zip`,
+  );
+}
+
+/* =======================
+   ✅ EDIT MODAL (GIỮ NGUYÊN)
+   ======================= */
 const editOpen = ref(false);
 const editSaving = ref(false);
 const editError = ref("");
@@ -1343,10 +1797,26 @@ async function saveEdit() {
     return;
   }
 
-  const msId = findIdByName(mauSacOptions.value, editForm.tenMauSac, ["tenMauSac", "ten_mau_sac", "ten"]);
-  const ktId = findIdByName(kichThuocOptions.value, editForm.tenKichThuoc, ["tenKichThuoc", "ten_kich_thuoc", "ten"]);
-  const lsId = findIdByName(loaiSanOptions.value, editForm.tenLoaiSan, ["tenLoaiSan", "ten_loai_san", "ten"]);
-  const fcId = findIdByName(formChanOptions.value, editForm.tenFormChan, ["tenFormChan", "ten_form_chan", "ten"]);
+  const msId = findIdByName(mauSacOptions.value, editForm.tenMauSac, [
+    "tenMauSac",
+    "ten_mau_sac",
+    "ten",
+  ]);
+  const ktId = findIdByName(kichThuocOptions.value, editForm.tenKichThuoc, [
+    "tenKichThuoc",
+    "ten_kich_thuoc",
+    "ten",
+  ]);
+  const lsId = findIdByName(loaiSanOptions.value, editForm.tenLoaiSan, [
+    "tenLoaiSan",
+    "ten_loai_san",
+    "ten",
+  ]);
+  const fcId = findIdByName(formChanOptions.value, editForm.tenFormChan, [
+    "tenFormChan",
+    "ten_form_chan",
+    "ten",
+  ]);
 
   const payload = {
     id: editForm.id,
@@ -1369,18 +1839,24 @@ async function saveEdit() {
     } else if (typeof productDetailService?.save === "function") {
       await productDetailService.save(payload);
     } else {
-      const res = await fetch(`${apiBase()}/api/chi-tiet-san-pham/${editForm.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
+      const res = await fetch(
+        `${apiBase()}/api/chi-tiet-san-pham/${editForm.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
       if (!res.ok) throw new Error("Fallback API update không thành công.");
     }
 
     if (editForm.file) {
       try {
         if (typeof anhChiTietSanPhamService?.uploadDaiDien === "function") {
-          await anhChiTietSanPhamService.uploadDaiDien(editForm.id, editForm.file);
+          await anhChiTietSanPhamService.uploadDaiDien(
+            editForm.id,
+            editForm.file,
+          );
         } else if (typeof anhChiTietSanPhamService?.upload === "function") {
           await anhChiTietSanPhamService.upload(editForm.id, editForm.file);
         } else if (typeof anhChiTietSanPhamService?.create === "function") {
@@ -1419,7 +1895,8 @@ async function saveEdit() {
     closeEdit();
   } catch (e) {
     console.error(e);
-    editError.value = "Cập nhật chưa thành công. Vui lòng kiểm tra API update chi tiết sản phẩm của BE/service.";
+    editError.value =
+      "Cập nhật chưa thành công. Vui lòng kiểm tra API update chi tiết sản phẩm của BE/service.";
   } finally {
     editSaving.value = false;
   }
@@ -1449,18 +1926,8 @@ async function genQr() {
 watch(
   () => editForm.maCtsp,
   () => genQr(),
-  { immediate: true }
+  { immediate: true },
 );
-
-function dataUrlToBlob(dataUrl) {
-  const [header, base64] = String(dataUrl).split(",");
-  const mime = header.match(/data:(.*?);base64/)?.[1] || "image/png";
-  const bin = atob(base64);
-  const len = bin.length;
-  const arr = new Uint8Array(len);
-  for (let i = 0; i < len; i++) arr[i] = bin.charCodeAt(i);
-  return new Blob([arr], { type: mime });
-}
 
 async function downloadQr() {
   const text = String(editForm.maCtsp || "").trim();
@@ -1484,6 +1951,9 @@ async function downloadQr() {
   }
 }
 
+/* =======================
+   ✅ QR CAMERA (GIỮ NGUYÊN)
+   ======================= */
 const qrCameraOpen = ref(false);
 const qrError = ref("");
 let qrScanner = null;
@@ -1500,7 +1970,7 @@ function findProductByMa(ma) {
   if (!code) return null;
   return (
     unwrapList(productOptions.value).find(
-      (x) => lc(x?.maSanPham ?? x?.ma_san_pham ?? x?.ma ?? "") === code
+      (x) => lc(x?.maSanPham ?? x?.ma_san_pham ?? x?.ma ?? "") === code,
     ) || null
   );
 }
@@ -1516,7 +1986,10 @@ function applyScopeAndReplaceRouteByProductId(id) {
   if (pid == null) return;
 
   applyScopedProductById(pid);
-  router.replace({ path: "/admin/chi-tiet-san-pham", query: { sanPhamId: pid } });
+  router.replace({
+    path: "/admin/chi-tiet-san-pham",
+    query: { sanPhamId: pid },
+  });
 }
 
 async function handleScannedText(decodedText) {
@@ -1564,11 +2037,12 @@ async function startQrCamera() {
         await handleScannedText(decodedText);
         await closeQrCamera();
       },
-      () => {}
+      () => {},
     );
   } catch (e) {
     console.error(e);
-    qrError.value = "Không mở được camera / không quét được QR. Vui lòng cấp quyền camera và thử lại.";
+    qrError.value =
+      "Không mở được camera / không quét được QR. Vui lòng cấp quyền camera và thử lại.";
   }
 }
 
@@ -1601,6 +2075,15 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.ss-btn-lite {
+  background: #f3f4f6 !important;
+  color: rgba(17, 24, 39, 0.88) !important;
+  border: 1px solid rgba(17, 24, 39, 0.1) !important;
+}
+.ss-btn-lite:hover {
+  background: #eef0f3 !important;
+}
+
 /* ✅ Ép toàn bộ không in đậm */
 .ss-font,
 .ss-font * {
@@ -1821,24 +2304,59 @@ onBeforeUnmount(() => {
 }
 
 /* widths */
-.col-stt { width: 5%; }
-.col-masp { width: 8%; }
-.col-ma { width: 8%; }
-.col-anh { width: 6%; }
-.col-ten { width: 13%; }
-.col-mau { width: 9%; }
-.col-kt { width: 6%; }
-.col-ls { width: 10%; }
-.col-sl { width: 6%; }
-.col-gia { width: 9%; }
-.col-tt { width: 8%; }
-.col-action { width: 8%; }
+.col-check {
+  width: 3%;
+}
+.col-stt {
+  width: 5%;
+}
+.col-masp {
+  width: 8%;
+}
+.col-ma {
+  width: 8%;
+}
+.col-anh {
+  width: 6%;
+}
+.col-ten {
+  width: 13%;
+}
+.col-mau {
+  width: 9%;
+}
+.col-kt {
+  width: 6%;
+}
+.col-ls {
+  width: 10%;
+}
+.col-sl {
+  width: 6%;
+}
+.col-gia {
+  width: 9%;
+}
+.col-tt {
+  width: 8%;
+}
+.col-action {
+  width: 8%;
+}
 
 .ss-td {
   color: rgba(17, 24, 39, 0.78);
 }
 .ss-muted {
   color: rgba(17, 24, 39, 0.55);
+}
+
+/* ✅ checkbox */
+.ss-check {
+  width: 16px;
+  height: 16px;
+  accent-color: #ff4d4f;
+  cursor: pointer;
 }
 
 /* ✅ Giá bán màu đỏ */
@@ -1880,10 +2398,7 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
 }
 
-/* ✅ Badge trạng thái: ĐÚNG ProductManagePage
-   - Kinh doanh: đỏ
-   - Ngừng kinh doanh: xám
-*/
+/* Badge */
 .ss-badge {
   display: inline-flex;
   align-items: center;
@@ -1891,7 +2406,7 @@ onBeforeUnmount(() => {
   padding: 6px 10px;
   border-radius: 999px;
   font-size: 12px;
-  border: 1px solid rgba(17, 24, 39, 0.10);
+  border: 1px solid rgba(17, 24, 39, 0.1);
   white-space: nowrap;
   min-width: 108px;
 }
@@ -1908,7 +2423,7 @@ onBeforeUnmount(() => {
   border-color: rgba(17, 24, 39, 0.12);
 }
 
-/* icon view chuẩn dự án */
+/* icon view */
 .ss-icon-btn-view {
   width: 36px;
   height: 36px;
@@ -1931,10 +2446,25 @@ onBeforeUnmount(() => {
 }
 
 /* ✅ Khoảng giá màu đỏ */
-.ss-price-hint { font-size: 13px; color: rgba(255, 77, 79, 0.95); }
+.ss-price-hint {
+  font-size: 13px;
+  color: rgba(255, 77, 79, 0.95);
+}
 
-.ss-range-wrap { position: relative; padding: 14px 0 10px; }
-.ss-range { width: 100%; appearance: none; height: 20px; background: transparent; position: relative; z-index: 3; outline: none; margin: 0; }
+.ss-range-wrap {
+  position: relative;
+  padding: 14px 0 10px;
+}
+.ss-range {
+  width: 100%;
+  appearance: none;
+  height: 20px;
+  background: transparent;
+  position: relative;
+  z-index: 3;
+  outline: none;
+  margin: 0;
+}
 .ss-range-top {
   position: absolute;
   left: 0;
@@ -1942,13 +2472,18 @@ onBeforeUnmount(() => {
   top: 14px;
   pointer-events: none;
 }
-.ss-range-top::-webkit-slider-thumb { pointer-events: auto; }
-.ss-range-top::-moz-range-thumb { pointer-events: auto; }
+.ss-range-top::-webkit-slider-thumb {
+  pointer-events: auto;
+}
+.ss-range-top::-moz-range-thumb {
+  pointer-events: auto;
+}
 
 .ss-range::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px; height: 18px;
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
   background: #fff;
   border: 1px solid rgba(17, 24, 39, 0.18);
@@ -1957,26 +2492,53 @@ onBeforeUnmount(() => {
   margin-top: 1px;
 }
 .ss-range::-moz-range-thumb {
-  width: 18px; height: 18px;
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
   background: #fff;
   border: 1px solid rgba(17, 24, 39, 0.18);
   box-shadow: 0 2px 10px rgba(17, 24, 39, 0.1);
   cursor: pointer;
 }
-.ss-range-track { position: absolute; left: 0; right: 0; top: 24px; height: 6px; z-index: 1; }
-.ss-range-track-bg { position: absolute; inset: 0; border-radius: 999px; background: rgba(17, 24, 39, 0.1); }
+.ss-range-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 24px;
+  height: 6px;
+  z-index: 1;
+}
+.ss-range-track-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.1);
+}
 .ss-range-track-fill {
-  position: absolute; top: 0;
-  height: 6px; border-radius: 999px;
+  position: absolute;
+  top: 0;
+  height: 6px;
+  border-radius: 999px;
   background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%);
 }
 
 /* Pagination */
-.ss-pagination-bar { margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap; }
-.ss-pagination { display: inline-flex; align-items: center; gap: 8px; }
+.ss-pagination-bar {
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ss-pagination {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
 .ss-pagebtn {
-  min-width: 36px; height: 36px;
+  min-width: 36px;
+  height: 36px;
   border-radius: 10px;
   border: 1px solid rgba(17, 24, 39, 0.12);
   background: #fff;
@@ -1987,11 +2549,24 @@ onBeforeUnmount(() => {
   justify-content: center;
   transition: 0.15s ease;
 }
-.ss-pagebtn:hover { background: rgba(17, 24, 39, 0.04); }
-.ss-pagebtn:disabled { opacity: 0.55; cursor: not-allowed; }
-.ss-pagebtn.active { border-color: rgba(255, 77, 79, 0.35); background: rgba(255, 77, 79, 0.08); }
-.ss-pageinfo { font-size: 13px; color: rgba(17, 24, 39, 0.55); }
-.ss-pageinfo span { color: rgba(17, 24, 39, 0.9); }
+.ss-pagebtn:hover {
+  background: rgba(17, 24, 39, 0.04);
+}
+.ss-pagebtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.ss-pagebtn.active {
+  border-color: rgba(255, 77, 79, 0.35);
+  background: rgba(255, 77, 79, 0.08);
+}
+.ss-pageinfo {
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.55);
+}
+.ss-pageinfo span {
+  color: rgba(17, 24, 39, 0.9);
+}
 
 /* PrimeVue MultiSelect */
 .ss-pv-multi :deep(.p-multiselect) {
@@ -2001,11 +2576,28 @@ onBeforeUnmount(() => {
   border: 1px solid rgba(17, 24, 39, 0.14);
   box-shadow: none;
 }
-.ss-pv-multi :deep(.p-multiselect:not(.p-disabled).p-focus) { border-color: rgba(255, 77, 79, 0.55); box-shadow: none; }
-.ss-pv-multi :deep(.p-multiselect-label) { padding: 8px 12px; color: rgba(17, 24, 39, 0.82); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ss-pv-multi :deep(.p-multiselect-trigger) { width: 40px; }
-.ss-pv-multi :deep(.p-multiselect-token) { border-radius: 999px; background: rgba(17, 24, 39, 0.04); color: rgba(17, 24, 39, 0.82); }
-.ss-pv-multi :deep(.p-multiselect-token-icon) { color: rgba(17, 24, 39, 0.6); }
+.ss-pv-multi :deep(.p-multiselect:not(.p-disabled).p-focus) {
+  border-color: rgba(255, 77, 79, 0.55);
+  box-shadow: none;
+}
+.ss-pv-multi :deep(.p-multiselect-label) {
+  padding: 8px 12px;
+  color: rgba(17, 24, 39, 0.82);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ss-pv-multi :deep(.p-multiselect-trigger) {
+  width: 40px;
+}
+.ss-pv-multi :deep(.p-multiselect-token) {
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.04);
+  color: rgba(17, 24, 39, 0.82);
+}
+.ss-pv-multi :deep(.p-multiselect-token-icon) {
+  color: rgba(17, 24, 39, 0.6);
+}
 
 /* dấu * màu đỏ */
 .ss-required {
@@ -2013,7 +2605,14 @@ onBeforeUnmount(() => {
 }
 
 /* MODAL */
-.ss-modal-backdrop { position: fixed; inset: 0; background: rgba(17, 24, 39, 0.45); display: grid; place-items: center; z-index: 2000; }
+.ss-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 2000;
+}
 .ss-modal {
   width: min(720px, calc(100vw - 24px));
   background: #fff;
@@ -2022,12 +2621,27 @@ onBeforeUnmount(() => {
   padding: 14px;
   box-shadow: 0 12px 40px rgba(17, 24, 39, 0.18);
 }
-.ss-modal-wide { width: min(720px, calc(100vw - 24px)); }
-.ss-edit-modal { max-height: 86vh; overflow: auto; }
-.ss-modal-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-.ss-modal-title { font-size: 16px; color: rgba(17, 24, 39, 0.9); }
+.ss-modal-wide {
+  width: min(720px, calc(100vw - 24px));
+}
+.ss-edit-modal {
+  max-height: 86vh;
+  overflow: auto;
+}
+.ss-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ss-modal-title {
+  font-size: 16px;
+  color: rgba(17, 24, 39, 0.9);
+}
 .ss-xbtn {
-  width: 34px; height: 34px;
+  width: 34px;
+  height: 34px;
   border-radius: 10px;
   border: 1px solid rgba(17, 24, 39, 0.14);
   background: #fff;
@@ -2035,8 +2649,13 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
 }
-.ss-xbtn .material-icons-outlined { font-size: 18px; color: rgba(17, 24, 39, 0.8); }
-.ss-xbtn:hover { background: rgba(17, 24, 39, 0.04); }
+.ss-xbtn .material-icons-outlined {
+  font-size: 18px;
+  color: rgba(17, 24, 39, 0.8);
+}
+.ss-xbtn:hover {
+  background: rgba(17, 24, 39, 0.04);
+}
 
 .ss-alert {
   margin: 8px 0 10px;
@@ -2048,38 +2667,110 @@ onBeforeUnmount(() => {
   font-size: 13px;
 }
 
-.ss-edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-.ss-edit-grid-2 { margin-top: 12px; align-items: start; }
-.ss-edit-col { display: grid; gap: 10px; }
+.ss-edit-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.ss-edit-grid-2 {
+  margin-top: 12px;
+  align-items: start;
+}
+.ss-edit-col {
+  display: grid;
+  gap: 10px;
+}
 
-.ss-input-label { font-size: 12px; color: rgba(17, 24, 39, 0.6); margin-bottom: 6px; }
-.ss-input { height: 40px; border-radius: 10px !important; border: 1px solid rgba(17, 24, 39, 0.14); }
-.ss-input:focus { box-shadow: none; border-color: rgba(255, 77, 79, 0.55); }
-.ss-textarea { border-radius: 12px !important; border: 1px solid rgba(17, 24, 39, 0.14); }
-.ss-textarea:focus { box-shadow: none; border-color: rgba(255, 77, 79, 0.55); }
+.ss-input-label {
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.6);
+  margin-bottom: 6px;
+}
+.ss-input {
+  height: 40px;
+  border-radius: 10px !important;
+  border: 1px solid rgba(17, 24, 39, 0.14);
+}
+.ss-input:focus {
+  box-shadow: none;
+  border-color: rgba(255, 77, 79, 0.55);
+}
+.ss-textarea {
+  border-radius: 12px !important;
+  border: 1px solid rgba(17, 24, 39, 0.14);
+}
+.ss-textarea:focus {
+  box-shadow: none;
+  border-color: rgba(255, 77, 79, 0.55);
+}
 
 /* status switch */
-.ss-status-row { display: flex; align-items: center; gap: 10px; height: 40px; }
-.ss-status-text { font-size: 13px; color: rgba(17, 24, 39, 0.8); }
-.ss-switch { position: relative; display: inline-block; width: 44px; height: 24px; }
-.ss-switch input { opacity: 0; width: 0; height: 0; }
-.ss-slider { position: absolute; cursor: pointer; inset: 0; background: rgba(17, 24, 39, 0.18); transition: 0.2s; border-radius: 999px; }
+.ss-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 40px;
+}
+.ss-status-text {
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.8);
+}
+.ss-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+}
+.ss-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.ss-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.18);
+  transition: 0.2s;
+  border-radius: 999px;
+}
 .ss-slider:before {
-  position: absolute; content: "";
-  height: 18px; width: 18px;
-  left: 3px; top: 3px;
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  top: 3px;
   background: white;
   transition: 0.2s;
   border-radius: 999px;
   box-shadow: 0 2px 8px rgba(17, 24, 39, 0.14);
 }
-.ss-switch input:checked + .ss-slider { background: rgba(255, 77, 79, 0.65); }
-.ss-switch input:checked + .ss-slider:before { transform: translateX(20px); }
+.ss-switch input:checked + .ss-slider {
+  background: rgba(255, 77, 79, 0.65);
+}
+.ss-switch input:checked + .ss-slider:before {
+  transform: translateX(20px);
+}
 
 /* box QR / ảnh */
-.ss-box { border: 1px solid rgba(17, 24, 39, 0.1); border-radius: 14px; padding: 12px; background: #fff; }
-.ss-box-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
-.ss-box-title { font-size: 13px; color: rgba(17, 24, 39, 0.82); }
+.ss-box {
+  border: 1px solid rgba(17, 24, 39, 0.1);
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+}
+.ss-box-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.ss-box-title {
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.82);
+}
 .ss-mini-btn {
   border-radius: 10px;
   padding: 7px 10px;
@@ -2088,17 +2779,24 @@ onBeforeUnmount(() => {
   color: rgba(17, 24, 39, 0.86);
   gap: 8px;
 }
-.ss-mini-btn:hover { background: rgba(17, 24, 39, 0.04); }
+.ss-mini-btn:hover {
+  background: rgba(17, 24, 39, 0.04);
+}
 
 /* QR */
-.ss-qr-wrap { display: grid; justify-items: center; gap: 8px; }
+.ss-qr-wrap {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
 .ss-qr-img {
-  width: 210px; height: 210px;
+  width: 210px;
+  height: 210px;
   border-radius: 12px;
   border: 1px solid rgba(17, 24, 39, 0.12);
   background: #fff;
 }
-.ss-qr-empty{
+.ss-qr-empty {
   width: 210px;
   height: 210px;
   border-radius: 12px;
@@ -2108,11 +2806,15 @@ onBeforeUnmount(() => {
   place-items: center;
   font-size: 12px;
 }
-.ss-qr-hint { font-size: 12px; color: rgba(17, 24, 39, 0.6); }
+.ss-qr-hint {
+  font-size: 12px;
+  color: rgba(17, 24, 39, 0.6);
+}
 
 /* ảnh */
 .ss-img-remove {
-  width: 28px; height: 28px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   border: 1px solid rgba(255, 77, 79, 0.3);
   background: rgba(255, 77, 79, 0.08);
@@ -2120,8 +2822,16 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
 }
-.ss-img-remove .material-icons-outlined { font-size: 16px; color: rgba(255, 77, 79, 0.95); }
-.ss-img-card { display: grid; justify-items: center; gap: 10px; padding: 4px 0 2px; }
+.ss-img-remove .material-icons-outlined {
+  font-size: 16px;
+  color: rgba(255, 77, 79, 0.95);
+}
+.ss-img-card {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding: 4px 0 2px;
+}
 .ss-img-preview {
   width: 100%;
   height: 180px;
@@ -2132,7 +2842,11 @@ onBeforeUnmount(() => {
   overflow: hidden;
   background: rgba(17, 24, 39, 0.02);
 }
-.ss-img-preview img { width: 100%; height: 100%; object-fit: contain; }
+.ss-img-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
 .ss-btn-img {
   border: none !important;
   background: #ff7a45 !important;
@@ -2140,8 +2854,13 @@ onBeforeUnmount(() => {
   border-radius: 10px !important;
   padding: 8px 14px !important;
 }
-.ss-btn-img:hover { filter: brightness(0.98); }
-.ss-img-note { font-size: 11px; color: rgba(17, 24, 39, 0.55); }
+.ss-btn-img:hover {
+  filter: brightness(0.98);
+}
+.ss-img-note {
+  font-size: 11px;
+  color: rgba(17, 24, 39, 0.55);
+}
 
 /* footer */
 .ss-modal-foot {
@@ -2165,12 +2884,22 @@ onBeforeUnmount(() => {
   animation: ssSpin 0.8s linear infinite;
 }
 @keyframes ssSpin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* QR scan modal */
-.ss-qr-box { border-radius: 16px; overflow: hidden; border: 1px solid rgba(17, 24, 39, 0.12); background: rgba(17, 24, 39, 0.04); }
-.ss-qr-reader { width: 100%; min-height: 360px; }
+.ss-qr-box {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  background: rgba(17, 24, 39, 0.04);
+}
+.ss-qr-reader {
+  width: 100%;
+  min-height: 360px;
+}
 .ss-cam-error {
   padding: 10px 12px;
   border-radius: 12px;
@@ -2181,12 +2910,24 @@ onBeforeUnmount(() => {
 
 /* Responsive */
 @media (max-width: 1200px) {
-  .ss-filter-row1 { grid-template-columns: 1fr 1fr; }
-  .ss-filter-row2 { grid-template-columns: 1fr 1fr; }
+  .ss-filter-row1 {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ss-filter-row2 {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 @media (max-width: 860px) {
-  .ss-edit-grid { grid-template-columns: 1fr; }
-  .ss-qr-img, .ss-qr-empty { width: 190px; height: 190px; }
-  .ss-img-preview { height: 170px; }
+  .ss-edit-grid {
+    grid-template-columns: 1fr;
+  }
+  .ss-qr-img,
+  .ss-qr-empty {
+    width: 190px;
+    height: 190px;
+  }
+  .ss-img-preview {
+    height: 170px;
+  }
 }
 </style>

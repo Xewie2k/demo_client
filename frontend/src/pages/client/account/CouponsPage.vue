@@ -36,7 +36,7 @@
 
     <!-- Coupon list -->
     <div v-else class="d-flex flex-column gap-3">
-      <div v-for="coupon in filteredCoupons" :key="coupon.id + '-' + coupon.nguon"
+      <div v-for="coupon in paginatedCoupons" :key="coupon.id + '-' + coupon.nguon"
         class="coupon-card d-flex border rounded-3 overflow-hidden"
         :class="{ 'opacity-60': coupon.trangThaiHienThi === 'used' || coupon.trangThaiHienThi === 'expired' }">
 
@@ -83,12 +83,34 @@
           </div>
         </div>
       </div>
+
+      <!-- Pagination -->
+      <div class="d-flex justify-content-center mt-3">
+        <nav aria-label="Phân trang phiếu giảm giá">
+          <ul class="pagination pagination-sm mb-0">
+            <li class="page-item" :class="{ disabled: currentPage === 1 }">
+              <button class="page-link rounded-start-pill" @click="goToPage(currentPage - 1)" :disabled="currentPage === 1">
+                <i class="bi bi-chevron-left" style="font-size:11px;"></i>
+              </button>
+            </li>
+            <li v-for="(p, idx) in pageRange" :key="idx" class="page-item"
+              :class="{ active: p === currentPage, disabled: p === '...' }">
+              <button class="page-link" @click="goToPage(p)">{{ p }}</button>
+            </li>
+            <li class="page-item" :class="{ disabled: currentPage === totalPages }">
+              <button class="page-link rounded-end-pill" @click="goToPage(currentPage + 1)" :disabled="currentPage === totalPages">
+                <i class="bi bi-chevron-right" style="font-size:11px;"></i>
+              </button>
+            </li>
+          </ul>
+        </nav>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import apiClient from '@/services/apiClient';
 import { useClientAuth } from '@/services/authClient';
 
@@ -111,6 +133,28 @@ const filteredCoupons = computed(() => {
   if (activeTab.value === 'used') return coupons.value.filter(c => c.trangThaiHienThi === 'used');
   return coupons.value;
 });
+
+// ── Pagination ──
+const PAGE_SIZE = 6;
+const currentPage = ref(1);
+watch(filteredCoupons, () => { currentPage.value = 1; });
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredCoupons.value.length / PAGE_SIZE)));
+const paginatedCoupons = computed(() => {
+  const start = (currentPage.value - 1) * PAGE_SIZE;
+  return filteredCoupons.value.slice(start, start + PAGE_SIZE);
+});
+const pageRange = computed(() => {
+  const total = totalPages.value;
+  const cur = currentPage.value;
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = [1];
+  if (cur > 3) pages.push('...');
+  for (let p = Math.max(2, cur - 1); p <= Math.min(total - 1, cur + 1); p++) pages.push(p);
+  if (cur < total - 2) pages.push('...');
+  pages.push(total);
+  return pages;
+});
+const goToPage = (p) => { if (typeof p === 'number') currentPage.value = p; };
 
 const getCount = (key) => {
   if (key === 'all') return coupons.value.length;
@@ -186,6 +230,25 @@ onMounted(fetchCoupons);
 </script>
 
 <style scoped>
+.pagination .page-link {
+  color: #333;
+  border-color: #dee2e6;
+  min-width: 36px;
+  text-align: center;
+  font-size: 0.85rem;
+}
+.pagination .page-item.active .page-link {
+  background-color: var(--ss-accent, #e53935);
+  border-color: var(--ss-accent, #e53935);
+  color: #fff;
+}
+.pagination .page-link:hover:not(:disabled) {
+  background-color: #fff5f5;
+  border-color: var(--ss-accent, #e53935);
+  color: var(--ss-accent, #e53935);
+}
+.pagination .page-item.disabled .page-link { color: #aaa; }
+
 .coupon-card {
   transition: all 0.2s ease;
 }

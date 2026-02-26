@@ -1,6 +1,6 @@
 <!-- File: src/views/admin/AdminLayout.vue -->
 <template>
-  <div class="container-fluid p-0 min-vh-100 bg-light ss-admin-root">
+  <div class="container-fluid p-0 min-vh-100 ss-admin-root">
     <!-- ✅ Sidebar tách riêng -->
     <SidebarMenu />
 
@@ -8,18 +8,28 @@
     <main class="ss-main">
       <Toast position="top-right" />
 
-      <header class="navbar bg-white px-4 sticky-top ss-header" style="height: 64px">
+      <header class="navbar px-4 sticky-top ss-header" style="height: 64px">
         <div class="container-fluid justify-content-end gap-3">
-          <span class="material-icons text-secondary cursor-pointer">dark_mode</span>
+          <!-- Dark mode button -->
+          <button
+            type="button"
+            class="ss-theme-btn"
+            @click="batTatTheme"
+            :title="theme === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'"
+          >
+            <span class="material-icons ss-text-muted">
+              {{ theme === "dark" ? "light_mode" : "dark_mode" }}
+            </span>
+          </button>
 
           <!-- ✅ User dropdown (tự quản lý, không phụ thuộc bootstrap js) -->
-          <div ref="userWrapRef" class="ss-user-wrap border-start ps-3">
+          <div ref="userWrapRef" class="ss-user-wrap ps-3">
             <button class="ss-user-btn" type="button" @click="toggleUserMenu">
-              <span class="material-icons text-secondary">account_circle</span>
-              <span class="fw-bold small text-secondary d-none d-md-inline">
+              <span class="material-icons ss-text-muted">account_circle</span>
+              <span class="fw-bold small ss-text-muted d-none d-md-inline">
                 {{ userName }}
               </span>
-              <span class="material-icons small text-secondary">
+              <span class="material-icons small ss-text-muted">
                 {{ userMenuOpen ? "expand_less" : "expand_more" }}
               </span>
             </button>
@@ -54,10 +64,14 @@ import { useRoute, useRouter } from "vue-router";
 import Swal from "sweetalert2";
 
 import SidebarMenu from "@/components/layouts/SidebarMenu.vue";
+import { useTheme } from "@/utils/useTheme";
 // Toast là component global (đã register trong main.js)
 
 const route = useRoute();
 const router = useRouter();
+
+const { theme, khoiTaoTheme, batTatTheme } = useTheme();
+khoiTaoTheme();
 
 const userName = ref("Tài khoản");
 const userMenuOpen = ref(false);
@@ -90,12 +104,7 @@ const getUser = () => {
 
 const syncUserName = () => {
   const u = getUser();
-  const name =
-    u?.hoTen ||
-    u?.tenNhanVien ||
-    u?.ten ||
-    u?.username ||
-    u?.email;
+  const name = u?.hoTen || u?.tenNhanVien || u?.ten || u?.username || u?.email;
 
   if (name) userName.value = name;
 };
@@ -170,6 +179,8 @@ onBeforeUnmount(() => {
 .ss-admin-root {
   overflow-x: hidden;
   --ss-sidebar-w: 240px;
+  background: var(--ss-bg);
+  color: var(--ss-text);
 }
 
 /* ✅ main ăn theo width sidebar mới */
@@ -181,11 +192,20 @@ onBeforeUnmount(() => {
 }
 
 .ss-header {
-  border-bottom: 1px solid var(--ss-border, #eee);
+  background: var(--ss-surface);
+  border-bottom: 1px solid var(--ss-border);
 }
 
-.cursor-pointer {
+.ss-theme-btn {
+  border: 0;
+  background: transparent;
+  padding: 6px 8px;
+  border-radius: 10px;
   cursor: pointer;
+}
+
+.ss-theme-btn:hover {
+  background: var(--ss-hover);
 }
 
 /* ===== USER MENU ===== */
@@ -193,6 +213,7 @@ onBeforeUnmount(() => {
   position: relative;
   display: flex;
   align-items: center;
+  border-left: 1px solid var(--ss-border);
 }
 
 .ss-user-btn {
@@ -207,7 +228,7 @@ onBeforeUnmount(() => {
 }
 
 .ss-user-btn:hover {
-  background: rgba(255, 77, 79, 0.06);
+  background: var(--ss-hover);
 }
 
 .ss-user-menu {
@@ -215,9 +236,9 @@ onBeforeUnmount(() => {
   top: calc(100% + 10px);
   right: 0;
   min-width: 220px;
-  background: #fff;
+  background: var(--ss-surface);
   border-radius: 12px;
-  border: 1px solid #eee;
+  border: 1px solid var(--ss-border);
   overflow: hidden;
   z-index: 1200;
 }
@@ -232,15 +253,16 @@ onBeforeUnmount(() => {
   padding: 10px 12px;
   text-align: left;
   cursor: pointer;
+  color: var(--ss-text);
 }
 
 .ss-user-item:hover {
-  background: rgba(255, 77, 79, 0.06);
+  background: var(--ss-hover);
 }
 
 .ss-user-divider {
   height: 1px;
-  background: #eee;
+  background: var(--ss-border);
 }
 
 .ss-user-ic {

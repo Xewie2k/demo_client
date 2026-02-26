@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Mã Giảm Giá Đặc Biệt Từ SevenStrike</title>
     <style>
         body { margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f0f0f0; }
@@ -22,28 +22,45 @@
         .voucher-row {
             border-bottom: 1px solid #f0f0f0;
             padding: 10px 0;
-            clear: both; /* Thay thế flex để an toàn hơn */
+            clear: both;
         }
         .label { color: #666666; float: left; }
         .value { color: #1a1a1a; font-weight: bold; float: right; }
         .promo-code {
-            font-size: 24px; color: #ce1d1d; text-align: center;
-            display: block; letter-spacing: 3px; margin: 15px 0; font-weight: bold;
+            font-size: 24px;
+            color: #ce1d1d;
+            text-align: center;
+            display: block;
+            letter-spacing: 3px;
+            margin: 15px 0;
+            font-weight: bold;
+            font-family: "Courier New", monospace;
         }
         .btn-container { text-align: center; margin-top: 30px; }
         .btn {
             background: linear-gradient(90deg, #ce1d1d 0%, #930707 100%);
-            color: #ffffff !important; padding: 15px 30px; text-decoration: none;
-            border-radius: 50px; font-weight: bold; display: inline-block;
+            color: #ffffff !important;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: bold;
+            display: inline-block;
         }
-        .footer { background: linear-gradient(135deg, #1a1a1a 0%, #434343 100%); padding: 20px; text-align: center; color: #ffffff; font-size: 12px; }
+        .footer {
+            background: linear-gradient(135deg, #1a1a1a 0%, #434343 100%);
+            padding: 20px;
+            text-align: center;
+            color: #ffffff;
+            font-size: 12px;
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
 <div class="wrapper">
     <div class="main-container">
         <div class="header">
-            <img src="cid:logo" alt="SevenStrike Logo" class="logo">
+            <img src="cid:logo" alt="SevenStrike Logo" class="logo" />
             <h1>Mã Giảm Giá Đặc Biệt</h1>
         </div>
 
@@ -56,30 +73,36 @@
                     <span class="label">Mã của bạn:</span>
                     <span class="value">{{MA_GIAM_GIA}}</span>
                 </div>
+
                 <div class="promo-code">{{MA_GIAM_GIA}}</div>
+
                 <div class="voucher-row">
                     <span class="label">Mức giảm:</span>
-                    <span class="value" style="color: #ce1d1d;">{{GIA_TRI_GIAM}}</span>
+                    <span class="value" style="color: #ce1d1d;">{{GIA_TRI_GIAM_HIEN_THI}}</span>
                 </div>
+
                 <div class="voucher-row">
                     <span class="label">Đơn tối thiểu:</span>
                     <span class="value">{{HOA_DON_TOI_THIEU}} VNĐ</span>
                 </div>
+
                 <div class="voucher-row" style="border-bottom: none;">
                     <span class="label">Hạn sử dụng:</span>
                     <span class="value">{{NGAY_KET_THUC}}</span>
                 </div>
+
                 <div style="clear: both;"></div>
             </div>
 
             <div class="btn-container">
-                <a href="https://yourwebsite.com" class="btn">SỬ DỤNG NGAY BÂY GIỜ</a>
+                <a href="{{LINK_SU_DUNG}}" class="btn">SỬ DỤNG NGAY BÂY GIỜ</a>
             </div>
         </div>
 
         <div class="footer">
             <p><strong>SEVENSTRIKE - NÂNG TẦM PHONG CÁCH</strong></p>
             <p>© {{CURRENT_YEAR}} SevenStrike. All rights reserved.</p>
+            <p>Địa chỉ: Hà Nội, Việt Nam</p>
         </div>
     </div>
 </div>

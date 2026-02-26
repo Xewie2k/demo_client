@@ -1,57 +1,90 @@
-<!-- File: src/pages/thong_ke/RevenueChart.vue -->
 <template>
-  <Line :data="chartData" :options="options" />
+  <canvas ref="chartRef"></canvas>
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { onMounted, watch, ref } from "vue";
 import {
-  Chart as ChartJS,
+  Chart,
+  LineController,
   LineElement,
   PointElement,
-  LinearScale,
+  BarController,
+  BarElement,
   CategoryScale,
-  Title,
+  LinearScale,
   Tooltip,
   Legend
 } from "chart.js";
 
-import { Line } from "vue-chartjs";
-
-ChartJS.register(
+Chart.register(
+  LineController,
   LineElement,
   PointElement,
-  LinearScale,
+  BarController,
+  BarElement,
   CategoryScale,
-  Title,
+  LinearScale,
   Tooltip,
   Legend
 );
 
 const props = defineProps({
-  chart: {
-    type: Array,
-    default: () => []
+  chart: Array,
+  type: {
+    type: String,
+    default: "line"
   }
 });
 
-const chartData = computed(() => {
-  return {
-    labels: props.chart.map((item) => item.time),
-    datasets: [
-      {
-        label: "Doanh thu",
-        data: props.chart.map((item) => item.revenue),
-        borderColor: "#28a745",
-        backgroundColor: "rgba(40,167,69,0.2)",
-        tension: 0.3
-      }
-    ]
-  };
-});
+const chartRef = ref(null);
+let chartInstance = null;
 
-const options = {
-  responsive: true,
-  maintainAspectRatio: false
+const renderChart = () => {
+  if (!chartRef.value) return;
+
+  if (chartInstance) {
+    chartInstance.destroy();
+  }
+
+  chartInstance = new Chart(chartRef.value, {
+    type: props.type,
+    data: {
+      labels: props.chart.map(i => i.time),
+      datasets: [
+  {
+    label: "Doanh thu",
+    data: props.chart.map(i => i.revenue),
+    borderColor: "#28a745",
+    backgroundColor:
+      props.type === "line"
+        ? "rgba(40,167,69,0.2)"
+        : "rgba(40,167,69,0.6)",
+
+    tension: 0.4,
+    fill: props.type === "line",
+
+    // 👇 CHỈ ÁP DỤNG KHI LÀ BAR
+    barPercentage: 0.4,        // nhỏ lại (mặc định 0.9)
+    categoryPercentage: 0.5,   // giảm độ chiếm ngang
+    maxBarThickness: 40        // giới hạn độ dày tối đa
+  }
+]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false
+    }
+  });
 };
+
+onMounted(renderChart);
+
+watch(
+  () => [props.chart, props.type],
+  () => {
+    renderChart();
+  },
+  { deep: true }
+);
 </script>

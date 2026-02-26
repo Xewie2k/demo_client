@@ -20,6 +20,16 @@ public class ClientController {
         return ResponseEntity.ok(service.getProducts());
     }
 
+    @GetMapping("/products/best-selling")
+    public ResponseEntity<List<ProductClientDTO>> bestSelling() {
+        return ResponseEntity.ok(service.getBestSellingProducts());
+    }
+
+    @GetMapping("/products/new-arrivals")
+    public ResponseEntity<List<ProductClientDTO>> newArrivals() {
+        return ResponseEntity.ok(service.getNewArrivalProducts());
+    }
+
     @GetMapping("/products/{id}")
     public ResponseEntity<ProductDetailClientDTO> getProductDetail(@PathVariable Integer id) {
         return ResponseEntity.ok(service.getProductDetail(id));

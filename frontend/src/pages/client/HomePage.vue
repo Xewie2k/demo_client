@@ -43,7 +43,7 @@
     <!-- Mẫu giày mới về -->
     <section class="container py-5">
       <div class="d-flex justify-content-between align-items-center mb-4">
-        <h5 class="fw-bold m-0 border-start border-4 border-danger ps-3">MẪU GIÀY MỚI VỀ</h5>
+        <h5 class="fw-bold m-0 border-start border-4 border-danger ps-3">MẪU GIÀY MỚI VỀ TRONG THÁNG</h5>
         <router-link to="/client/products" class="text-decoration-none small fw-bold" style="color: var(--ss-accent);">
           Xem tất cả <i class="bi bi-arrow-right"></i>
         </router-link>
@@ -62,8 +62,8 @@
 
       <div v-else class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3">
         <div v-for="product in newProducts" :key="product.id" class="col">
-          <div class="card h-100 border-0 product-card shadow-sm rounded-3" @click="goToDetail(product.id)">
-            <div class="position-relative overflow-hidden p-2 bg-white rounded-top-3">
+          <div class="card h-100 border-0 product-card rounded-3" @click="goToDetail(product.id)">
+            <div class="position-relative overflow-hidden p-2 rounded-top-3" style="background-color:#f8f9fa;">
               <div class="ratio ratio-1x1">
                 <img
                   :src="product.anhDaiDien || '/placeholder-shoe.png'"
@@ -72,8 +72,8 @@
                   @error="e => e.target.src = '/placeholder-shoe.png'"
                 >
               </div>
-              <span v-if="!product.phanTramGiam" class="position-absolute top-0 start-0 m-2 badge bg-danger" style="font-size: 0.7rem;">Mới</span>
-              <span v-if="product.phanTramGiam" class="position-absolute top-0 end-0 m-2 badge bg-danger rounded-pill px-2 py-1" style="font-size: 0.75rem;">-{{ product.phanTramGiam }}%</span>
+              <span class="position-absolute top-0 start-0 m-2 badge-new">Mới</span>
+              <span v-if="product.phanTramGiam" class="position-absolute top-0 end-0 m-2 badge-discount" :class="discountBadgeClass(product.phanTramGiam)" :style="discountBadgeStyle(product.phanTramGiam)">-{{ product.phanTramGiam }}%</span>
               <div class="product-action position-absolute top-50 start-50 translate-middle d-flex gap-2 opacity-0">
                 <button class="btn btn-dark btn-sm rounded-circle shadow" title="Xem nhanh">
                   <i class="bi bi-eye"></i>
@@ -83,20 +83,24 @@
                 </button>
               </div>
             </div>
-            <div class="card-body d-flex flex-column pt-2 text-center">
-              <small class="text-secondary text-uppercase mb-1" style="font-size: 0.7rem;">{{ product.tenThuongHieu }}</small>
-              <h6 class="card-title fw-bold text-dark text-truncate mb-2" :title="product.tenSanPham" style="font-size: 0.9rem;">
+            <div class="card-body px-3 pt-2 pb-3 d-flex flex-column gap-1 text-center">
+              <div class="text-muted fw-semibold" style="font-size:1.1rem;">
+                <i class="bi bi-tag-fill me-1" style="color:var(--ss-accent);font-size:0.9rem;"></i>{{ product.maSanPham }}
+              </div>
+              <div>
+                <div v-if="product.phanTramGiam" class="text-muted text-decoration-line-through" style="font-size:0.78rem; line-height:1.2;">{{ formatPrice(product.giaGocThapNhat) }}</div>
+                <div class="fw-bold" style="font-size:1.1rem; color:var(--ss-accent); line-height:1.3;">{{ formatPrice(product.phanTramGiam ? product.giaSauGiamThapNhat : product.giaThapNhat) }}</div>
+              </div>
+              <div>
+                <span v-if="product.hangCoSan" class="stock-badge stock-badge--in">Còn hàng</span>
+                <span v-else class="stock-badge stock-badge--out">Hết hàng</span>
+              </div>
+              <div v-if="product.kichThuocCoSan && product.kichThuocCoSan.length" class="d-flex flex-wrap gap-1 justify-content-center">
+                <span v-for="s in product.kichThuocCoSan" :key="s" class="size-chip">{{ s }}</span>
+              </div>
+              <h6 class="product-name text-dark mb-0 mt-1" style="font-size:0.83rem; line-height:1.4; font-weight:500;">
                 {{ product.tenSanPham }}
               </h6>
-              <div class="mt-auto">
-                <template v-if="product.phanTramGiam">
-                  <div class="text-muted text-decoration-line-through" style="font-size: 0.8rem;">{{ formatPrice(product.giaGocThapNhat) }}</div>
-                  <div class="fw-bold text-danger" style="font-size: 0.95rem;">{{ formatPrice(product.giaSauGiamThapNhat) }}</div>
-                </template>
-                <div v-else class="fw-bold text-danger" style="font-size: 0.95rem;">
-                  {{ formatPrice(product.giaThapNhat) }}
-                </div>
-              </div>
             </div>
           </div>
         </div>
@@ -107,7 +111,7 @@
     <section class="py-5" style="background-color: #f8f9fa;">
       <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4">
-          <h5 class="fw-bold m-0 border-start border-4 border-danger ps-3">MẪU GIÀY BÁN CHẠY</h5>
+          <h5 class="fw-bold m-0 border-start border-4 border-danger ps-3">MẪU GIÀY BÁN CHẠY TRONG THÁNG</h5>
           <router-link to="/client/products" class="text-decoration-none small fw-bold" style="color: var(--ss-accent);">
             Xem tất cả <i class="bi bi-arrow-right"></i>
           </router-link>
@@ -126,8 +130,8 @@
 
         <div v-else class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3">
           <div v-for="product in bestSellingProducts" :key="product.id" class="col">
-            <div class="card h-100 border-0 product-card shadow-sm rounded-3" @click="goToDetail(product.id)">
-              <div class="position-relative overflow-hidden p-2 bg-white rounded-top-3">
+            <div class="card h-100 border-0 product-card rounded-3" @click="goToDetail(product.id)">
+              <div class="position-relative overflow-hidden p-2 rounded-top-3" style="background-color:#f8f9fa;">
                 <div class="ratio ratio-1x1">
                   <img
                     :src="product.anhDaiDien || '/placeholder-shoe.png'"
@@ -136,8 +140,8 @@
                     @error="e => e.target.src = '/placeholder-shoe.png'"
                   >
                 </div>
-                <span v-if="!product.phanTramGiam" class="position-absolute top-0 start-0 m-2 badge bg-warning text-dark" style="font-size: 0.7rem;">Hot</span>
-                <span v-if="product.phanTramGiam" class="position-absolute top-0 end-0 m-2 badge bg-danger rounded-pill px-2 py-1" style="font-size: 0.75rem;">-{{ product.phanTramGiam }}%</span>
+                <span class="position-absolute top-0 start-0 m-2 badge-hot"><i class="bi bi-fire me-1"></i>Hot</span>
+                <span v-if="product.phanTramGiam" class="position-absolute top-0 end-0 m-2 badge-discount" :class="discountBadgeClass(product.phanTramGiam)" :style="discountBadgeStyle(product.phanTramGiam)">-{{ product.phanTramGiam }}%</span>
                 <div class="product-action position-absolute top-50 start-50 translate-middle d-flex gap-2 opacity-0">
                   <button class="btn btn-dark btn-sm rounded-circle shadow" title="Xem nhanh">
                     <i class="bi bi-eye"></i>
@@ -147,20 +151,24 @@
                   </button>
                 </div>
               </div>
-              <div class="card-body d-flex flex-column pt-2 text-center">
-                <small class="text-secondary text-uppercase mb-1" style="font-size: 0.7rem;">{{ product.tenThuongHieu }}</small>
-                <h6 class="card-title fw-bold text-dark text-truncate mb-2" :title="product.tenSanPham" style="font-size: 0.9rem;">
+              <div class="card-body px-3 pt-2 pb-3 d-flex flex-column gap-1 text-center">
+                <div class="text-muted fw-semibold" style="font-size:1.1rem;">
+                  <i class="bi bi-tag-fill me-1" style="color:var(--ss-accent);font-size:0.9rem;"></i>{{ product.maSanPham }}
+                </div>
+                <div>
+                  <div v-if="product.phanTramGiam" class="text-muted text-decoration-line-through" style="font-size:0.78rem; line-height:1.2;">{{ formatPrice(product.giaGocThapNhat) }}</div>
+                  <div class="fw-bold" style="font-size:1.1rem; color:var(--ss-accent); line-height:1.3;">{{ formatPrice(product.phanTramGiam ? product.giaSauGiamThapNhat : product.giaThapNhat) }}</div>
+                </div>
+                <div>
+                  <span v-if="product.hangCoSan" class="stock-badge stock-badge--in">Còn hàng</span>
+                  <span v-else class="stock-badge stock-badge--out">Hết hàng</span>
+                </div>
+                <div v-if="product.kichThuocCoSan && product.kichThuocCoSan.length" class="d-flex flex-wrap gap-1 justify-content-center">
+                  <span v-for="s in product.kichThuocCoSan" :key="s" class="size-chip">{{ s }}</span>
+                </div>
+                <h6 class="product-name text-dark mb-0 mt-1" style="font-size:0.83rem; line-height:1.4; font-weight:500;">
                   {{ product.tenSanPham }}
                 </h6>
-                <div class="mt-auto">
-                  <template v-if="product.phanTramGiam">
-                    <div class="text-muted text-decoration-line-through" style="font-size: 0.8rem;">{{ formatPrice(product.giaGocThapNhat) }}</div>
-                    <div class="fw-bold text-danger" style="font-size: 0.95rem;">{{ formatPrice(product.giaSauGiamThapNhat) }}</div>
-                  </template>
-                  <div v-else class="fw-bold text-danger" style="font-size: 0.95rem;">
-                    {{ formatPrice(product.giaThapNhat) }}
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -171,7 +179,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import apiClient from '@/services/apiClient';
 import { useCart } from '@/services/cart';
@@ -183,7 +191,8 @@ import banner1 from '@/assets/images/banner/banner.png';
 import banner2 from '@/assets/images/banner/image.png';
 import banner3 from '@/assets/images/banner/slider_2.webp';
 
-const products = ref([]);
+const newProducts = ref([]);
+const bestSellingProducts = ref([]);
 const loading = ref(true);
 const router = useRouter();
 
@@ -214,24 +223,15 @@ const stopAutoplay = () => {
   if (autoplayTimer) clearInterval(autoplayTimer);
 };
 
-// Products
-const newProducts = computed(() => products.value.slice(0, 8));
-
-const bestSellingProducts = computed(() => {
-  if (products.value.length <= 8) return [...products.value];
-  // Shuffle and pick 8
-  const shuffled = [...products.value].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, 8);
-});
-
-const fetchProducts = async () => {
+// Lấy hàng mới về (30 ngày gần đây) và sản phẩm bán chạy từ backend
+const fetchHomeProducts = async () => {
   try {
-    const res = await apiClient.get('/api/client/products');
-    const d = res.data;
-    if (Array.isArray(d)) products.value = d;
-    else if (d?.content) products.value = d.content;
-    else if (d?.data) products.value = d.data;
-    else products.value = [];
+    const [newRes, bestRes] = await Promise.all([
+      apiClient.get('/api/client/products/new-arrivals'),
+      apiClient.get('/api/client/products/best-selling'),
+    ]);
+    newProducts.value = Array.isArray(newRes.data) ? newRes.data : [];
+    bestSellingProducts.value = Array.isArray(bestRes.data) ? bestRes.data : [];
   } catch (err) {
     console.error(err);
   } finally {
@@ -242,6 +242,14 @@ const fetchProducts = async () => {
 const goToDetail = (id) => {
   router.push({ name: 'client-product-detail', params: { id } });
 };
+
+const discountBadgeClass = (pct) => {
+  if (!pct) return '';
+  if (pct > 70) return 'text-white';
+  if (pct >= 50) return 'bg-warning text-dark';
+  return 'bg-danger text-white';
+};
+const discountBadgeStyle = (pct) => pct > 70 ? 'background-color:#FF6B00;' : '';
 
 const formatPrice = (value) => {
   if (value === null || value === undefined) return '0 ₫';
@@ -269,7 +277,7 @@ const quickAddToCart = (product, $event) => {
 };
 
 onMounted(() => {
-  fetchProducts();
+  fetchHomeProducts();
   startAutoplay();
 });
 
@@ -335,21 +343,88 @@ onBeforeUnmount(() => {
   background: white;
 }
 
+/* ── Image Badges ── */
+.badge-new {
+  display: inline-block;
+  background: #16a34a;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+.badge-hot {
+  display: inline-block;
+  background: linear-gradient(135deg, #ff5722, #c62828);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(198,40,40,0.4);
+  letter-spacing: 0.3px;
+}
+.badge-discount {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 20px;
+  letter-spacing: 0.3px;
+}
+
 /* Product Card */
 .product-card {
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
   overflow: hidden;
+  border: 1px solid #c8c8c8 !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.07) !important;
 }
 .product-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 12px 28px rgba(0,0,0,0.13) !important;
+  border-color: #aaa !important;
 }
 .product-card:hover .product-action {
   opacity: 1 !important;
 }
 .product-action {
   transition: opacity 0.3s ease;
+}
+.product-card .card-body { border-top: 2px solid #e0e0e0; }
+
+/* Product name: 2 dòng max */
+.product-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
+/* Stock badge */
+.stock-badge {
+  display: inline-block;
+  padding: 3px 11px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.stock-badge--in  { background: #e8f5e9; color: #2e7d32; }
+.stock-badge--out { background: #f5f5f5; color: #9e9e9e; }
+
+/* Size chip */
+.size-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 0.82rem;
+  color: #444;
+  background: #fff;
+  font-weight: 500;
 }
 .object-fit-contain {
   object-fit: contain;

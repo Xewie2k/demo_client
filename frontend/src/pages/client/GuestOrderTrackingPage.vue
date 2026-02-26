@@ -52,9 +52,9 @@
             </div>
             <div class="card-body p-4">
               <!-- Timeline -->
-              <div v-if="selectedOrder.timeline" class="mb-4">
+              <div class="mb-4">
                 <h6 class="fw-bold mb-3 border-start border-4 ps-2" style="border-color: var(--ss-accent) !important;">Trạng thái đơn hàng</h6>
-                <OrderTimeline :timeline="selectedOrder.timeline" />
+                <OrderTimeline :status-code="selectedOrder.trangThaiHienTai" :timeline="selectedOrder.timeline" />
               </div>
 
               <!-- Receiver Info -->
@@ -135,7 +135,7 @@
 
         <!-- Order List -->
         <div v-else>
-          <div v-for="order in myOrders" :key="order.id" class="card mb-3 border rounded-3 overflow-hidden">
+          <div v-for="order in paginatedMyOrders" :key="order.id" class="card mb-3 border rounded-3 overflow-hidden">
             <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 px-3">
               <div class="d-flex align-items-center gap-2">
                 <span class="fw-bold">{{ order.maHoaDon }}</span>
@@ -168,6 +168,28 @@
               </button>
             </div>
           </div>
+
+          <!-- Pagination -->
+          <div class="d-flex justify-content-center mt-3">
+            <nav aria-label="Phân trang đơn hàng">
+              <ul class="pagination pagination-sm mb-0">
+                <li class="page-item" :class="{ disabled: myOrdersPage === 1 }">
+                  <button class="page-link rounded-start-pill" @click="goToOrderPage(myOrdersPage - 1)" :disabled="myOrdersPage === 1">
+                    <i class="bi bi-chevron-left" style="font-size:11px;"></i>
+                  </button>
+                </li>
+                <li v-for="(p, idx) in myOrdersPageRange" :key="idx" class="page-item"
+                  :class="{ active: p === myOrdersPage, disabled: p === '...' }">
+                  <button class="page-link" @click="goToOrderPage(p)">{{ p }}</button>
+                </li>
+                <li class="page-item" :class="{ disabled: myOrdersPage === myOrdersTotalPages }">
+                  <button class="page-link rounded-end-pill" @click="goToOrderPage(myOrdersPage + 1)" :disabled="myOrdersPage === myOrdersTotalPages">
+                    <i class="bi bi-chevron-right" style="font-size:11px;"></i>
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          </div>
         </div>
       </div>
 
@@ -183,7 +205,7 @@
                     <label class="form-label small fw-semibold text-secondary">Mã đơn hàng</label>
                     <div class="input-group">
                       <span class="input-group-text bg-light border-end-0"><i class="bi bi-receipt text-muted"></i></span>
-                      <input type="text" class="form-control border-start-0 ps-0" v-model="trackingForm.id" placeholder="Nhập mã đơn hàng" required>
+                      <input type="text" class="form-control border-start-0 ps-0" v-model="trackingForm.maHoaDon" placeholder="Nhập mã đơn hàng (VD: HD0001234)" required>
                     </div>
                   </div>
                   <div class="mb-4">
@@ -285,49 +307,50 @@
         <p class="mt-2 text-muted">Đang tải thông tin đơn hàng...</p>
       </div>
 
-      <div v-else-if="error" class="text-center py-5">
-        <!-- No query params: show search form -->
-        <div v-if="!hasQueryParams" class="row justify-content-center">
-          <div class="col-md-6">
-            <div class="text-center mb-4">
-              <h4 class="fw-bold">Tra cứu đơn hàng</h4>
-              <p class="text-muted">Nhập mã đơn hàng và email để tra cứu trạng thái</p>
-            </div>
-            <div class="card border-0 shadow-sm">
-              <div class="card-body p-4">
-                <form @submit.prevent="guestTrack">
-                  <div class="mb-3">
-                    <label class="form-label small fw-semibold text-secondary">Mã đơn hàng</label>
-                    <div class="input-group">
-                      <span class="input-group-text bg-light border-end-0"><i class="bi bi-receipt text-muted"></i></span>
-                      <input type="text" class="form-control border-start-0 ps-0" v-model="guestForm.id" placeholder="Nhập mã đơn hàng" required>
-                    </div>
+      <!-- No query params: show search form -->
+      <div v-else-if="!hasQueryParams" class="row justify-content-center">
+        <div class="col-md-6">
+          <div class="text-center mb-4">
+            <h4 class="fw-bold">Tra cứu đơn hàng</h4>
+            <p class="text-muted">Nhập mã đơn hàng và email để tra cứu trạng thái</p>
+          </div>
+          <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+              <form @submit.prevent="guestTrack">
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold text-secondary">Mã đơn hàng</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-receipt text-muted"></i></span>
+                    <input type="text" class="form-control border-start-0 ps-0" v-model="guestForm.maHoaDon" placeholder="Nhập mã đơn hàng (VD: HD0001234)" required>
                   </div>
-                  <div class="mb-4">
-                    <label class="form-label small fw-semibold text-secondary">Email</label>
-                    <div class="input-group">
-                      <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
-                      <input type="email" class="form-control border-start-0 ps-0" v-model="guestForm.email" placeholder="Email đặt hàng" required>
-                    </div>
+                </div>
+                <div class="mb-4">
+                  <label class="form-label small fw-semibold text-secondary">Email</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
+                    <input type="email" class="form-control border-start-0 ps-0" v-model="guestForm.email" placeholder="Email đặt hàng" required>
                   </div>
-                  <button type="submit" class="btn w-100 text-white fw-bold" style="background-color: var(--ss-accent);">
-                    Tra cứu
-                  </button>
-                </form>
-              </div>
+                </div>
+                <button type="submit" class="btn w-100 text-white fw-bold" style="background-color: var(--ss-accent);">
+                  Tra cứu
+                </button>
+              </form>
             </div>
           </div>
         </div>
+      </div>
 
-        <!-- Has query params but error -->
-        <div v-else class="alert alert-danger text-center shadow-sm mx-auto" style="max-width: 500px;">
+      <!-- Has query params but error -->
+      <div v-else-if="error" class="text-center py-5">
+        <div class="alert alert-danger text-center shadow-sm mx-auto" style="max-width: 500px;">
           <h5><i class="bi bi-exclamation-triangle me-2"></i>Lỗi tra cứu</h5>
           <p class="mb-3">{{ error }}</p>
           <router-link to="/client/tracking" class="btn btn-outline-dark">Tra cứu lại</router-link>
         </div>
       </div>
 
-      <div v-else class="card border-0 shadow-sm">
+      <!-- Order detail -->
+      <div v-else-if="order && order.id" class="card border-0 shadow-sm">
         <div class="card-header bg-white border-bottom py-3">
           <div class="d-flex justify-content-between align-items-center">
             <div>
@@ -397,12 +420,22 @@
           </div>
         </div>
       </div>
+
+      <!-- Not found fallback -->
+      <div v-else class="text-center py-5">
+        <i class="bi bi-search fs-1 text-muted"></i>
+        <p class="mt-3 text-muted">Không tìm thấy đơn hàng. Vui lòng kiểm tra lại mã đơn và email.</p>
+        <button class="btn btn-outline-dark btn-sm rounded-pill px-4 mt-2"
+          @click="hasQueryParams = false; error = null; loading = false">
+          Tra cứu lại
+        </button>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue';
+import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import apiClient from '@/services/apiClient';
 import { useClientAuth } from '@/services/authClient';
@@ -413,7 +446,7 @@ const router = useRouter();
 const { customer, isLoggedIn } = useClientAuth();
 
 // Guest mode state
-const loading = ref(false);
+const loading = ref(true);
 const error = ref(null);
 const order = ref({});
 const hasQueryParams = ref(false);
@@ -425,33 +458,30 @@ const myOrdersLoading = ref(true);
 const selectedOrder = ref(null);
 
 // Tracking form (logged-in tab 2)
-const trackingForm = reactive({ id: '', email: '' });
+const trackingForm = reactive({ maHoaDon: '', email: '' });
 const trackingLoading = ref(false);
 const trackingError = ref(null);
 const trackedOrder = ref(null);
 
 // Guest form
-const guestForm = reactive({ id: '', email: '' });
+const guestForm = reactive({ maHoaDon: '', email: '' });
 
 const steps = [
-  { code: 1, label: 'Chờ xác nhận', icon: 'bi bi-clipboard' },
-  { code: 2, label: 'Chờ giao', icon: 'bi bi-box-seam' },
-  { code: 3, label: 'Đang giao', icon: 'bi bi-truck' },
-  { code: 6, label: 'Hoàn thành', icon: 'bi bi-check-circle' }
+  { code: 1, label: 'Chờ xác nhận',    icon: 'bi bi-clipboard' },
+  { code: 2, label: 'Chờ giao hàng',   icon: 'bi bi-box-seam' },
+  { code: 3, label: 'Đang vận chuyển', icon: 'bi bi-truck' },
+  { code: 4, label: 'Đã giao hàng',    icon: 'bi bi-truck-front' },
+  { code: 5, label: 'Hoàn thành',      icon: 'bi bi-check-circle' },
 ];
 
 const progressWidth = computed(() => {
   const target = trackedOrder.value || order.value;
   const st = target?.trangThaiHienTai || 1;
-  if (st >= 6) return 100;
-  if (st === 1) return 0;
-  if (st === 2) return 33;
-  if (st === 3) return 66;
-  return 0;
+  return Math.max(0, (st - 1) / 4 * 100);
 });
 
 const getStatusName = (code) => {
-  const map = { 1: 'Chờ xác nhận', 2: 'Chờ giao hàng', 3: 'Đang vận chuyển', 4: 'Đã giao hàng', 5: 'Đã hủy', 6: 'Hoàn thành', 7: 'Giao thất bại' };
+  const map = { 1: 'Chờ xác nhận', 2: 'Chờ giao hàng', 3: 'Đang vận chuyển', 4: 'Đã giao hàng', 5: 'Hoàn thành' };
   return map[code] || 'Không xác định';
 };
 
@@ -459,15 +489,40 @@ const getStatusBadgeClass = (status) => {
   if (!status) return 'bg-secondary text-white';
   const s = status.toLowerCase();
   if (s.includes('hoàn thành')) return 'bg-success text-white';
-  if (s.includes('đang giao') || s.includes('vận chuyển')) return 'bg-primary text-white';
-  if (s.includes('chờ giao')) return 'bg-info text-white';
-  if (s.includes('chờ xác nhận')) return 'bg-warning text-dark';
+  if (s.includes('đã giao')) return 'bg-info text-white';
+  if (s.includes('đang') || s.includes('vận chuyển')) return 'bg-primary text-white';
+  if (s.includes('chờ giao')) return 'bg-warning text-dark';
+  if (s.includes('chờ xác nhận')) return 'bg-secondary text-white';
   if (s.includes('hủy') || s.includes('thất bại')) return 'bg-danger text-white';
   return 'bg-secondary text-white';
 };
 
 const formatCurrency = (v) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v || 0);
 const formatDate = (d) => d ? new Date(d).toLocaleString('vi-VN') : '';
+
+// ── Pagination for "Đơn hàng của tôi" ──
+const MY_ORDERS_PAGE_SIZE = 5;
+const myOrdersPage = ref(1);
+const myOrdersTotalPages = computed(() => Math.max(1, Math.ceil(myOrders.value.length / MY_ORDERS_PAGE_SIZE)));
+const paginatedMyOrders = computed(() => {
+  const start = (myOrdersPage.value - 1) * MY_ORDERS_PAGE_SIZE;
+  return myOrders.value.slice(start, start + MY_ORDERS_PAGE_SIZE);
+});
+const myOrdersPageRange = computed(() => {
+  const total = myOrdersTotalPages.value;
+  const cur = myOrdersPage.value;
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = [1];
+  if (cur > 3) pages.push('...');
+  for (let p = Math.max(2, cur - 1); p <= Math.min(total - 1, cur + 1); p++) pages.push(p);
+  if (cur < total - 2) pages.push('...');
+  pages.push(total);
+  return pages;
+});
+const goToOrderPage = (p) => {
+  if (typeof p !== 'number') return;
+  myOrdersPage.value = p;
+};
 
 // Logged-in: fetch my orders
 const fetchMyOrders = async () => {
@@ -498,7 +553,7 @@ const trackByCode = async () => {
   trackedOrder.value = null;
   trackingLoading.value = true;
   try {
-    const res = await apiClient.get(`/api/client/hoa-don/tracking?id=${trackingForm.id}&email=${trackingForm.email}`);
+    const res = await apiClient.get(`/api/client/hoa-don/tracking?maHoaDon=${encodeURIComponent(trackingForm.maHoaDon)}&email=${encodeURIComponent(trackingForm.email)}`);
     trackedOrder.value = res.data;
   } catch (e) {
     trackingError.value = 'Không tìm thấy đơn hàng hoặc email không khớp.';
@@ -507,41 +562,104 @@ const trackByCode = async () => {
   }
 };
 
-// Guest: track from form
+// Guest: track from form — dùng Vue Router, không reload trang
 const guestTrack = () => {
-  router.push({ path: '/client/tracking', query: { id: guestForm.id, email: guestForm.email } });
-  // Reload with query params
-  setTimeout(() => location.reload(), 100);
+  router.push({ path: '/client/tracking', query: { maHoaDon: guestForm.maHoaDon, email: guestForm.email } });
 };
+
+// Watch for SPA in-app route changes (e.g. when guest submits the form via guestTrack())
+watch(
+  () => route.query,
+  async (q) => {
+    if (isLoggedIn.value) return;
+    const maHD = q.maHoaDon || null;
+    const idNum = q.id || null;
+    const email = q.email || null;
+    if ((maHD || idNum) && email) {
+      hasQueryParams.value = true;
+      loading.value = true;
+      error.value = null;
+      order.value = {};
+      try {
+        const params = new URLSearchParams({ email });
+        if (maHD) params.set('maHoaDon', maHD);
+        else params.set('id', idNum);
+        const res = await apiClient.get(`/api/client/hoa-don/tracking?${params.toString()}`);
+        order.value = res.data;
+      } catch (e) {
+        error.value = 'Không tìm thấy đơn hàng hoặc email không khớp.';
+      } finally {
+        loading.value = false;
+      }
+    } else {
+      hasQueryParams.value = false;
+      error.value = null;
+      loading.value = false;
+    }
+  }
+  // No { immediate: true } — initial load is handled in onMounted where route is guaranteed resolved
+);
 
 onMounted(async () => {
   if (isLoggedIn.value) {
     await fetchMyOrders();
-    return;
-  }
-
-  // Guest mode
-  const { id, email } = route.query;
-  if (!id || !email) {
-    hasQueryParams.value = false;
-    error.value = 'Vui lòng nhập mã đơn hàng và email để tra cứu.';
-    loading.value = false;
-    return;
-  }
-  hasQueryParams.value = true;
-  loading.value = true;
-  try {
-    const res = await apiClient.get(`/api/client/hoa-don/tracking?id=${id}&email=${email}`);
-    order.value = res.data;
-  } catch (e) {
-    error.value = 'Không tìm thấy đơn hàng hoặc email không khớp.';
-  } finally {
-    loading.value = false;
+    // Handle URL params for logged-in users: auto-fill tracking form and switch to tracking tab
+    const q = route.query;
+    if (q.maHoaDon && q.email) {
+      trackingForm.maHoaDon = q.maHoaDon;
+      trackingForm.email = q.email;
+      activeTab.value = 'tracking';
+      await trackByCode();
+    }
+  } else {
+    // Guest mode: route is fully resolved in onMounted, so query params are available
+    const q = route.query;
+    const maHD = q.maHoaDon || null;
+    const idNum = q.id || null;
+    const email = q.email || null;
+    if ((maHD || idNum) && email) {
+      hasQueryParams.value = true;
+      loading.value = true;
+      error.value = null;
+      try {
+        const params = new URLSearchParams({ email });
+        if (maHD) params.set('maHoaDon', maHD);
+        else params.set('id', idNum);
+        const res = await apiClient.get(`/api/client/hoa-don/tracking?${params.toString()}`);
+        order.value = res.data;
+      } catch (e) {
+        error.value = 'Không tìm thấy đơn hàng hoặc email không khớp.';
+      } finally {
+        loading.value = false;
+      }
+    } else {
+      hasQueryParams.value = false;
+      loading.value = false;
+    }
   }
 });
 </script>
 
 <style scoped>
+.pagination .page-link {
+  color: #333;
+  border-color: #dee2e6;
+  min-width: 36px;
+  text-align: center;
+  font-size: 0.85rem;
+}
+.pagination .page-item.active .page-link {
+  background-color: var(--ss-accent, #e53935);
+  border-color: var(--ss-accent, #e53935);
+  color: #fff;
+}
+.pagination .page-link:hover:not(:disabled) {
+  background-color: #fff5f5;
+  border-color: var(--ss-accent, #e53935);
+  color: var(--ss-accent, #e53935);
+}
+.pagination .page-item.disabled .page-link { color: #aaa; }
+
 .nav-tabs .nav-link {
   color: #666;
   border: none;

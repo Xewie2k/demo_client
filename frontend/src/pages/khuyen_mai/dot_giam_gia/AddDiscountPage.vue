@@ -647,8 +647,16 @@
 
                 <td class="text-wrap-name text-center">{{ item.tenSanPham }}</td>
 
-                <!-- ✅ HIỂN THỊ GIÁ THỰC TẾ -->
-                <td class="text-center">{{ formatCurrency(getGiaBienThe(item)) }}</td>
+                <!-- ✅ HIỂN THỊ GIÁ THỰC TẾ + GIÁ SAU GIẢM -->
+                <td class="text-center price-cell">
+                  <template v-if="displayPercent">
+                    <span class="price-original">{{ formatCurrency(getGiaBienThe(item)) }}</span>
+                    <span class="price-discounted">{{ formatCurrency(getGiaBienThe(item) * (1 - displayPercent / 100)) }}</span>
+                  </template>
+                  <template v-else>
+                    {{ formatCurrency(getGiaBienThe(item)) }}
+                  </template>
+                </td>
 
                 <td class="text-center">{{ item.tenThuongHieu }}</td>
                 <td class="text-center">{{ item.tenChatLieu }}</td>
@@ -1325,31 +1333,6 @@ const canSubmit = computed(() => {
   return true;
 });
 
-const checkOverlaps = async (newStart, newEnd, selectedIds) => {
-  const allDiscounts = await discountService.getAll();
-  const overlappingDiscounts = (Array.isArray(allDiscounts) ? allDiscounts : []).filter((d) => {
-    if (!d.trangThai) return false;
-
-    const dStart = normalizeDate(d.ngayBatDau, false);
-    const dEnd = normalizeDate(d.ngayKetThuc, true);
-    const nStart = normalizeDate(newStart, false);
-    const nEnd = normalizeDate(newEnd, true);
-
-    if (!dStart || !dEnd || !nStart || !nEnd) return false;
-    return nStart <= dEnd && nEnd >= dStart;
-  });
-
-  for (const discount of overlappingDiscounts) {
-    const details = await discountService.getDiscountDetails(discount.id);
-    const conflict = (Array.isArray(details) ? details : []).find((detail) => selectedIds.includes(detail.idChiTietSanPham));
-    if (conflict) {
-      const variant = rawVariants.value.find((v) => v.id === conflict.idChiTietSanPham);
-      return { overlap: true, discountName: discount.tenDotGiamGia, productName: variant ? variant.tenSanPham : "Sản phẩm" };
-    }
-  }
-  return { overlap: false };
-};
-
 const submitCreate = async () => {
   if (!canSubmit.value) {
     alert("Vui lòng nhập đúng và đủ thông tin bắt buộc (tên, ngày, % giảm 1-100).");
@@ -1358,20 +1341,6 @@ const submitCreate = async () => {
 
   if (selectedVariantIds.value.length === 0) {
     if (!confirm("Bạn chưa chọn sản phẩm nào. Tiếp tục tạo?")) return;
-  }
-
-  if (selectedVariantIds.value.length > 0) {
-    try {
-      const overlapCheck = await checkOverlaps(formData.ngayBatDau, formData.ngayKetThuc, selectedVariantIds.value);
-      if (overlapCheck.overlap) {
-        alert(`Lỗi trùng lặp: Sản phẩm "${overlapCheck.productName}" đã nằm trong đợt giảm giá "${overlapCheck.discountName}" trong khoảng thời gian này.`);
-        return;
-      }
-    } catch (e) {
-      console.error(e);
-      alert("Không kiểm tra được trùng lặp đợt giảm giá. Vui lòng thử lại.");
-      return;
-    }
   }
 
   const payload = { ...formData, idChiTietSanPhams: selectedVariantIds.value };
@@ -1517,23 +1486,31 @@ onMounted(loadData);
 .empty-state { text-align:center; color:#cbd5e1; padding:20px; }
 .text-wrap-name { max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* ✅ Giá gốc gạch ngang + giá sau giảm */
+.price-cell { line-height: 1.6; }
+.price-original { text-decoration: line-through; color: #94a3b8; font-size: 12px; display: block; }
+.price-discounted { color: #ef4444; font-weight: 600; font-size: 14px; display: block; }
+
 /* ✅ Badge -% trên ảnh */
-.thumb-wrap { position: relative; display: inline-block; line-height: 0; }
+.thumb-wrap { position: relative; display: inline-block; vertical-align: middle; }
 .discount-badge {
   position: absolute;
-  top: -6px;
-  left: -6px;
+  top: -4px;
+  right: -4px;
   background: #ef4444;
   color: #fff;
-  font-size: 11px;
+  font-size: 9px;
   font-weight: 700;
-  padding: 3px 6px;
+  padding: 1px 4px;
   border-radius: 999px;
-  border: 2px solid #fff;
-  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25);
+  border: 1.5px solid #fff;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
   pointer-events: none;
+  white-space: nowrap;
+  line-height: 1.3;
+  z-index: 2;
 }
-.discount-badge.sm { font-size: 10px; padding: 2px 6px; }
+.discount-badge.sm { font-size: 8px; padding: 1px 3px; top: -3px; right: -3px; }
 
 /* ✅ Combobox giống ProductManagePage.vue */
 .ss-combo { position: relative; min-width: 160px; }
