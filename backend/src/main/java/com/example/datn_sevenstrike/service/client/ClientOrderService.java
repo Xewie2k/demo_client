@@ -457,6 +457,7 @@ public class ClientOrderService {
                     .giaGoc(giaGoc)
                     .giaSauGiam(giaSauGiam)
                     .phanTramGiam(phanTramGiam)
+                    .ngayKetThuc(bestDiscount.isPresent() ? bestDiscount.get().getNgayKetThuc() : null)
                     .build();
         }).collect(Collectors.toList());
 
@@ -501,6 +502,7 @@ public class ClientOrderService {
                 .giaGocThapNhat(cheapestDisc != null ? cheapestDisc.getGiaGoc() : null)
                 .giaSauGiamThapNhat(cheapestDisc != null ? cheapestDisc.getGiaSauGiam() : null)
                 .phanTramGiam(cheapestDisc != null ? cheapestDisc.getPhanTramGiam() : null)
+                .ngayKetThucGiamGia(cheapestDisc != null ? cheapestDisc.getNgayKetThuc() : null)
                 .hangCoSan(hangCoSan)
                 .kichThuocCoSan(kichThuocCoSan)
                 .anhDaiDien(thumb)

@@ -165,7 +165,7 @@
     </nav>
 
     <!-- Main Content -->
-    <main class="flex-grow-1 bg-white">
+    <main class="flex-grow-1" style="background-color: #f5f6f7;">
       <router-view />
     </main>
 

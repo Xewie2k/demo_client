@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -30,6 +31,7 @@ public class ProductClientDTO {
     private BigDecimal giaGocThapNhat;
     private BigDecimal giaSauGiamThapNhat;
     private Integer phanTramGiam;
+    private LocalDate ngayKetThucGiamGia;
 
     // stock & sizes
     private String maSanPham;

@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Data
 @Builder
@@ -25,4 +26,5 @@ public class VariantClientDTO {
     private BigDecimal giaGoc;
     private BigDecimal giaSauGiam;
     private Integer phanTramGiam;
+    private LocalDate ngayKetThuc;
 }

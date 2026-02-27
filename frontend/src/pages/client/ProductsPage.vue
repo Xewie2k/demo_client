@@ -96,6 +96,17 @@
                     </button>
                   </template>
                 </div>
+                <!-- Custom color picker -->
+                <div class="mt-2 pt-2" style="border-top:1px solid #e8e8e8;">
+                  <div class="small text-muted mb-1" style="font-size:0.72rem;">Chọn màu tùy chỉnh</div>
+                  <div class="d-flex align-items-center gap-2">
+                    <input type="color" class="color-picker-input" v-model="customColorHex" title="Chọn màu">
+                    <span v-if="customColorHex" class="small text-muted" style="font-size:0.75rem;">{{ customColorHex }}</span>
+                    <button v-if="customColorHex" class="btn btn-link btn-sm p-0 text-danger" @click="customColorHex=''">
+                      <i class="bi bi-x-circle"></i>
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -295,6 +306,9 @@
               {{ filters.priceMin ? formatPrice(filters.priceMin) : '0' }} — {{ filters.priceMax ? formatPrice(filters.priceMax) : '∞' }}
               <i class="bi bi-x" @click="filters.priceMin = null; filters.priceMax = null"></i>
             </span>
+            <span v-if="customColorHex" class="filter-tag text-white" :style="{background: customColorHex, border:'none'}">
+              Màu tùy chỉnh <i class="bi bi-x" @click="customColorHex=''"></i>
+            </span>
           </div>
 
           <!-- Mobile result count -->
@@ -322,7 +336,7 @@
           </div>
 
           <!-- Product Grid -->
-          <div v-else class="products-grid-anchor row row-cols-2 row-cols-sm-2 row-cols-lg-3 g-3">
+          <div v-else class="products-grid-anchor row row-cols-2 row-cols-md-3 row-cols-lg-4 g-2">
             <div v-for="product in paginatedProducts" :key="product.id" class="col">
               <div class="card h-100 border-0 product-card rounded-3" @click="goToDetail(product.id)">
                 <div class="position-relative overflow-hidden p-2 rounded-top-3" style="background-color:#f8f9fa;">
@@ -346,24 +360,29 @@
                     </button>
                   </div>
                 </div>
-                <div class="card-body px-3 pt-2 pb-3 d-flex flex-column gap-1 text-center">
-                  <div class="text-muted fw-semibold" style="font-size:1.1rem;">
-                    <i class="bi bi-tag-fill me-1" style="color:var(--ss-accent);font-size:0.9rem;"></i>{{ product.maSanPham }}
+                <div class="card-body px-2 pt-1 pb-2 text-start">
+                  <div class="d-flex align-items-start gap-1">
+                    <i class="bi bi-tag-fill flex-shrink-0" style="color:var(--ss-accent);font-size:0.75rem;padding-top:3px;"></i>
+                    <div class="d-flex flex-column gap-1 flex-grow-1 min-w-0">
+                      <div class="text-muted fw-semibold text-truncate" style="font-size:1.1rem;">{{ product.maSanPham }}</div>
+                      <div>
+                        <div v-if="product.phanTramGiam" class="text-muted text-decoration-line-through" style="font-size:0.85rem;">{{ formatPrice(product.giaGocThapNhat) }}</div>
+                        <div class="fw-bold" style="font-size:1.1rem; color:var(--ss-accent);">{{ formatPrice(product.phanTramGiam ? product.giaSauGiamThapNhat : product.giaThapNhat) }}</div>
+                      </div>
+                      <div v-if="product.phanTramGiam && product.ngayKetThucGiamGia" class="discount-countdown">
+                        <i class="bi bi-clock-fill me-1"></i>{{ discountLabel(product.ngayKetThucGiamGia) }}
+                      </div>
+                      <div>
+                        <span v-if="product.hangCoSan" class="stock-badge stock-badge--in">Còn hàng</span>
+                        <span v-else class="stock-badge stock-badge--out">Hết hàng</span>
+                      </div>
+                      <div v-if="product.kichThuocCoSan && product.kichThuocCoSan.length" class="d-flex flex-wrap gap-1">
+                        <span v-for="s in product.kichThuocCoSan" :key="s" class="size-chip">{{ s }}</span>
+                      </div>
+                                        <h6 class="product-name text-dark mb-0 mt-1" style="font-size:1.1rem; line-height:1.4;">{{ product.tenSanPham }}</h6>
+
+                    </div>
                   </div>
-                  <div>
-                    <div v-if="product.phanTramGiam" class="text-muted text-decoration-line-through" style="font-size:0.78rem; line-height:1.2;">{{ formatPrice(product.giaGocThapNhat) }}</div>
-                    <div class="fw-bold" style="font-size:1.1rem; color:var(--ss-accent); line-height:1.3;">{{ formatPrice(product.phanTramGiam ? product.giaSauGiamThapNhat : product.giaThapNhat) }}</div>
-                  </div>
-                  <div>
-                    <span v-if="product.hangCoSan" class="stock-badge stock-badge--in">Còn hàng</span>
-                    <span v-else class="stock-badge stock-badge--out">Hết hàng</span>
-                  </div>
-                  <div v-if="product.kichThuocCoSan && product.kichThuocCoSan.length" class="d-flex flex-wrap gap-1 justify-content-center">
-                    <span v-for="s in product.kichThuocCoSan" :key="s" class="size-chip">{{ s }}</span>
-                  </div>
-                  <h6 class="product-name text-dark mb-0 mt-1" style="font-size:0.83rem; line-height:1.4; font-weight:500;">
-                    {{ product.tenSanPham }}
-                  </h6>
                 </div>
               </div>
             </div>
@@ -464,6 +483,17 @@
                   <i v-if="filters.mauSac.includes(c.name)" class="bi bi-check2 me-1" style="font-size:11px;"></i>{{ c.name }}
                 </button>
               </template>
+            </div>
+            <!-- Custom color picker (mobile) -->
+            <div class="mt-2 pt-2" style="border-top:1px solid #e8e8e8;">
+              <div class="small text-muted mb-1" style="font-size:0.72rem;">Chọn màu tùy chỉnh</div>
+              <div class="d-flex align-items-center gap-2">
+                <input type="color" class="color-picker-input" v-model="customColorHex" title="Chọn màu">
+                <span v-if="customColorHex" class="small text-muted" style="font-size:0.75rem;">{{ customColorHex }}</span>
+                <button v-if="customColorHex" class="btn btn-link btn-sm p-0 text-danger" @click="customColorHex=''">
+                  <i class="bi bi-x-circle"></i>
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -625,6 +655,7 @@ const products = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const showFilter = ref(false);
+const customColorHex = ref('');
 const router = useRouter();
 const route = useRoute();
 
@@ -692,6 +723,24 @@ const fetchProducts = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+// ── Discount countdown helper ──
+const discountLabel = (dateStr) => {
+  if (!dateStr) return '';
+  const end = new Date(dateStr); end.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const days = Math.ceil((end - today) / 86400000);
+  if (days < 0) return 'Đã hết hạn';
+  if (days === 0) return 'Hết hôm nay';
+  return `Còn ${days} ngày`;
+};
+
+// ── Custom color filter helper ──
+const hexDist = (h1, h2) => {
+  if (!h1 || !h2 || h1.length < 7 || h2.length < 7) return 999;
+  const p = (h, i) => parseInt(h.slice(i, i + 2), 16);
+  return Math.sqrt((p(h1,1)-p(h2,1))**2 + (p(h1,3)-p(h2,3))**2 + (p(h1,5)-p(h2,5))**2);
 };
 
 const discountBadgeClass = (pct) => {
@@ -776,6 +825,7 @@ const multiKeys = ['mauSac', 'kichThuoc', 'brand', 'discounts', 'xuatXu', 'loaiS
 const activeFilterCount = computed(() => {
   let n = multiKeys.filter(k => filters[k].length > 0).length;
   if (filters.priceMin > 0 || (filters.priceMax != null && filters.priceMax < priceBoundMax.value)) n++;
+  if (customColorHex.value) n++;
   return n;
 });
 
@@ -793,6 +843,7 @@ const filteredProducts = computed(() => {
 
   // Variant-level multi-select (sản phẩm có ít nhất 1 variant khớp)
   if (filters.mauSac.length)    result = result.filter(p => (p.variants || []).some(v => filters.mauSac.includes(v.tenMauSac)));
+  if (customColorHex.value)     result = result.filter(p => (p.variants || []).some(v => v.maMauHex && hexDist(v.maMauHex, customColorHex.value) < 80));
   if (filters.kichThuoc.length) result = result.filter(p => (p.variants || []).some(v => filters.kichThuoc.includes(v.tenKichThuoc)));
 
   // Discount (multi-select: khớp đúng % đã chọn)
@@ -864,6 +915,7 @@ const resetFilters = () => {
   filters.priceMin = null;
   filters.priceMax = priceBoundMax.value || null;
   sortBy.value = 'newest';
+  customColorHex.value = '';
 };
 
 const goToDetail = (id) => router.push({ name: 'client-product-detail', params: { id } });
@@ -897,7 +949,7 @@ onMounted(fetchProducts);
 .filter-sidebar {
   background: #fff;
   border-radius: 12px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid #d0d0d0;
   box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   overflow: hidden;
 }
@@ -948,7 +1000,7 @@ onMounted(fetchProducts);
 }
 .product-card:hover .product-action { opacity: 1 !important; }
 .product-action { transition: opacity 0.3s ease; }
-.product-card .card-body { border-top: 2px solid #e0e0e0; }
+.product-card .card-body { border-top: 2px solid #f0f0f0; }
 .object-fit-contain { object-fit: contain; width: 100%; height: 100%; }
 
 /* ── Product name: 2 dòng max ── */
@@ -966,7 +1018,8 @@ onMounted(fetchProducts);
   padding: 3px 11px;
   border-radius: 20px;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 .stock-badge--in  { background: #fff0f0; color: var(--ss-accent, #dc3545); }
 .stock-badge--out { background: #f5f5f5; color: #9e9e9e; }
@@ -978,8 +1031,7 @@ onMounted(fetchProducts);
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 0.82rem;
-  color: #444;
-  background: #fff;
+  color: #666;
   font-weight: 500;
 }
 
@@ -1020,7 +1072,7 @@ onMounted(fetchProducts);
 .filter-drawer__footer { flex-shrink: 0; }
 
 /* ── Filter sections (always visible) ── */
-.accordion-section { border-bottom: 1px solid #f0f0f0; }
+.accordion-section { border-bottom: 1px solid #e0e0e0; }
 
 .filter-section-title {
   padding: 12px 20px 4px;
@@ -1049,6 +1101,29 @@ onMounted(fetchProducts);
 }
 .sort-option:hover { background: #fff5f5; color: var(--ss-accent, #e53935); }
 .sort-option--active { background: #fff5f5; font-weight: 600; color: var(--ss-accent, #e53935); }
+
+/* ── Discount countdown ── */
+.discount-countdown {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ss-accent, #dc3545);
+  background: #fff0f0;
+  border-radius: 10px;
+  padding: 1px 8px;
+}
+
+/* ── Color picker input ── */
+.color-picker-input {
+  width: 32px;
+  height: 32px;
+  border: 2px solid #ddd;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+}
 
 /* ── Color Swatch ── */
 .color-swatch {

@@ -61,7 +61,7 @@
       </div>
 
       <div v-else class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3">
-        <div v-for="product in newProducts" :key="product.id" class="col">
+        <div v-for="product in newProducts.slice(0, 8)" :key="product.id" class="col">
           <div class="card h-100 border-0 product-card rounded-3" @click="goToDetail(product.id)">
             <div class="position-relative overflow-hidden p-2 rounded-top-3" style="background-color:#f8f9fa;">
               <div class="ratio ratio-1x1">
@@ -83,24 +83,25 @@
                 </button>
               </div>
             </div>
-            <div class="card-body px-3 pt-2 pb-3 d-flex flex-column gap-1 text-center">
-              <div class="text-muted fw-semibold" style="font-size:1.1rem;">
-                <i class="bi bi-tag-fill me-1" style="color:var(--ss-accent);font-size:0.9rem;"></i>{{ product.maSanPham }}
+            <div class="card-body px-2 pt-1 pb-2 text-start">
+              <div class="d-flex align-items-start gap-1">
+                <i class="bi bi-tag-fill flex-shrink-0" style="color:var(--ss-accent);font-size:0.75rem;padding-top:3px;"></i>
+                <div class="d-flex flex-column gap-1 flex-grow-1 min-w-0">
+                  <div class="text-muted fw-semibold text-truncate" style="font-size:1.1rem;">{{ product.maSanPham }}</div>
+                  <div>
+                    <div v-if="product.phanTramGiam" class="text-muted text-decoration-line-through" style="font-size:0.85rem;">{{ formatPrice(product.giaGocThapNhat) }}</div>
+                    <div class="fw-bold" style="font-size:1.1rem; color:var(--ss-accent);">{{ formatPrice(product.phanTramGiam ? product.giaSauGiamThapNhat : product.giaThapNhat) }}</div>
+                  </div>
+                  <div>
+                    <span v-if="product.hangCoSan" class="stock-badge stock-badge--in">Còn hàng</span>
+                    <span v-else class="stock-badge stock-badge--out">Hết hàng</span>
+                  </div>
+                  <div v-if="product.kichThuocCoSan && product.kichThuocCoSan.length" class="d-flex flex-wrap gap-1">
+                    <span v-for="s in product.kichThuocCoSan" :key="s" class="size-chip">{{ s }}</span>
+                  </div>
+                    <h6 class="product-name text-dark mb-0 mt-1" style="font-size:1.1rem; line-height:1.4;">{{ product.tenSanPham }}</h6>
+                </div>
               </div>
-              <div>
-                <div v-if="product.phanTramGiam" class="text-muted text-decoration-line-through" style="font-size:0.78rem; line-height:1.2;">{{ formatPrice(product.giaGocThapNhat) }}</div>
-                <div class="fw-bold" style="font-size:1.1rem; color:var(--ss-accent); line-height:1.3;">{{ formatPrice(product.phanTramGiam ? product.giaSauGiamThapNhat : product.giaThapNhat) }}</div>
-              </div>
-              <div>
-                <span v-if="product.hangCoSan" class="stock-badge stock-badge--in">Còn hàng</span>
-                <span v-else class="stock-badge stock-badge--out">Hết hàng</span>
-              </div>
-              <div v-if="product.kichThuocCoSan && product.kichThuocCoSan.length" class="d-flex flex-wrap gap-1 justify-content-center">
-                <span v-for="s in product.kichThuocCoSan" :key="s" class="size-chip">{{ s }}</span>
-              </div>
-              <h6 class="product-name text-dark mb-0 mt-1" style="font-size:0.83rem; line-height:1.4; font-weight:500;">
-                {{ product.tenSanPham }}
-              </h6>
             </div>
           </div>
         </div>
@@ -129,7 +130,7 @@
         </div>
 
         <div v-else class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-3">
-          <div v-for="product in bestSellingProducts" :key="product.id" class="col">
+          <div v-for="product in bestSellingProducts.slice(0, 8)" :key="product.id" class="col">
             <div class="card h-100 border-0 product-card rounded-3" @click="goToDetail(product.id)">
               <div class="position-relative overflow-hidden p-2 rounded-top-3" style="background-color:#f8f9fa;">
                 <div class="ratio ratio-1x1">
@@ -151,24 +152,26 @@
                   </button>
                 </div>
               </div>
-              <div class="card-body px-3 pt-2 pb-3 d-flex flex-column gap-1 text-center">
-                <div class="text-muted fw-semibold" style="font-size:1.1rem;">
-                  <i class="bi bi-tag-fill me-1" style="color:var(--ss-accent);font-size:0.9rem;"></i>{{ product.maSanPham }}
+              <div class="card-body px-2 pt-1 pb-2 text-start">
+                <div class="d-flex align-items-start gap-1">
+                  <i class="bi bi-tag-fill flex-shrink-0" style="color:var(--ss-accent);font-size:0.75rem;padding-top:3px;"></i>
+                  <div class="d-flex flex-column gap-1 flex-grow-1 min-w-0">
+                    <div class="text-muted fw-semibold text-truncate" style="font-size:1.1rem;">{{ product.maSanPham }}</div>
+                    <div>
+                      <div v-if="product.phanTramGiam" class="text-muted text-decoration-line-through" style="font-size:0.85rem;">{{ formatPrice(product.giaGocThapNhat) }}</div>
+                      <div class="fw-bold" style="font-size:1.1rem; color:var(--ss-accent);">{{ formatPrice(product.phanTramGiam ? product.giaSauGiamThapNhat : product.giaThapNhat) }}</div>
+                    </div>
+                    <div>
+                      <span v-if="product.hangCoSan" class="stock-badge stock-badge--in">Còn hàng</span>
+                      <span v-else class="stock-badge stock-badge--out">Hết hàng</span>
+                    </div>
+                    <div v-if="product.kichThuocCoSan && product.kichThuocCoSan.length" class="d-flex flex-wrap gap-1">
+                      <span v-for="s in product.kichThuocCoSan" :key="s" class="size-chip">{{ s }}</span>
+                    </div>
+                                    <h6 class="product-name text-dark mb-0 mt-1" style="font-size:1.1rem; line-height:1.4;">{{ product.tenSanPham }}</h6>
+
+                  </div>
                 </div>
-                <div>
-                  <div v-if="product.phanTramGiam" class="text-muted text-decoration-line-through" style="font-size:0.78rem; line-height:1.2;">{{ formatPrice(product.giaGocThapNhat) }}</div>
-                  <div class="fw-bold" style="font-size:1.1rem; color:var(--ss-accent); line-height:1.3;">{{ formatPrice(product.phanTramGiam ? product.giaSauGiamThapNhat : product.giaThapNhat) }}</div>
-                </div>
-                <div>
-                  <span v-if="product.hangCoSan" class="stock-badge stock-badge--in">Còn hàng</span>
-                  <span v-else class="stock-badge stock-badge--out">Hết hàng</span>
-                </div>
-                <div v-if="product.kichThuocCoSan && product.kichThuocCoSan.length" class="d-flex flex-wrap gap-1 justify-content-center">
-                  <span v-for="s in product.kichThuocCoSan" :key="s" class="size-chip">{{ s }}</span>
-                </div>
-                <h6 class="product-name text-dark mb-0 mt-1" style="font-size:0.83rem; line-height:1.4; font-weight:500;">
-                  {{ product.tenSanPham }}
-                </h6>
               </div>
             </div>
           </div>
@@ -393,7 +396,7 @@ onBeforeUnmount(() => {
 .product-action {
   transition: opacity 0.3s ease;
 }
-.product-card .card-body { border-top: 2px solid #e0e0e0; }
+.product-card .card-body { border-top: 2px solid #f0f0f0; }
 
 /* Product name: 2 dòng max */
 .product-name {
@@ -410,7 +413,8 @@ onBeforeUnmount(() => {
   padding: 3px 11px;
   border-radius: 20px;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.3px;
 }
 .stock-badge--in  { background: #fff0f0; color: var(--ss-accent, #dc3545); }
 .stock-badge--out { background: #f5f5f5; color: #9e9e9e; }
@@ -422,8 +426,7 @@ onBeforeUnmount(() => {
   border: 1px solid #ddd;
   border-radius: 4px;
   font-size: 0.82rem;
-  color: #444;
-  background: #fff;
+  color: #666;
   font-weight: 500;
 }
 .object-fit-contain {
