@@ -96,7 +96,7 @@ const articles = [
   {
     icon: 'bi bi-lightbulb',
     tag: 'Mẹo hay',
-    tagClass: 'bg-primary',
+    tagClass: 'bg-dark',
     date: '08/02/2026',
     title: '5 mẹo bảo quản giày bóng đá bền đẹp như mới',
     desc: 'Hướng dẫn chi tiết cách vệ sinh, bảo quản giày bóng đá đúng cách để tăng tuổi thọ và giữ form giày luôn như mới mua.',
@@ -104,7 +104,7 @@ const articles = [
   {
     icon: 'bi bi-graph-up-arrow',
     tag: 'Xu hướng',
-    tagClass: 'bg-success',
+    tagClass: 'bg-secondary',
     date: '01/02/2026',
     title: 'Xu hướng giày bóng đá 2026: Nhẹ hơn, nhanh hơn',
     desc: 'Các thương hiệu lớn đang hướng tới những đôi giày siêu nhẹ, tối ưu tốc độ và sự linh hoạt cho người chơi.',
@@ -112,7 +112,7 @@ const articles = [
   {
     icon: 'bi bi-percent',
     tag: 'Khuyến mãi',
-    tagClass: 'bg-warning text-dark',
+    tagClass: 'bg-dark',
     date: '25/01/2026',
     title: 'Flash Sale tháng 2 - Giảm đến 40% tất cả sản phẩm',
     desc: 'Chương trình khuyến mãi lớn nhất đầu năm 2026. Hàng trăm sản phẩm giảm giá sốc, số lượng có hạn.',
@@ -120,7 +120,7 @@ const articles = [
   {
     icon: 'bi bi-calendar-event',
     tag: 'Sự kiện',
-    tagClass: 'bg-info',
+    tagClass: 'bg-secondary',
     date: '20/01/2026',
     title: 'Giải đấu SevenStrike Cup 2026 chính thức khởi động',
     desc: 'Giải bóng đá phong trào do SevenStrike tài trợ chính thức quay trở lại với quy mô lớn hơn và giải thưởng hấp dẫn.',

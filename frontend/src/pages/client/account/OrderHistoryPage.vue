@@ -124,10 +124,10 @@ const fetchOrders = async () => {
 const getStatusBadgeClass = (status) => {
   if (!status) return 'bg-secondary text-white';
   const s = status.toLowerCase();
-  if (s.includes('hoàn thành')) return 'bg-success text-white';
-  if (s.includes('đã giao')) return 'bg-info text-white';
-  if (s.includes('đang') || s.includes('vận chuyển')) return 'bg-primary text-white';
-  if (s.includes('chờ giao')) return 'bg-warning text-dark';
+  if (s.includes('hoàn thành')) return 'bg-dark text-white';
+  if (s.includes('đã giao')) return 'bg-dark text-white';
+  if (s.includes('đang') || s.includes('vận chuyển')) return 'bg-danger text-white';
+  if (s.includes('chờ giao')) return 'bg-secondary text-white';
   if (s.includes('chờ xác nhận')) return 'bg-secondary text-white';
   if (s.includes('hủy') || s.includes('thất bại')) return 'bg-danger text-white';
   return 'bg-secondary text-white';

@@ -232,7 +232,7 @@
                     <h6 class="mb-0 fw-bold">Đơn hàng #{{ trackedOrder.id }}</h6>
                     <small class="text-muted">{{ formatDate(trackedOrder.ngayTao) }}</small>
                   </div>
-                  <span class="badge bg-primary px-3 py-2">{{ getStatusName(trackedOrder.trangThaiHienTai) }}</span>
+                  <span class="badge bg-dark px-3 py-2">{{ getStatusName(trackedOrder.trangThaiHienTai) }}</span>
                 </div>
               </div>
               <div class="card-body p-4">
@@ -357,7 +357,7 @@
               <h5 class="mb-0 fw-bold">Đơn hàng #{{ order.id }}</h5>
               <small class="text-muted">Ngày đặt: {{ formatDate(order.ngayTao) }}</small>
             </div>
-            <span class="badge bg-primary px-3 py-2">{{ getStatusName(order.trangThaiHienTai) }}</span>
+            <span class="badge bg-dark px-3 py-2">{{ getStatusName(order.trangThaiHienTai) }}</span>
           </div>
         </div>
         <div class="card-body p-4">
@@ -488,10 +488,10 @@ const getStatusName = (code) => {
 const getStatusBadgeClass = (status) => {
   if (!status) return 'bg-secondary text-white';
   const s = status.toLowerCase();
-  if (s.includes('hoàn thành')) return 'bg-success text-white';
-  if (s.includes('đã giao')) return 'bg-info text-white';
-  if (s.includes('đang') || s.includes('vận chuyển')) return 'bg-primary text-white';
-  if (s.includes('chờ giao')) return 'bg-warning text-dark';
+  if (s.includes('hoàn thành')) return 'bg-dark text-white';
+  if (s.includes('đã giao')) return 'bg-dark text-white';
+  if (s.includes('đang') || s.includes('vận chuyển')) return 'bg-danger text-white';
+  if (s.includes('chờ giao')) return 'bg-secondary text-white';
   if (s.includes('chờ xác nhận')) return 'bg-secondary text-white';
   if (s.includes('hủy') || s.includes('thất bại')) return 'bg-danger text-white';
   return 'bg-secondary text-white';

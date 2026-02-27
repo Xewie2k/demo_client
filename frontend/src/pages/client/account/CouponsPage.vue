@@ -64,7 +64,7 @@
               <span class="badge bg-light text-dark border" style="font-size: 0.7rem;">
                 <i class="bi bi-upc me-1"></i>{{ coupon.maPhieuGiamGia }}
               </span>
-              <span class="badge rounded-pill" :class="coupon.nguon === 'personal' ? 'bg-info text-white' : 'bg-light text-dark border'">
+              <span class="badge rounded-pill" :class="coupon.nguon === 'personal' ? 'bg-dark text-white' : 'bg-light text-dark border'">
                 <i :class="coupon.nguon === 'personal' ? 'bi bi-gift' : 'bi bi-globe'" class="me-1"></i>
                 {{ coupon.nguon === 'personal' ? 'Cá nhân' : 'Công khai' }}
               </span>
@@ -206,15 +206,15 @@ const formatDate = (value) => {
 
 const getDiscountBg = (status) => {
   if (status === 'used' || status === 'expired') return '#adb5bd';
-  if (status === 'upcoming') return '#ffc107';
+  if (status === 'upcoming') return '#555555';
   return 'var(--ss-accent)';
 };
 
 const getStatusClass = (status) => {
-  if (status === 'available') return 'bg-success text-white';
+  if (status === 'available') return 'bg-dark text-white';
   if (status === 'used') return 'bg-secondary text-white';
   if (status === 'expired') return 'bg-danger text-white';
-  if (status === 'upcoming') return 'bg-warning text-dark';
+  if (status === 'upcoming') return 'bg-secondary text-white';
   return 'bg-secondary text-white';
 };
 

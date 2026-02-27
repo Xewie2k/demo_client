@@ -697,10 +697,10 @@ const fetchProducts = async () => {
 const discountBadgeClass = (pct) => {
   if (!pct) return '';
   if (pct > 70) return 'text-white';
-  if (pct >= 50) return 'bg-warning text-dark';
+  if (pct >= 50) return 'bg-danger text-white';
   return 'bg-danger text-white';
 };
-const discountBadgeStyle = (pct) => pct > 70 ? 'background-color:#FF6B00;' : '';
+const discountBadgeStyle = (pct) => pct > 70 ? 'background-color:#c62828;' : '';
 
 // ── Unique options ──
 const uniqueBrands = computed(() => [...new Set(products.value.map(p => p.tenThuongHieu).filter(Boolean))].sort());
@@ -905,7 +905,7 @@ onMounted(fetchProducts);
 /* ── Image Badges ── */
 .badge-new {
   display: inline-block;
-  background: #16a34a;
+  background: var(--ss-accent, #dc3545);
   color: #fff;
   font-size: 0.78rem;
   font-weight: 700;
@@ -915,7 +915,7 @@ onMounted(fetchProducts);
 }
 .badge-hot {
   display: inline-block;
-  background: linear-gradient(135deg, #ff5722, #c62828);
+  background: linear-gradient(135deg, #e53935, #c62828);
   color: #fff;
   font-size: 0.78rem;
   font-weight: 700;
@@ -968,7 +968,7 @@ onMounted(fetchProducts);
   font-size: 0.85rem;
   font-weight: 600;
 }
-.stock-badge--in  { background: #e8f5e9; color: #2e7d32; }
+.stock-badge--in  { background: #fff0f0; color: var(--ss-accent, #dc3545); }
 .stock-badge--out { background: #f5f5f5; color: #9e9e9e; }
 
 /* ── Size chip ── */
