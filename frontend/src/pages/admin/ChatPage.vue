@@ -24,6 +24,7 @@
           Khách hàng
         </button>
         <button
+          v-if="isAdmin"
           class="flex-1 btn btn-sm py-2 rounded-0 d-flex align-items-center justify-content-center gap-1"
           :class="activeLoai === 'NOI_BO' ? 'btn-primary text-white' : 'btn-light text-secondary'"
           @click="switchLoai('NOI_BO')"
@@ -229,9 +230,20 @@ const soPhienNoiBoCho = computed(() =>
 
 // ── Lấy user admin từ localStorage ───────────────────────────────────────────
 function getAdminUser() {
-  const raw = localStorage.getItem('user') || localStorage.getItem('nguoiDung')
+  const raw =
+    localStorage.getItem('user') ||
+    sessionStorage.getItem('user') ||
+    localStorage.getItem('nguoiDung') ||
+    sessionStorage.getItem('nguoiDung')
   try { return raw ? JSON.parse(raw) : null } catch { return null }
 }
+
+// ── Phân quyền theo role ──────────────────────────────────────────────────────
+const isAdmin = computed(() => {
+  const u = getAdminUser()
+  const role = u?.role || u?.vaiTro || u?.chucVu || ''
+  return role === 'ADMIN'
+})
 
 let subscriptionAdmin = null
 let subscriptionNoiBo = null
@@ -240,7 +252,9 @@ let subscriptionChat  = null
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 onMounted(async () => {
   await loadSessions('KHACH_HANG')
-  await loadSessions('NOI_BO')
+  if (isAdmin.value) {
+    await loadSessions('NOI_BO')
+  }
 
   const client = connectChat()
   const waitConnected = () => new Promise((resolve) => {
@@ -260,16 +274,18 @@ onMounted(async () => {
     }
   })
 
-  // Subscribe thông báo phiên nội bộ mới / cập nhật
-  subscriptionNoiBo = client.subscribe('/topic/admin/noibo-notifications', (msg) => {
-    const updatedPhien = JSON.parse(msg.body)
-    const idx = sessionsNoiBo.value.findIndex(s => s.id === updatedPhien.id)
-    if (idx >= 0) {
-      sessionsNoiBo.value[idx] = updatedPhien
-    } else {
-      sessionsNoiBo.value.unshift(updatedPhien)
-    }
-  })
+  // Subscribe thông báo phiên nội bộ — chỉ ADMIN
+  if (isAdmin.value) {
+    subscriptionNoiBo = client.subscribe('/topic/admin/noibo-notifications', (msg) => {
+      const updatedPhien = JSON.parse(msg.body)
+      const idx = sessionsNoiBo.value.findIndex(s => s.id === updatedPhien.id)
+      if (idx >= 0) {
+        sessionsNoiBo.value[idx] = updatedPhien
+      } else {
+        sessionsNoiBo.value.unshift(updatedPhien)
+      }
+    })
+  }
 })
 
 onBeforeUnmount(() => {

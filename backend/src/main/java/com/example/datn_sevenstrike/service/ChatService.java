@@ -100,50 +100,64 @@ public class ChatService {
         TinNhanDTO khachDTO = toTinNhanDTO(savedKhach);
         messagingTemplate.convertAndSend("/topic/chat/" + phienChatId, khachDTO);
 
-        // Nếu đang ở chế độ BOT → gọi Gemini (dùng prompt phù hợp với loại phiên)
+        // Nếu đang ở chế độ BOT → xử lý escalate hoặc gọi Gemini
         if (TRANG_THAI_BOT.equals(phien.getTrangThai())) {
             boolean isNoiBo = LOAI_NOI_BO.equals(phien.getLoai());
-            String geminiReply = isNoiBo
-                    ? geminiService.hoiGeminiNoiBo(req.getNoiDung())
-                    : geminiService.hoiGemini(req.getNoiDung());
+            String noiDung = req.getNoiDung() != null ? req.getNoiDung().trim() : "";
 
-            if ("CHUYEN_NHAN_VIEN".equals(geminiReply)) {
-                // Chuyển sang chờ nhân viên/admin
-                phien.setTrangThai(TRANG_THAI_CHO_NV);
-                phienChatRepo.save(phien);
+            // Kiểm tra yêu cầu escalate trực tiếp (bypass Gemini để đảm bảo độ tin cậy)
+            boolean isDirectEscalate =
+                    noiDung.contains("Tôi cần gặp Admin") ||
+                    noiDung.contains("Tôi muốn nói chuyện với nhân viên hỗ trợ");
 
-                String thongBao = isNoiBo
-                        ? "Yêu cầu của bạn cần sự phê duyệt của Admin. Đang kết nối với Admin, vui lòng chờ..."
-                        : "Tôi đã kết nối bạn với nhân viên hỗ trợ. Vui lòng chờ trong giây lát...";
-
-                TinNhan botNotify = TinNhan.builder()
-                        .phienChat(phien)
-                        .nguoiGui("BOT")
-                        .tenNguoiGui("SevenStrike AI")
-                        .noiDung(thongBao)
-                        .thoiGian(LocalDateTime.now())
-                        .build();
-                TinNhan savedNotify = tinNhanRepo.save(botNotify);
-                messagingTemplate.convertAndSend("/topic/chat/" + phienChatId, toTinNhanDTO(savedNotify));
-
-                // Thông báo đến đúng topic theo loại phiên
-                String notifyTopic = isNoiBo ? "/topic/admin/noibo-notifications" : "/topic/admin/notifications";
-                messagingTemplate.convertAndSend(notifyTopic, toDTO(phien));
-
+            if (isDirectEscalate) {
+                xuLyEscalate(phien, isNoiBo);
             } else {
-                // Lưu và broadcast câu trả lời của bot
-                TinNhan botReply = TinNhan.builder()
-                        .phienChat(phien)
-                        .nguoiGui("BOT")
-                        .tenNguoiGui("SevenStrike AI")
-                        .noiDung(geminiReply)
-                        .thoiGian(LocalDateTime.now())
-                        .build();
-                TinNhan savedBot = tinNhanRepo.save(botReply);
-                messagingTemplate.convertAndSend("/topic/chat/" + phienChatId, toTinNhanDTO(savedBot));
+                String geminiReply = isNoiBo
+                        ? geminiService.hoiGeminiNoiBo(noiDung)
+                        : geminiService.hoiGemini(noiDung);
+
+                if ("CHUYEN_NHAN_VIEN".equals(geminiReply)) {
+                    xuLyEscalate(phien, isNoiBo);
+                } else {
+                    // Lưu và broadcast câu trả lời của bot
+                    TinNhan botReply = TinNhan.builder()
+                            .phienChat(phien)
+                            .nguoiGui("BOT")
+                            .tenNguoiGui("SevenStrike AI")
+                            .noiDung(geminiReply)
+                            .thoiGian(LocalDateTime.now())
+                            .build();
+                    TinNhan savedBot = tinNhanRepo.save(botReply);
+                    messagingTemplate.convertAndSend("/topic/chat/" + phienChatId, toTinNhanDTO(savedBot));
+                }
             }
         }
         // Nếu CHO_NHAN_VIEN hoặc DANG_XU_LY → chỉ broadcast, không gọi AI
+    }
+
+    // ─── Xử lý escalate: chuyển phiên sang chờ nhân viên/admin ──────────────
+    private void xuLyEscalate(PhienChat phien, boolean isNoiBo) {
+        phien.setTrangThai(TRANG_THAI_CHO_NV);
+        phienChatRepo.save(phien);
+
+        String thongBao = isNoiBo
+                ? "Yêu cầu của bạn cần sự phê duyệt của Admin. Đang kết nối với Admin, vui lòng chờ..."
+                : "Tôi đã kết nối bạn với nhân viên hỗ trợ. Vui lòng chờ trong giây lát...";
+
+        TinNhan botNotify = TinNhan.builder()
+                .phienChat(phien)
+                .nguoiGui("BOT")
+                .tenNguoiGui("SevenStrike AI")
+                .noiDung(thongBao)
+                .thoiGian(LocalDateTime.now())
+                .build();
+        TinNhan savedNotify = tinNhanRepo.save(botNotify);
+        messagingTemplate.convertAndSend("/topic/chat/" + phien.getId(), toTinNhanDTO(savedNotify));
+
+        // Thông báo đến đúng topic theo loại phiên
+        String notifyTopic = isNoiBo ? "/topic/admin/noibo-notifications" : "/topic/admin/notifications";
+        messagingTemplate.convertAndSend(notifyTopic, toDTO(phien));
     }
 
     // ─── Nhân viên gửi tin nhắn ──────────────────────────────────────────────
