@@ -413,8 +413,17 @@ const formatPrice = (value) => {
 
 const fetchVouchers = async () => {
     try {
-        const res = await apiClient.get('/api/client/vouchers');
-        vouchers.value = res.data;
+        if (isLoggedIn.value && customer.value?.id) {
+            // Đã đăng nhập: lấy cả voucher cá nhân + công khai
+            const res = await apiClient.get('/api/client/my-coupons', {
+                params: { customerId: customer.value.id }
+            });
+            vouchers.value = res.data.filter(v => v.trangThaiHienThi === 'available');
+        } else {
+            // Chưa đăng nhập: chỉ lấy voucher công khai
+            const res = await apiClient.get('/api/client/vouchers');
+            vouchers.value = res.data;
+        }
     } catch (e) {
         console.error("Failed to fetch vouchers", e);
     }

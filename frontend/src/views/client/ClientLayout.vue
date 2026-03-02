@@ -243,6 +243,9 @@
       </div>
     </footer>
   </div>
+
+  <!-- Widget chat AI + Nhân viên — chỉ hiện ở phần /client/ -->
+  <ChatWidget />
 </template>
 
 <script setup>
@@ -250,6 +253,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCart } from '@/services/cart';
 import { useClientAuth } from '@/services/authClient';
+import ChatWidget from '@/components/shared/ChatWidget.vue';
 
 const router = useRouter();
 const { cart } = useCart();

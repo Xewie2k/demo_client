@@ -38,6 +38,12 @@
         <span class="ss-nav-label">Quản lý hóa đơn</span>
       </RouterLink>
 
+      <!-- Quản lý Chat: ADMIN + NHAN_VIEN -->
+      <RouterLink class="ss-nav-link" to="/admin/chat" title="Quản lý Chat">
+        <span class="material-icons ss-ic">chat</span>
+        <span class="ss-nav-label">Quản lý Chat</span>
+      </RouterLink>
+
       <!-- Khách hàng:
            - NHAN_VIEN: hiển thị dạng item riêng
            - ADMIN: KHÔNG hiển thị (vì đã có trong Quản lý tài khoản) -->

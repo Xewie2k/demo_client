@@ -56,6 +56,9 @@ import ThongKePage from "@/pages/thong_ke/ThongKePage.vue";
 import LichLamViecPage from "@/pages/lich_lam_viec/LichLamViec.vue";
 import GiaoCaPage from "@/pages/lich_lam_viec/GiaoCa.vue";
 
+// ✅ Chat
+import ChatPage from "@/pages/admin/ChatPage.vue";
+
 // ✅ Client Pages
 import ClientLayout from "@/views/client/ClientLayout.vue";
 import HomePage from "@/pages/client/HomePage.vue";
@@ -213,6 +216,14 @@ const routes = [
         path: "trang-chu",
         name: "admin-trang-chu",
         component: TrangChuPage,
+        meta: { roles: ["ADMIN", "NHAN_VIEN"] },
+      },
+
+      // ✅ QUẢN LÝ CHAT: ADMIN + NHÂN VIÊN
+      {
+        path: "chat",
+        name: "admin-chat",
+        component: ChatPage,
         meta: { roles: ["ADMIN", "NHAN_VIEN"] },
       },
 

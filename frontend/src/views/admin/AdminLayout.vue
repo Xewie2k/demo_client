@@ -56,14 +56,18 @@
       </div>
     </main>
   </div>
+
+  <!-- Widget chat nội bộ chỉ hiện cho nhân viên (không phải admin) -->
+  <StaffChatWidget v-if="isNhanVien" />
 </template>
 
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Swal from "sweetalert2";
 
 import SidebarMenu from "@/components/layouts/SidebarMenu.vue";
+import StaffChatWidget from "@/components/shared/StaffChatWidget.vue";
 import { useTheme } from "@/utils/useTheme";
 // Toast là component global (đã register trong main.js)
 
@@ -101,6 +105,13 @@ const getUser = () => {
     return null;
   }
 };
+
+// Chỉ nhân viên (không phải admin) mới thấy widget chat nội bộ
+const isNhanVien = computed(() => {
+  const u = getUser();
+  const role = u?.role || u?.vaiTro || u?.chucVu || '';
+  return role === 'NHAN_VIEN';
+});
 
 const syncUserName = () => {
   const u = getUser();

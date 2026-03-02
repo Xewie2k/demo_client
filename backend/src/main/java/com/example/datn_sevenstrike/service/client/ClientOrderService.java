@@ -47,11 +47,10 @@ public class ClientOrderService {
         return list.stream().map(this::mapToProductClientDTO).collect(Collectors.toList());
     }
 
-    // Sản phẩm bán chạy nhất tháng này (top 8 theo số lượng bán trong đơn hoàn thành)
+    // Sản phẩm bán chạy nhất (top 8 theo số lượng bán trong 12 tháng gần nhất)
     @Transactional(readOnly = true)
     public List<ProductClientDTO> getBestSellingProducts() {
-        LocalDateTime startOfMonth = LocalDateTime.now()
-                .withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime startOfMonth = LocalDateTime.now().minusMonths(12);
         List<Integer> topIds = hdctRepo.findBestSellingProductIds(startOfMonth, PageRequest.of(0, 8));
         // Giữ nguyên thứ tự bán chạy
         List<ProductClientDTO> result = new ArrayList<>();
@@ -64,11 +63,10 @@ public class ClientOrderService {
         return result;
     }
 
-    // Hàng mới về trong tháng hiện tại (tối đa 8 sản phẩm)
+    // Hàng mới về trong 12 tháng gần nhất (tối đa 8 sản phẩm)
     @Transactional(readOnly = true)
     public List<ProductClientDTO> getNewArrivalProducts() {
-        LocalDateTime threshold = LocalDateTime.now()
-                .withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime threshold = LocalDateTime.now().minusMonths(12);
         List<SanPham> list = sanPhamRepo.findNewArrivals(threshold, PageRequest.of(0, 8));
         return list.stream().map(this::mapToProductClientDTO).collect(Collectors.toList());
     }
@@ -335,6 +333,14 @@ public class ClientOrderService {
         if (req.getIdPhieuGiamGia() != null) {
             voucher = phieuRepo.findByIdAndXoaMemFalse(req.getIdPhieuGiamGia())
                     .orElseThrow(() -> new BadRequestEx("Voucher không tồn tại"));
+
+            // Nếu là khách vãng lai (chưa đăng nhập), không cho dùng phiếu cá nhân
+            boolean laPhieuCaNhan = !phieuCaNhanRepo
+                    .findAllByIdPhieuGiamGiaAndXoaMemFalseOrderByIdDesc(req.getIdPhieuGiamGia())
+                    .isEmpty();
+            if (laPhieuCaNhan && req.getIdKhachHang() == null) {
+                throw new BadRequestEx("Phiếu giảm giá này chỉ dành cho khách hàng đã đăng nhập");
+            }
 
              if (!Boolean.TRUE.equals(voucher.getTrangThai()) || 
                  voucher.getSoLuongSuDung() <= 0 || 
