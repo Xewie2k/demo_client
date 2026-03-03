@@ -80,6 +80,15 @@ public class ChatController {
         return ResponseEntity.ok(chatService.layDanhSachPhien(trangThai, loai));
     }
 
+    // ─── REST: Lấy thông tin một phiên (để restore) ──────────────────────────
+    @GetMapping("/api/chat/{id}")
+    @ResponseBody
+    public ResponseEntity<PhienChatDTO> layPhien(@PathVariable Integer id) {
+        return chatService.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
     // ─── REST: Lịch sử tin nhắn ──────────────────────────────────────────────
     @GetMapping("/api/chat/{id}/messages")
     @ResponseBody

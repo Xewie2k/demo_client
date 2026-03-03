@@ -98,6 +98,12 @@ export async function khoiTaoPhienNoiBo(tenNhanVien, nhanVienId = null) {
   return res.data
 }
 
+// ── REST: Lấy thông tin một phiên ────────────────────────────────────────────
+export async function getPhien(phienChatId) {
+  const res = await apiClient.get(`${BACKEND_API}/api/chat/${phienChatId}`)
+  return res.data
+}
+
 // ── REST: Lấy lịch sử tin nhắn ───────────────────────────────────────────────
 export async function layTinNhan(phienChatId) {
   const res = await apiClient.get(`${BACKEND_API}/api/chat/${phienChatId}/messages`)

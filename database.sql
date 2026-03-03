@@ -3,7 +3,7 @@ begin
     create database DATN_SevenStrike;
 end
 go
-
+ 
 use DATN_SevenStrike;
 go
 

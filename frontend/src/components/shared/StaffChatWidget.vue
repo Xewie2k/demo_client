@@ -120,7 +120,7 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { connectChat, layTinNhan, disconnectChat } from '@/services/chatService'
+import { connectChat, layTinNhan, getPhien, disconnectChat } from '@/services/chatService'
 import apiClient from '@/services/apiClient'
 
 const BACKEND_API = 'http://localhost:8080'
@@ -165,6 +165,21 @@ function getStaffUser() {
   try { return JSON.parse(raw) } catch { return null }
 }
 
+// ── LocalStorage helpers ───────────────────────────────────────────────────────
+function getStaffChatKey() {
+  const user = getStaffUser()
+  return user?.id ? `ss_chat_pid_staff_${user.id}` : 'ss_chat_pid_staff'
+}
+function saveStaffChatSession(phienId) {
+  localStorage.setItem(getStaffChatKey(), String(phienId))
+}
+function loadStaffChatSession() {
+  return localStorage.getItem(getStaffChatKey())
+}
+function clearStaffChatSession() {
+  localStorage.removeItem(getStaffChatKey())
+}
+
 // ── Khởi tạo phiên và kết nối WS ─────────────────────────────────────────────
 onMounted(async () => {
   const user = getStaffUser()
@@ -174,16 +189,36 @@ onMounted(async () => {
   const nhanVienId = user?.id || null
 
   try {
-    const res = await apiClient.post(`${BACKEND_API}/api/chat/staff/start`, {
-      tenKhach,
-      nhanVienId,
-      loai: 'NOI_BO',
-    })
-    const phien = res.data
+    let phien = null
+    const storedId = loadStaffChatSession()
+
+    if (storedId) {
+      try {
+        const stored = await getPhien(Number(storedId))
+        if (stored.trangThai !== 'DA_DONG') {
+          phien = stored
+        } else {
+          clearStaffChatSession()
+        }
+      } catch {
+        clearStaffChatSession()
+      }
+    }
+
+    if (!phien) {
+      const res = await apiClient.post(`${BACKEND_API}/api/chat/staff/start`, {
+        tenKhach,
+        nhanVienId,
+        loai: 'NOI_BO',
+      })
+      phien = res.data
+      saveStaffChatSession(phien.id)
+    }
+
     phienChatId.value = phien.id
     trangThai.value   = phien.trangThai
 
-    // Lấy tin nhắn chào hỏi ban đầu
+    // Lấy toàn bộ lịch sử tin nhắn
     const history = await layTinNhan(phien.id)
     messages.value = history
     await scrollToBottom()
@@ -205,6 +240,12 @@ onMounted(async () => {
       isWaiting.value = false
 
       if (data.nguoiGui === 'NHAN_VIEN') trangThai.value = 'DANG_XU_LY'
+
+      // Phiên đóng → clear localStorage để lần sau tạo phiên mới
+      if (data.nguoiGui === 'BOT' && data.noiDung?.includes('kết thúc')) {
+        trangThai.value = 'DA_DONG'
+        clearStaffChatSession()
+      }
 
       if (!isOpen.value) unreadCount.value++
       scrollToBottom()

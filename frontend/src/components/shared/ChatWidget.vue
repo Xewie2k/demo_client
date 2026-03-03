@@ -122,7 +122,7 @@
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import {
   connectChat, subscribeTopic, sendStompMessage,
-  khoiTaoPhien, layTinNhan, disconnectChat
+  khoiTaoPhien, layTinNhan, getPhien, disconnectChat
 } from '@/services/chatService'
 import { useClientAuth } from '@/services/authClient'
 
@@ -157,17 +157,52 @@ const visibleSuggestions    = computed(() =>
 
 let subscription = null
 
+// ── LocalStorage helpers ───────────────────────────────────────────────────────
+function getChatKey() {
+  const id = customer.value?.id
+  return id ? `ss_chat_pid_${id}` : 'ss_chat_pid_guest'
+}
+function saveChatSession(phienId) {
+  localStorage.setItem(getChatKey(), String(phienId))
+}
+function loadChatSession() {
+  return localStorage.getItem(getChatKey())
+}
+function clearChatSession() {
+  localStorage.removeItem(getChatKey())
+}
+
 // ── Khởi tạo phiên và kết nối WS ─────────────────────────────────────────────
 onMounted(async () => {
   const tenKhach = customer.value?.hoTen || 'Khách vãng lai'
   const khachHangId = customer.value?.id || null
 
   try {
-    const phien = await khoiTaoPhien(tenKhach, khachHangId)
+    let phien = null
+    const storedId = loadChatSession()
+
+    if (storedId) {
+      try {
+        const stored = await getPhien(Number(storedId))
+        if (stored.trangThai !== 'DA_DONG') {
+          phien = stored
+        } else {
+          clearChatSession()
+        }
+      } catch {
+        clearChatSession()
+      }
+    }
+
+    if (!phien) {
+      phien = await khoiTaoPhien(tenKhach, khachHangId)
+      saveChatSession(phien.id)
+    }
+
     phienChatId.value = phien.id
     trangThai.value   = phien.trangThai
 
-    // Lấy tin nhắn chào hỏi ban đầu
+    // Lấy toàn bộ lịch sử tin nhắn
     const history = await layTinNhan(phien.id)
     messages.value = history
     await scrollToBottom()
@@ -191,6 +226,12 @@ onMounted(async () => {
 
       // Cập nhật trạng thái theo type tin nhắn
       if (data.nguoiGui === 'NHAN_VIEN') trangThai.value = 'DANG_XU_LY'
+
+      // Phiên đóng → clear localStorage để lần sau tạo phiên mới
+      if (data.nguoiGui === 'BOT' && data.noiDung?.includes('kết thúc')) {
+        trangThai.value = 'DA_DONG'
+        clearChatSession()
+      }
 
       if (!isOpen.value) unreadCount.value++
       scrollToBottom()

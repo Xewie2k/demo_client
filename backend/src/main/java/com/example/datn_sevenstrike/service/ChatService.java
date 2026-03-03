@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -246,6 +247,11 @@ public class ChatService {
                     : phienChatRepo.findByTrangThaiNotOrderByThoiGianBatDauDesc(TRANG_THAI_DA_DONG);
         }
         return list.stream().map(this::toDTO).collect(Collectors.toList());
+    }
+
+    // ─── Lấy thông tin một phiên ─────────────────────────────────────────────
+    public Optional<PhienChatDTO> findById(Integer id) {
+        return phienChatRepo.findById(id).map(this::toDTO);
     }
 
     // ─── Lấy lịch sử tin nhắn ───────────────────────────────────────────────
