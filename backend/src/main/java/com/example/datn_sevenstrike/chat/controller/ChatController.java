@@ -1,7 +1,7 @@
-package com.example.datn_sevenstrike.controller;
+package com.example.datn_sevenstrike.chat.controller;
 
-import com.example.datn_sevenstrike.dto.chat.*;
-import com.example.datn_sevenstrike.service.ChatService;
+import com.example.datn_sevenstrike.chat.dto.*;
+import com.example.datn_sevenstrike.chat.service.ChatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.*;
@@ -54,11 +54,12 @@ public class ChatController {
         return ResponseEntity.ok(chatService.nhanVienNhanPhien(id, nhanVienId));
     }
 
-    // ─── REST: Đóng phiên ────────────────────────────────────────────────────
+    // ─── REST: Đóng phiên (có kiểm tra quyền) ───────────────────────────────
     @PostMapping("/api/chat/{id}/close")
     @ResponseBody
-    public ResponseEntity<Void> dongPhien(@PathVariable Integer id) {
-        chatService.dongPhien(id);
+    public ResponseEntity<Void> dongPhien(@PathVariable Integer id,
+                                           @RequestBody(required = false) DongPhienRequest req) {
+        chatService.dongPhien(id, req);
         return ResponseEntity.ok().build();
     }
 

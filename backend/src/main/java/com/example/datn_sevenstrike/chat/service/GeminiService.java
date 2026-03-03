@@ -1,4 +1,4 @@
-package com.example.datn_sevenstrike.service;
+package com.example.datn_sevenstrike.chat.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

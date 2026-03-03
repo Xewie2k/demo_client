@@ -1,4 +1,4 @@
-package com.example.datn_sevenstrike.entity;
+package com.example.datn_sevenstrike.chat.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

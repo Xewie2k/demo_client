@@ -24,6 +24,7 @@
               <span v-if="trangThai === 'BOT_DANG_XU_LY'">🤖 Trợ lý AI</span>
               <span v-else-if="trangThai === 'CHO_NHAN_VIEN'">⏳ Đang kết nối nhân viên...</span>
               <span v-else-if="trangThai === 'DANG_XU_LY'">🟢 Nhân viên đang hỗ trợ</span>
+              <span v-else-if="trangThai === 'DA_DONG'">🔴 Phiên đã kết thúc</span>
               <span v-else>Hỗ trợ trực tuyến</span>
             </div>
           </div>
@@ -91,8 +92,16 @@
         </div>
       </transition>
 
+      <!-- Phiên đã kết thúc -->
+      <div v-if="trangThai === 'DA_DONG'" class="chat-ended-bar">
+        <span class="chat-ended-text">Phiên hỗ trợ đã kết thúc</span>
+        <button class="chat-restart-btn" @click="batDauMoi">
+          🔄 Bắt đầu cuộc trò chuyện mới
+        </button>
+      </div>
+
       <!-- Input -->
-      <div class="chat-input-wrap">
+      <div v-else class="chat-input-wrap">
         <button
           class="btn-suggest"
           @click="showSuggestions = !showSuggestions"
@@ -103,12 +112,11 @@
           class="chat-input"
           placeholder="Nhập tin nhắn..."
           @keyup.enter="guiTin"
-          :disabled="trangThai === 'DA_DONG'"
         />
         <button
           class="chat-send-btn"
           @click="guiTin"
-          :disabled="!inputText.trim() || trangThai === 'DA_DONG'"
+          :disabled="!inputText.trim()"
         >
           <span class="material-icons">send</span>
         </button>
@@ -123,7 +131,7 @@ import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import {
   connectChat, subscribeTopic, sendStompMessage,
   khoiTaoPhien, layTinNhan, getPhien, disconnectChat
-} from '@/services/chatService'
+} from '@/chatAI/services/chatService'
 import { useClientAuth } from '@/services/authClient'
 
 const { customer } = useClientAuth()
@@ -226,6 +234,7 @@ onMounted(async () => {
 
       // Cập nhật trạng thái theo type tin nhắn
       if (data.nguoiGui === 'NHAN_VIEN') trangThai.value = 'DANG_XU_LY'
+      if (data.nguoiGui === 'BOT' && data.noiDung?.includes('tiếp nhận')) trangThai.value = 'DANG_XU_LY'
 
       // Phiên đóng → clear localStorage để lần sau tạo phiên mới
       if (data.nguoiGui === 'BOT' && data.noiDung?.includes('kết thúc')) {
@@ -275,6 +284,58 @@ function yeuCauNhanVien() {
     noiDung: 'Tôi muốn nói chuyện với nhân viên hỗ trợ.',
     tenNguoiGui: customer.value?.hoTen || 'Khách vãng lai',
   })
+}
+
+// ── Bắt đầu phiên mới khi phiên cũ đã đóng ───────────────────────────────────
+async function batDauMoi() {
+  if (subscription) { subscription.unsubscribe(); subscription = null }
+  messages.value = []
+  trangThai.value = 'BOT_DANG_XU_LY'
+  phienChatId.value = null
+  isWaiting.value = false
+  showSuggestions.value = true
+  showAllSuggestions.value = false
+
+  const tenKhach = customer.value?.hoTen || 'Khách vãng lai'
+  const khachHangId = customer.value?.id || null
+
+  try {
+    const phien = await khoiTaoPhien(tenKhach, khachHangId)
+    saveChatSession(phien.id)
+    phienChatId.value = phien.id
+    trangThai.value = phien.trangThai
+
+    const history = await layTinNhan(phien.id)
+    messages.value = history
+    await scrollToBottom()
+
+    const client = connectChat()
+    const waitConnected = () => new Promise((resolve) => {
+      if (client.connected) { resolve(); return }
+      const check = setInterval(() => {
+        if (client.connected) { clearInterval(check); resolve() }
+      }, 100)
+    })
+    await waitConnected()
+
+    subscription = client.subscribe(`/topic/chat/${phien.id}`, (msg) => {
+      const data = JSON.parse(msg.body)
+      messages.value.push(data)
+      isWaiting.value = false
+
+      if (data.nguoiGui === 'NHAN_VIEN') trangThai.value = 'DANG_XU_LY'
+      if (data.nguoiGui === 'BOT' && data.noiDung?.includes('tiếp nhận')) trangThai.value = 'DANG_XU_LY'
+      if (data.nguoiGui === 'BOT' && data.noiDung?.includes('kết thúc')) {
+        trangThai.value = 'DA_DONG'
+        clearChatSession()
+      }
+
+      if (!isOpen.value) unreadCount.value++
+      scrollToBottom()
+    })
+  } catch (e) {
+    console.error('[ChatWidget] Bắt đầu mới thất bại:', e)
+  }
 }
 
 // ── Toggle cửa sổ chat ────────────────────────────────────────────────────────
@@ -382,7 +443,7 @@ async function scrollToBottom() {
   line-height: 1.5;
   word-break: break-word;
 }
-.chat-msg--bot   .chat-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; }
+.chat-msg--bot   .chat-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; white-space: pre-wrap; }
 .chat-msg--khach .chat-msg__bubble { background: var(--ss-accent, #ff4d4f); color: #fff; border-radius: 12px 2px 12px 12px; }
 .chat-msg--nv    .chat-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 2px 12px 12px 12px; }
 
@@ -489,6 +550,35 @@ async function scrollToBottom() {
   line-height: 1;
 }
 .btn-suggest:hover { opacity: 1; }
+
+/* ── Ended bar ────────────────────────────────────────────────────────────── */
+.chat-ended-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #e5e7eb;
+  background: #fff8f8;
+}
+.chat-ended-text {
+  font-size: 12px;
+  color: #9ca3af;
+}
+.chat-restart-btn {
+  font-size: 13px;
+  padding: 6px 16px;
+  border: 1px solid #ff4d4f;
+  color: #ff4d4f;
+  background: #fff;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.chat-restart-btn:hover {
+  background: #ff4d4f;
+  color: #fff;
+}
 
 /* ── Transition ───────────────────────────────────────────────────────────── */
 .chat-slide-enter-active,

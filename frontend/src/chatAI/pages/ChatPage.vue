@@ -113,14 +113,15 @@
           <div class="d-flex gap-2">
             <button
               v-if="selectedSession.trangThai === 'CHO_NHAN_VIEN'"
-              class="btn btn-sm btn-success"
+              class="btn btn-sm"
+              style="background:var(--ss-accent);color:#fff;border:none"
               @click="tiepNhan"
             >
               <span class="material-icons" style="font-size:14px; vertical-align:middle">check_circle</span>
               Tiếp nhận
             </button>
             <button
-              v-if="selectedSession.trangThai !== 'DA_DONG'"
+              v-if="canClose"
               class="btn btn-sm btn-outline-secondary"
               @click="dongPhienHienTai"
             >
@@ -185,11 +186,13 @@ import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import {
   connectChat, sendStompMessage,
   layDanhSachPhien, layTinNhan, nhanPhien, dongPhien
-} from '@/services/chatService'
+} from '@/chatAI/services/chatService'
 
 // ── Dữ liệu ─────────────────────────────────────────────────────────────────
-const sessions        = ref([])
-const sessionsNoiBo   = ref([])
+const sessions            = ref([])
+const sessionsNoiBo       = ref([])
+const sessionsClosedKH    = ref([])
+const sessionsClosedNoiBo = ref([])
 const selectedId      = ref(null)
 const currentMessages = ref([])
 const replyText       = ref('')
@@ -209,14 +212,19 @@ const currentSessions = computed(() =>
 )
 
 const selectedSession = computed(() =>
-  [...sessions.value, ...sessionsNoiBo.value].find(s => s.id === selectedId.value)
+  [...sessions.value, ...sessionsNoiBo.value,
+   ...sessionsClosedKH.value, ...sessionsClosedNoiBo.value]
+    .find(s => s.id === selectedId.value)
 )
 
 const filteredSessions = computed(() => {
-  const list = currentSessions.value
-  if (activeTab.value === 'active') {
-    return list.filter(s => s.trangThai !== 'DA_DONG')
+  if (activeTab.value === 'DA_DONG') {
+    return activeLoai.value === 'NOI_BO'
+      ? sessionsClosedNoiBo.value
+      : sessionsClosedKH.value
   }
+  const list = currentSessions.value
+  if (activeTab.value === 'active') return list.filter(s => s.trangThai !== 'DA_DONG')
   return list.filter(s => s.trangThai === activeTab.value)
 })
 
@@ -227,6 +235,13 @@ const soPhienCho = computed(() =>
 const soPhienNoiBoCho = computed(() =>
   sessionsNoiBo.value.filter(s => s.trangThai === 'CHO_NHAN_VIEN').length
 )
+
+const canClose = computed(() => {
+  if (!selectedSession.value || selectedSession.value.trangThai === 'DA_DONG') return false
+  if (isAdmin.value) return true
+  const user = getAdminUser()
+  return selectedSession.value.nhanVienId === user?.id
+})
 
 // ── Lấy user admin từ localStorage ───────────────────────────────────────────
 function getAdminUser() {
@@ -266,11 +281,16 @@ onMounted(async () => {
   // Subscribe thông báo phiên khách hàng mới / cập nhật
   subscriptionAdmin = client.subscribe('/topic/admin/notifications', (msg) => {
     const updatedPhien = JSON.parse(msg.body)
-    const idx = sessions.value.findIndex(s => s.id === updatedPhien.id)
-    if (idx >= 0) {
-      sessions.value[idx] = updatedPhien
+    if (updatedPhien.trangThai === 'DA_DONG') {
+      const idx = sessions.value.findIndex(s => s.id === updatedPhien.id)
+      if (idx >= 0) sessions.value.splice(idx, 1)
+      const ci = sessionsClosedKH.value.findIndex(s => s.id === updatedPhien.id)
+      if (ci >= 0) sessionsClosedKH.value[ci] = updatedPhien
+      else sessionsClosedKH.value.unshift(updatedPhien)
     } else {
-      sessions.value.unshift(updatedPhien)
+      const idx = sessions.value.findIndex(s => s.id === updatedPhien.id)
+      if (idx >= 0) sessions.value[idx] = updatedPhien
+      else sessions.value.unshift(updatedPhien)
     }
   })
 
@@ -278,11 +298,16 @@ onMounted(async () => {
   if (isAdmin.value) {
     subscriptionNoiBo = client.subscribe('/topic/admin/noibo-notifications', (msg) => {
       const updatedPhien = JSON.parse(msg.body)
-      const idx = sessionsNoiBo.value.findIndex(s => s.id === updatedPhien.id)
-      if (idx >= 0) {
-        sessionsNoiBo.value[idx] = updatedPhien
+      if (updatedPhien.trangThai === 'DA_DONG') {
+        const idx = sessionsNoiBo.value.findIndex(s => s.id === updatedPhien.id)
+        if (idx >= 0) sessionsNoiBo.value.splice(idx, 1)
+        const ci = sessionsClosedNoiBo.value.findIndex(s => s.id === updatedPhien.id)
+        if (ci >= 0) sessionsClosedNoiBo.value[ci] = updatedPhien
+        else sessionsClosedNoiBo.value.unshift(updatedPhien)
       } else {
-        sessionsNoiBo.value.unshift(updatedPhien)
+        const idx = sessionsNoiBo.value.findIndex(s => s.id === updatedPhien.id)
+        if (idx >= 0) sessionsNoiBo.value[idx] = updatedPhien
+        else sessionsNoiBo.value.unshift(updatedPhien)
       }
     })
   }
@@ -293,6 +318,18 @@ onBeforeUnmount(() => {
   if (subscriptionNoiBo) subscriptionNoiBo.unsubscribe()
   if (subscriptionChat)  subscriptionChat.unsubscribe()
 })
+
+// ── Tải danh sách phiên đã đóng ───────────────────────────────────────────────
+async function loadClosedSessions() {
+  try {
+    const loai = activeLoai.value
+    const data = await layDanhSachPhien('DA_DONG', loai)
+    if (loai === 'NOI_BO') sessionsClosedNoiBo.value = data
+    else sessionsClosedKH.value = data
+  } catch (e) {
+    console.error('[ChatPage] loadClosedSessions error:', e)
+  }
+}
 
 // ── Tải danh sách phiên ───────────────────────────────────────────────────────
 async function loadSessions(loai) {
@@ -373,19 +410,31 @@ function guiTinNhanVien() {
 // ── Đóng phiên ────────────────────────────────────────────────────────────────
 async function dongPhienHienTai() {
   if (!selectedId.value) return
+  const user = getAdminUser()
   try {
-    await dongPhien(selectedId.value)
+    await dongPhien(selectedId.value, {
+      nguoiDongId: user?.id || null,
+      vaiTro: isAdmin.value ? 'ADMIN' : 'NHAN_VIEN',
+    })
     const sess = selectedSession.value
-    const list = sess?.loai === 'NOI_BO' ? sessionsNoiBo : sessions
+    const list       = sess?.loai === 'NOI_BO' ? sessionsNoiBo    : sessions
+    const closedList = sess?.loai === 'NOI_BO' ? sessionsClosedNoiBo : sessionsClosedKH
     const idx = list.value.findIndex(s => s.id === selectedId.value)
-    if (idx >= 0) list.value[idx].trangThai = 'DA_DONG'
+    if (idx >= 0) {
+      const closedSess = { ...list.value[idx], trangThai: 'DA_DONG' }
+      list.value.splice(idx, 1)
+      const existIdx = closedList.value.findIndex(s => s.id === closedSess.id)
+      if (existIdx >= 0) closedList.value[existIdx] = closedSess
+      else closedList.value.unshift(closedSess)
+    }
   } catch (e) {
     console.error('[ChatPage] dongPhien error:', e)
   }
 }
 
-function switchTab(val) {
+async function switchTab(val) {
   activeTab.value = val
+  if (val === 'DA_DONG') await loadClosedSessions()
 }
 
 function switchLoai(loai) {
@@ -393,6 +442,7 @@ function switchLoai(loai) {
   selectedId.value = null
   currentMessages.value = []
   if (subscriptionChat) { subscriptionChat.unsubscribe(); subscriptionChat = null }
+  if (activeTab.value === 'DA_DONG') loadClosedSessions()
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -453,10 +503,12 @@ async function scrollToBottom() {
   margin-bottom: 14px;
   max-width: 75%;
 }
-.admin-msg--bot, .admin-msg--nv { align-self: flex-start; }
-.admin-msg--khach { align-self: flex-end; margin-left: auto; }
+.admin-msg--bot   { align-self: flex-start; }
+.admin-msg--nv    { align-self: flex-start; }           /* Nhân viên → trái */
+.admin-msg--khach { align-self: flex-end; }             /* Khách hàng → phải */
 
 .admin-msg__meta { font-size: 11px; color: #9ca3af; margin-bottom: 4px; }
+.admin-msg--nv    .admin-msg__meta { text-align: left; }
 .admin-msg--khach .admin-msg__meta { text-align: right; }
 
 .admin-msg__bubble {
@@ -466,9 +518,9 @@ async function scrollToBottom() {
   line-height: 1.55;
   word-break: break-word;
 }
-.admin-msg--bot   .admin-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; }
-.admin-msg--khach .admin-msg__bubble { background: var(--ss-accent); color: #fff; }
-.admin-msg--nv    .admin-msg__bubble { background: #1e3a8a; color: #fff; }
+.admin-msg--bot   .admin-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; }
+.admin-msg--nv    .admin-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 2px 12px 12px 12px; }
+.admin-msg--khach .admin-msg__bubble { background: var(--ss-accent); color: #fff; border-radius: 12px 2px 12px 12px; }
 
 .header-noibo {
   background: #eff6ff;

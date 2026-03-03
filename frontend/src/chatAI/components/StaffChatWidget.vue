@@ -24,6 +24,7 @@
               <span v-if="trangThai === 'BOT_DANG_XU_LY'">🤖 AI Nội Bộ</span>
               <span v-else-if="trangThai === 'CHO_NHAN_VIEN'">⏳ Đang kết nối Admin...</span>
               <span v-else-if="trangThai === 'DANG_XU_LY'">🟢 Admin đang hỗ trợ</span>
+              <span v-else-if="trangThai === 'DA_DONG'">🔴 Phiên đã kết thúc</span>
               <span v-else>Hỗ trợ nội bộ</span>
             </div>
           </div>
@@ -91,8 +92,16 @@
         </div>
       </transition>
 
+      <!-- Phiên đã kết thúc -->
+      <div v-if="trangThai === 'DA_DONG'" class="chat-ended-bar">
+        <span class="chat-ended-text">Phiên nội bộ đã kết thúc</span>
+        <button class="chat-restart-btn" @click="batDauMoi">
+          🔄 Bắt đầu cuộc trò chuyện mới
+        </button>
+      </div>
+
       <!-- Input -->
-      <div class="chat-input-wrap">
+      <div v-else class="chat-input-wrap">
         <button
           class="btn-suggest"
           @click="showSuggestions = !showSuggestions"
@@ -103,12 +112,11 @@
           class="chat-input"
           placeholder="Nhập tin nhắn..."
           @keyup.enter="guiTin"
-          :disabled="trangThai === 'DA_DONG'"
         />
         <button
           class="staff-send-btn"
           @click="guiTin"
-          :disabled="!inputText.trim() || trangThai === 'DA_DONG'"
+          :disabled="!inputText.trim()"
         >
           <span class="material-icons">send</span>
         </button>
@@ -120,7 +128,7 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { connectChat, layTinNhan, getPhien, disconnectChat } from '@/services/chatService'
+import { connectChat, layTinNhan, getPhien, disconnectChat } from '@/chatAI/services/chatService'
 import apiClient from '@/services/apiClient'
 
 const BACKEND_API = 'http://localhost:8080'
@@ -297,6 +305,63 @@ function yeuCauAdmin() {
   })
 }
 
+// ── Bắt đầu phiên mới khi phiên cũ đã đóng ───────────────────────────────────
+async function batDauMoi() {
+  if (subscription) { subscription.unsubscribe(); subscription = null }
+  messages.value = []
+  trangThai.value = 'BOT_DANG_XU_LY'
+  phienChatId.value = null
+  isWaiting.value = false
+  showSuggestions.value = true
+  showAllSuggestions.value = false
+
+  const user = getStaffUser()
+  const tenKhach = user?.hoTen || user?.tenNhanVien || user?.ten || 'Nhân viên'
+  const nhanVienId = user?.id || null
+
+  try {
+    const res = await apiClient.post(`${BACKEND_API}/api/chat/staff/start`, {
+      tenKhach,
+      nhanVienId,
+      loai: 'NOI_BO',
+    })
+    const phien = res.data
+    saveStaffChatSession(phien.id)
+    phienChatId.value = phien.id
+    trangThai.value = phien.trangThai
+
+    const history = await layTinNhan(phien.id)
+    messages.value = history
+    await scrollToBottom()
+
+    const client = connectChat()
+    const waitConnected = () => new Promise((resolve) => {
+      if (client.connected) { resolve(); return }
+      const check = setInterval(() => {
+        if (client.connected) { clearInterval(check); resolve() }
+      }, 100)
+    })
+    await waitConnected()
+
+    subscription = client.subscribe(`/topic/chat/${phien.id}`, (msg) => {
+      const data = JSON.parse(msg.body)
+      messages.value.push(data)
+      isWaiting.value = false
+
+      if (data.nguoiGui === 'NHAN_VIEN') trangThai.value = 'DANG_XU_LY'
+      if (data.nguoiGui === 'BOT' && data.noiDung?.includes('kết thúc')) {
+        trangThai.value = 'DA_DONG'
+        clearStaffChatSession()
+      }
+
+      if (!isOpen.value) unreadCount.value++
+      scrollToBottom()
+    })
+  } catch (e) {
+    console.error('[StaffChatWidget] Bắt đầu mới thất bại:', e)
+  }
+}
+
 // ── Toggle cửa sổ chat ────────────────────────────────────────────────────────
 function toggleChat() {
   isOpen.value = !isOpen.value
@@ -402,7 +467,7 @@ async function scrollToBottom() {
   line-height: 1.5;
   word-break: break-word;
 }
-.chat-msg--bot   .chat-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; }
+.chat-msg--bot   .chat-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; white-space: pre-wrap; }
 .chat-msg--khach .chat-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 12px 2px 12px 12px; }
 .chat-msg--nv    .chat-msg__bubble { background: #1d4ed8; color: #fff; border-radius: 2px 12px 12px 12px; }
 
@@ -509,6 +574,35 @@ async function scrollToBottom() {
   line-height: 1;
 }
 .btn-suggest:hover { opacity: 1; }
+
+/* ── Ended bar ────────────────────────────────────────────────────────────── */
+.chat-ended-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid #e5e7eb;
+  background: #f8faff;
+}
+.chat-ended-text {
+  font-size: 12px;
+  color: #9ca3af;
+}
+.chat-restart-btn {
+  font-size: 13px;
+  padding: 6px 16px;
+  border: 1px solid #1e3a8a;
+  color: #1e3a8a;
+  background: #fff;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.chat-restart-btn:hover {
+  background: #1e3a8a;
+  color: #fff;
+}
 
 /* ── Transition ───────────────────────────────────────────────────────────── */
 .chat-slide-enter-active,

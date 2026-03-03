@@ -1,6 +1,6 @@
-package com.example.datn_sevenstrike.repository;
+package com.example.datn_sevenstrike.chat.repository;
 
-import com.example.datn_sevenstrike.entity.TinNhan;
+import com.example.datn_sevenstrike.chat.entity.TinNhan;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

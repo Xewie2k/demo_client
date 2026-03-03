@@ -253,7 +253,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCart } from '@/services/cart';
 import { useClientAuth } from '@/services/authClient';
-import ChatWidget from '@/components/shared/ChatWidget.vue';
+import ChatWidget from '@/chatAI/components/ChatWidget.vue';
 
 const router = useRouter();
 const { cart } = useCart();

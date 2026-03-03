@@ -1,6 +1,8 @@
-package com.example.datn_sevenstrike.service;
+package com.example.datn_sevenstrike.chat.service;
 
-import com.example.datn_sevenstrike.dto.chat.*;
+import com.example.datn_sevenstrike.chat.dto.*;
+import com.example.datn_sevenstrike.chat.entity.*;
+import com.example.datn_sevenstrike.chat.repository.*;
 import com.example.datn_sevenstrike.entity.*;
 import com.example.datn_sevenstrike.repository.*;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -49,8 +52,7 @@ public class ChatService {
             phien.setTenKhach(req.getTenKhach() != null ? req.getTenKhach() : "Nhân viên");
             if (req.getNhanVienId() != null) {
                 nhanVienRepo.findById(req.getNhanVienId()).ifPresent(nv -> {
-                    // Lưu nhân viên khởi tạo vào field nhanVien tạm (sẽ bị overwrite khi admin nhận)
-                    // Dùng tenKhach để hiển thị tên
+                    phien.setNhanVien(nv); // Lưu để phân quyền đóng phiên
                     phien.setTenKhach(nv.getTenNhanVien() != null ? nv.getTenNhanVien() : req.getTenKhach());
                 });
             }
@@ -190,15 +192,16 @@ public class ChatService {
         phien.setTrangThai(TRANG_THAI_DANG_XU_LY);
         PhienChat saved = phienChatRepo.save(phien);
 
-        // Thông báo cho khách
+        // Thông báo cho khách (kèm tên và mã nhân viên)
         String tenNV = saved.getNhanVien() != null
                 ? (saved.getNhanVien().getTenNhanVien() != null ? saved.getNhanVien().getTenNhanVien() : "Nhân viên")
                 : "Nhân viên";
+        String maNV = saved.getNhanVien() != null ? String.valueOf(saved.getNhanVien().getId()) : "";
         TinNhan notify = TinNhan.builder()
                 .phienChat(saved)
                 .nguoiGui("BOT")
                 .tenNguoiGui("SevenStrike AI")
-                .noiDung("Nhân viên " + tenNV + " đã tiếp nhận hỗ trợ bạn.")
+                .noiDung("Nhân viên " + tenNV + " (Mã: " + maNV + ") đã tiếp nhận hỗ trợ bạn.")
                 .thoiGian(LocalDateTime.now())
                 .build();
         TinNhan savedNotify = tinNhanRepo.save(notify);
@@ -212,11 +215,26 @@ public class ChatService {
         return toDTO(saved);
     }
 
-    // ─── Đóng phiên ──────────────────────────────────────────────────────────
+    // ─── Đóng phiên (WS endpoint gọi overload này) ───────────────────────────
     @Transactional
     public void dongPhien(Integer phienChatId) {
+        dongPhien(phienChatId, null);
+    }
+
+    // ─── Đóng phiên (REST endpoint — có kiểm tra quyền) ─────────────────────
+    @Transactional
+    public void dongPhien(Integer phienChatId, DongPhienRequest req) {
         PhienChat phien = phienChatRepo.findById(phienChatId)
                 .orElseThrow(() -> new RuntimeException("Phiên chat không tồn tại"));
+
+        // Kiểm tra quyền: nhân viên chỉ được đóng phiên mình phụ trách
+        if (req != null && "NHAN_VIEN".equals(req.getVaiTro())) {
+            Integer nvId = phien.getNhanVien() != null ? phien.getNhanVien().getId() : null;
+            if (!Objects.equals(nvId, req.getNguoiDongId())) {
+                throw new RuntimeException("Không có quyền đóng phiên này");
+            }
+        }
+
         phien.setTrangThai(TRANG_THAI_DA_DONG);
         phien.setThoiGianKetThuc(LocalDateTime.now());
         phienChatRepo.save(phien);
@@ -230,6 +248,12 @@ public class ChatService {
                 .build();
         TinNhan saved = tinNhanRepo.save(notify);
         messagingTemplate.convertAndSend("/topic/chat/" + phienChatId, toTinNhanDTO(saved));
+
+        // Broadcast cập nhật session đến ChatPage để đồng bộ real-time
+        String notifyTopic = LOAI_NOI_BO.equals(phien.getLoai())
+                ? "/topic/admin/noibo-notifications"
+                : "/topic/admin/notifications";
+        messagingTemplate.convertAndSend(notifyTopic, toDTO(phien));
     }
 
     // ─── Lấy danh sách phiên (cho admin) ────────────────────────────────────
@@ -272,6 +296,7 @@ public class ChatService {
                 .thoiGianBatDau(p.getThoiGianBatDau())
                 .tinNhanCuoi(tinNhanCuoi)
                 .soTinNhan(tinNhans.size())
+                .nhanVienId(p.getNhanVien() != null ? p.getNhanVien().getId() : null)
                 .build();
     }
 

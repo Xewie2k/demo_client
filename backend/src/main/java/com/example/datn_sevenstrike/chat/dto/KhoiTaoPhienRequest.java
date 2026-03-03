@@ -1,4 +1,4 @@
-package com.example.datn_sevenstrike.dto.chat;
+package com.example.datn_sevenstrike.chat.dto;
 
 import lombok.*;
 

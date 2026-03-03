@@ -1,4 +1,4 @@
-package com.example.datn_sevenstrike.config;
+package com.example.datn_sevenstrike.chat.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;

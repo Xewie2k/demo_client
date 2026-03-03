@@ -1,7 +1,7 @@
 import { ref } from 'vue'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
-import apiClient from './apiClient'
+import apiClient from '@/services/apiClient'
 
 const BACKEND_WS_URL = 'http://localhost:8080/ws'
 const BACKEND_API    = 'http://localhost:8080'
@@ -126,8 +126,8 @@ export async function nhanPhien(phienChatId, nhanVienId) {
 }
 
 // ── REST: Đóng phiên ─────────────────────────────────────────────────────────
-export async function dongPhien(phienChatId) {
-  await apiClient.post(`${BACKEND_API}/api/chat/${phienChatId}/close`)
+export async function dongPhien(phienChatId, data = {}) {
+  await apiClient.post(`${BACKEND_API}/api/chat/${phienChatId}/close`, data)
 }
 
 export { isConnected }

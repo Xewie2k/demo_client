@@ -1,4 +1,4 @@
-package com.example.datn_sevenstrike.dto.chat;
+package com.example.datn_sevenstrike.chat.dto;
 
 import lombok.*;
 
@@ -14,4 +14,5 @@ public class PhienChatDTO {
     private LocalDateTime thoiGianBatDau;
     private String tinNhanCuoi;
     private int soTinNhan;
+    private Integer nhanVienId;
 }

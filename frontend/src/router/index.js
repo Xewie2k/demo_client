@@ -57,7 +57,7 @@ import LichLamViecPage from "@/pages/lich_lam_viec/LichLamViec.vue";
 import GiaoCaPage from "@/pages/lich_lam_viec/GiaoCa.vue";
 
 // ✅ Chat
-import ChatPage from "@/pages/admin/ChatPage.vue";
+import ChatPage from "@/chatAI/pages/ChatPage.vue";
 
 // ✅ Client Pages
 import ClientLayout from "@/views/client/ClientLayout.vue";

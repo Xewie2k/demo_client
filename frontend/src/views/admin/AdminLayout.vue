@@ -67,7 +67,7 @@ import { useRoute, useRouter } from "vue-router";
 import Swal from "sweetalert2";
 
 import SidebarMenu from "@/components/layouts/SidebarMenu.vue";
-import StaffChatWidget from "@/components/shared/StaffChatWidget.vue";
+import StaffChatWidget from "@/chatAI/components/StaffChatWidget.vue";
 import { useTheme } from "@/utils/useTheme";
 // Toast là component global (đã register trong main.js)
 
