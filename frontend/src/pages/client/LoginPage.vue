@@ -16,20 +16,20 @@
 
           <div v-if="errorMsg" class="alert alert-danger py-2 small rounded-3">{{ errorMsg }}</div>
 
-          <form @submit.prevent="handleLogin">
+          <form @submit.prevent="handleLogin" novalidate>
             <div class="mb-3">
               <label class="form-label small fw-semibold text-secondary">Email / Tên tài khoản</label>
               <div class="input-group">
                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
                 <input
                   type="text"
-                  class="form-control border-start-0 ps-0"
+                  :class="['form-control border-start-0 ps-0', errors.username && 'is-invalid']"
                   v-model="username"
-                  required
                   placeholder="Nhập email hoặc tên tài khoản"
                   autofocus
                 >
               </div>
+              <div v-if="errors.username" class="text-danger small mt-1">{{ errors.username }}</div>
             </div>
             <div class="mb-4">
               <label class="form-label small fw-semibold text-secondary">Mật khẩu</label>
@@ -37,15 +37,15 @@
                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock text-muted"></i></span>
                 <input
                   :type="showPassword ? 'text' : 'password'"
-                  class="form-control border-start-0 border-end-0 ps-0"
+                  :class="['form-control border-start-0 border-end-0 ps-0', errors.password && 'is-invalid']"
                   v-model="password"
-                  required
                   placeholder="Nhập mật khẩu"
                 >
                 <button class="btn btn-outline-secondary border-start-0" type="button" @click="showPassword = !showPassword" tabindex="-1">
                   <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'" class="text-muted"></i>
                 </button>
               </div>
+              <div v-if="errors.password" class="text-danger small mt-1">{{ errors.password }}</div>
             </div>
             <button
               type="submit"
@@ -84,10 +84,27 @@ const password = ref('');
 const loading = ref(false);
 const errorMsg = ref('');
 const showPassword = ref(false);
+const errors = ref({});
+
+function validate() {
+  errors.value = {};
+  if (!username.value.trim()) {
+    errors.value.username = 'Vui lòng nhập email hoặc tên tài khoản';
+  } else if (username.value.trim().length < 3) {
+    errors.value.username = 'Tối thiểu 3 ký tự';
+  }
+  if (!password.value) {
+    errors.value.password = 'Vui lòng nhập mật khẩu';
+  } else if (password.value.length < 6) {
+    errors.value.password = 'Mật khẩu tối thiểu 6 ký tự';
+  }
+  return Object.keys(errors.value).length === 0;
+}
 
 const handleLogin = async () => {
-  loading.value = true;
   errorMsg.value = '';
+  if (!validate()) return;
+  loading.value = true;
   try {
     await login(username.value, password.value);
     const redirect = route.query.redirect || '/client';

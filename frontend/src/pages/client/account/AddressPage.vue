@@ -51,32 +51,37 @@
             <div v-if="modalError" class="alert alert-danger py-2 small">{{ modalError }}</div>
             <div class="mb-3">
               <label class="form-label small fw-bold">Tên địa chỉ <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" v-model="addrForm.tenDiaChi" placeholder="Ví dụ: Nhà, Công ty..." required>
+              <input type="text" :class="['form-control', addrErrors.tenDiaChi && 'is-invalid']" v-model="addrForm.tenDiaChi" placeholder="Ví dụ: Nhà, Công ty...">
+              <div v-if="addrErrors.tenDiaChi" class="text-danger small mt-1">{{ addrErrors.tenDiaChi }}</div>
             </div>
             <div class="mb-3">
-              <label class="form-label small fw-bold">Tỉnh/Thành phố</label>
-              <select class="form-select" v-model="addrCodes.city" @change="onCityChange">
+              <label class="form-label small fw-bold">Tỉnh/Thành phố <span class="text-danger">*</span></label>
+              <select :class="['form-select', addrErrors.city && 'is-invalid']" v-model="addrCodes.city" @change="onCityChange">
                 <option value="">Chọn Tỉnh/Thành</option>
                 <option v-for="p in provinces" :key="p.code" :value="p.code">{{ p.name }}</option>
               </select>
+              <div v-if="addrErrors.city" class="text-danger small mt-1">{{ addrErrors.city }}</div>
             </div>
             <div class="mb-3">
-              <label class="form-label small fw-bold">Quận/Huyện</label>
-              <select class="form-select" v-model="addrCodes.district" @change="onDistrictChange" :disabled="!addrCodes.city">
+              <label class="form-label small fw-bold">Quận/Huyện <span class="text-danger">*</span></label>
+              <select :class="['form-select', addrErrors.district && 'is-invalid']" v-model="addrCodes.district" @change="onDistrictChange" :disabled="!addrCodes.city">
                 <option value="">Chọn Quận/Huyện</option>
                 <option v-for="d in districts" :key="d.code" :value="d.code">{{ d.name }}</option>
               </select>
+              <div v-if="addrErrors.district" class="text-danger small mt-1">{{ addrErrors.district }}</div>
             </div>
             <div class="mb-3">
-              <label class="form-label small fw-bold">Xã/Phường</label>
-              <select class="form-select" v-model="addrCodes.ward" @change="onWardChange" :disabled="!addrCodes.district">
+              <label class="form-label small fw-bold">Xã/Phường <span class="text-danger">*</span></label>
+              <select :class="['form-select', addrErrors.ward && 'is-invalid']" v-model="addrCodes.ward" @change="onWardChange" :disabled="!addrCodes.district">
                 <option value="">Chọn Xã/Phường</option>
                 <option v-for="w in wards" :key="w.code" :value="w.code">{{ w.name }}</option>
               </select>
+              <div v-if="addrErrors.ward" class="text-danger small mt-1">{{ addrErrors.ward }}</div>
             </div>
             <div class="mb-3">
-              <label class="form-label small fw-bold">Địa chỉ cụ thể</label>
-              <input type="text" class="form-control" v-model="addrForm.diaChiCuThe" placeholder="Số nhà, ngõ, đường...">
+              <label class="form-label small fw-bold">Địa chỉ cụ thể <span class="text-danger">*</span></label>
+              <input type="text" :class="['form-control', addrErrors.diaChiCuThe && 'is-invalid']" v-model="addrForm.diaChiCuThe" placeholder="Số nhà, ngõ, đường...">
+              <div v-if="addrErrors.diaChiCuThe" class="text-danger small mt-1">{{ addrErrors.diaChiCuThe }}</div>
             </div>
             <div class="form-check">
               <input class="form-check-input" type="checkbox" v-model="addrForm.macDinh" id="defaultCheck">
@@ -108,9 +113,20 @@ const loading = ref(true);
 const addresses = ref([]);
 const editingId = ref(null);
 const modalError = ref('');
+const addrErrors = ref({});
 const modalSaving = ref(false);
 const modalRef = ref(null);
 let bsModal = null;
+
+function validateAddr() {
+  addrErrors.value = {};
+  if (!addrForm.tenDiaChi.trim()) addrErrors.value.tenDiaChi = 'Vui lòng nhập tên địa chỉ';
+  if (!addrCodes.city) addrErrors.value.city = 'Vui lòng chọn Tỉnh/Thành phố';
+  if (!addrCodes.district) addrErrors.value.district = 'Vui lòng chọn Quận/Huyện';
+  if (!addrCodes.ward) addrErrors.value.ward = 'Vui lòng chọn Xã/Phường';
+  if (!addrForm.diaChiCuThe.trim()) addrErrors.value.diaChiCuThe = 'Vui lòng nhập địa chỉ cụ thể';
+  return Object.keys(addrErrors.value).length === 0;
+}
 
 const addrForm = reactive({
   tenDiaChi: '',
@@ -194,6 +210,7 @@ const resetForm = () => {
   wards.value = [];
   editingId.value = null;
   modalError.value = '';
+  addrErrors.value = {};
 };
 
 const getModal = () => {
@@ -252,8 +269,9 @@ const openEditModal = async (addr) => {
 };
 
 const saveAddress = async () => {
-  modalSaving.value = true;
   modalError.value = '';
+  if (!validateAddr()) return;
+  modalSaving.value = true;
   try {
     const payload = { ...addrForm, idKhachHang: customer.value.id };
     if (editingId.value) {
