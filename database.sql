@@ -1,12 +1,18 @@
-﻿if db_id('DATN_SevenStrike') is null
+﻿if db_id('DATN_SevenStrike_Test') is not null
 begin
-    create database DATN_SevenStrike;
+    alter database DATN_SevenStrike_Test set single_user with rollback immediate;
+    drop database DATN_SevenStrike_Test;
 end
 go
- 
-use DATN_SevenStrike;
+
+create database DATN_SevenStrike_Test;
 go
 
+use DATN_SevenStrike_Test;
+go
+
+set nocount on;
+go
 /* =========================================================
    1) DANH MỤC CHUNG (THUỘC TÍNH)
    ========================================================= */
@@ -34,7 +40,7 @@ create table dbo.mau_sac (
     ma_mau_sac as 'MS' + right('00000' + cast(id as varchar(5)), 5) persisted,
     ten_mau_sac nvarchar(255) not null,
 
-    ma_mau_hex varchar(7) null, -- #RRGGBB cho FE render
+    ma_mau_hex varchar(7) null,
     trang_thai bit not null default 1,
     xoa_mem bit not null default 0,
 
@@ -171,6 +177,7 @@ create table dbo.khach_hang (
     so_dien_thoai varchar(12) null,
     gioi_tinh bit null,
     ngay_sinh date null,
+    anh_dai_dien varchar(500) null,
 
     trang_thai bit not null default 1,
     xoa_mem bit not null default 0,
@@ -178,8 +185,7 @@ create table dbo.khach_hang (
     ngay_tao datetime2 not null default sysdatetime(),
     nguoi_tao int null,
     ngay_cap_nhat datetime2 null,
-    nguoi_cap_nhat int null,
-	anh_dai_dien varchar(500) null
+    nguoi_cap_nhat int null
 );
 go
 
@@ -382,7 +388,9 @@ create table dbo.phieu_giam_gia_ca_nhan (
     ngay_gui_mail datetime2 null,
 
     constraint FK_pggcn_kh foreign key (id_khach_hang) references dbo.khach_hang(id),
-    constraint FK_pggcn_pgg foreign key (id_phieu_giam_gia) references dbo.phieu_giam_gia(id)
+    constraint FK_pggcn_pgg foreign key (id_phieu_giam_gia) references dbo.phieu_giam_gia(id),
+
+    constraint UQ_pggcn_combo unique (id, id_khach_hang, id_phieu_giam_gia)
 );
 go
 
@@ -470,7 +478,7 @@ create table dbo.giao_ca (
     tien_dau_ca_nhap decimal(18,2) null,
     da_xac_nhan_tien_dau_ca bit not null default 0,
 
-    trang_thai int not null default 0, -- 0: đang hoạt động, 1: đã đóng ca
+    trang_thai int not null default 0,
     ghi_chu nvarchar(255) null,
 
     xoa_mem bit not null default 0,
@@ -528,7 +536,7 @@ end
 go
 
 /* =========================================================
-   8) HÓA ĐƠN - HÓA ĐƠN CHI TIẾT 
+   8) HÓA ĐƠN - HÓA ĐƠN CHI TIẾT
    ========================================================= */
 
 create table dbo.hoa_don (
@@ -544,7 +552,9 @@ create table dbo.hoa_don (
 
     ma_hoa_don as 'HD' + right('00000' + cast(id as varchar(5)), 5) persisted,
 
-    loai_don bit not null default 0,
+    -- ✅ tinyint: 0 tại quầy | 1 giao hàng | 2 online
+    loai_don tinyint not null constraint DF_hd_loai_don default (0),
+    constraint CK_hd_loai_don_code check (loai_don in (0,1,2)),
 
     phi_van_chuyen decimal(18,2) not null default 0 check (phi_van_chuyen >= 0),
     tong_tien decimal(18,2) not null check (tong_tien >= 0),
@@ -557,6 +567,7 @@ create table dbo.hoa_don (
     email_khach_hang varchar(255) null,
 
     trang_thai_hien_tai int not null default 1,
+    constraint CK_hd_trang_thai_code check (trang_thai_hien_tai in (1,2,3,4,5,6)),
 
     ngay_tao datetime2 not null default sysdatetime(),
     ngay_thanh_toan datetime2 null,
@@ -571,7 +582,10 @@ create table dbo.hoa_don (
     constraint FK_hd_kh foreign key (id_khach_hang) references dbo.khach_hang(id),
     constraint FK_hd_nv foreign key (id_nhan_vien) references dbo.nhan_vien(id),
     constraint FK_hd_pgg foreign key (id_phieu_giam_gia) references dbo.phieu_giam_gia(id),
-    constraint FK_hd_pggcn foreign key (id_phieu_giam_gia_ca_nhan) references dbo.phieu_giam_gia_ca_nhan(id),
+
+    constraint FK_hd_pggcn_combo foreign key (id_phieu_giam_gia_ca_nhan, id_khach_hang, id_phieu_giam_gia)
+    references dbo.phieu_giam_gia_ca_nhan(id, id_khach_hang, id_phieu_giam_gia),
+
     constraint FK_hd_giao_ca foreign key (id_giao_ca) references dbo.giao_ca(id),
 
     constraint CK_hd_voucher_ca_nhan check (
@@ -580,9 +594,7 @@ create table dbo.hoa_don (
     ),
 
     constraint CK_hd_thanh_toan check (ngay_thanh_toan is null or ngay_thanh_toan >= ngay_tao),
-    constraint CK_hd_tien check (tong_tien_sau_giam <= tong_tien),
-
-    constraint CK_hd_trang_thai_code check (trang_thai_hien_tai in (1,2,3,4,5))
+    constraint CK_hd_tien check (tong_tien_sau_giam <= tong_tien)
 );
 go
 
@@ -681,13 +693,19 @@ create table dbo.giao_dich_thanh_toan (
 
     xoa_mem bit not null default 0,
 
+    -- ✅ thêm để lưu đúng ai thao tác (ai ghi nhận giao dịch)
+    nguoi_cap_nhat int null,
+
     constraint FK_gdtt_hd foreign key (id_hoa_don) references dbo.hoa_don(id),
-    constraint FK_gdtt_pttt foreign key (id_phuong_thuc_thanh_toan) references dbo.phuong_thuc_thanh_toan(id)
+    constraint FK_gdtt_pttt foreign key (id_phuong_thuc_thanh_toan) references dbo.phuong_thuc_thanh_toan(id),
+
+    -- ✅ FK người cập nhật
+    constraint FK_gdtt_nguoi_cap_nhat foreign key (nguoi_cap_nhat) references dbo.nhan_vien(id)
 );
 go
 
 /* =========================================================
-   10) LỊCH SỬ HÓA ĐƠN (chốt 1..5)
+   10) LỊCH SỬ HÓA ĐƠN (1..6)
    ========================================================= */
 
 create table dbo.lich_su_hoa_don (
@@ -695,14 +713,20 @@ create table dbo.lich_su_hoa_don (
     id_hoa_don int not null,
 
     trang_thai int not null,
+    constraint CK_lshd_trang_thai_code check (trang_thai in (1,2,3,4,5,6)),
 
     thoi_gian datetime2 not null default sysdatetime(),
     ghi_chu nvarchar(255) null,
 
     xoa_mem bit not null default 0,
 
+    -- ✅ thêm để lưu đúng ai thao tác (ai tạo ra dòng lịch sử)
+    nguoi_cap_nhat int null,
+
     constraint FK_lshd_hd foreign key (id_hoa_don) references dbo.hoa_don(id),
-    constraint CK_lshd_trang_thai_code check (trang_thai in (1,2,3,4,5))
+
+    -- ✅ FK người cập nhật
+    constraint FK_lshd_nguoi_cap_nhat foreign key (nguoi_cap_nhat) references dbo.nhan_vien(id)
 );
 go
 
@@ -734,7 +758,49 @@ create table dbo.quyen_han_chuc_nang (
 go
 
 /* =========================================================
-   12) INDEX / RÀNG BUỘC (FINAL)
+   12) HỆ THỐNG CHAT / AI TƯ VẤN
+   ========================================================= */
+
+create table dbo.phien_chat (
+    id int identity(1,1) primary key,
+    
+    ma_phien_chat as 'CHAT' + right('00000' + cast(id as varchar(5)), 5) persisted,
+    
+    id_khach_hang int null,
+    id_nhan_vien int null,
+    
+    ten_khach nvarchar(255) null,
+    loai nvarchar(20) not null default 'KHACH_HANG',  -- KHACH_HANG | NOI_BO
+    trang_thai nvarchar(50) null,
+    
+    thoi_gian_bat_dau datetime2 null default sysdatetime(),
+    thoi_gian_ket_thuc datetime2 null,
+    xoa_mem bit not null default 0,
+
+    constraint FK_phien_chat_kh foreign key (id_khach_hang) references dbo.khach_hang(id),
+    constraint FK_phien_chat_nv foreign key (id_nhan_vien) references dbo.nhan_vien(id)
+);
+go
+
+create table dbo.tin_nhan (
+    id int identity(1,1) primary key,
+    id_phien_chat int not null,
+    
+    ma_tin_nhan as 'TN' + right('00000' + cast(id as varchar(5)), 5) persisted,
+
+    nguoi_gui nvarchar(20) null,   -- BOT | KHACH | NHAN_VIEN
+    ten_nguoi_gui nvarchar(255) null,
+    noi_dung nvarchar(max) null,
+    
+    thoi_gian datetime2 null default sysdatetime(),
+    xoa_mem bit not null default 0,
+
+    constraint FK_tin_nhan_phien_chat foreign key (id_phien_chat) references dbo.phien_chat(id)
+);
+go
+
+/* =========================================================
+   13) INDEX / RÀNG BUỘC (FINAL)
    ========================================================= */
 
 create unique index UX_ctsp_variant_alive
@@ -785,16 +851,6 @@ go
 create unique index UX_ctdgg_alive
 on dbo.chi_tiet_dot_giam_gia(id_dot_giam_gia, id_chi_tiet_san_pham)
 where xoa_mem = 0;
-go
-
-alter table dbo.phieu_giam_gia_ca_nhan
-add constraint UQ_pggcn_combo unique (id, id_khach_hang, id_phieu_giam_gia);
-go
-
-alter table dbo.hoa_don
-add constraint FK_hd_pggcn_combo
-foreign key (id_phieu_giam_gia_ca_nhan, id_khach_hang, id_phieu_giam_gia)
-references dbo.phieu_giam_gia_ca_nhan(id, id_khach_hang, id_phieu_giam_gia);
 go
 
 create index IX_sp_ma_sp_alive
@@ -888,6 +944,11 @@ on dbo.hoa_don(trang_thai_hien_tai, ngay_tao, id)
 where xoa_mem = 0;
 go
 
+create index IX_hd_loai_trangthai_ngay_alive
+on dbo.hoa_don(loai_don, trang_thai_hien_tai, ngay_tao, id)
+where xoa_mem = 0;
+go
+
 create unique index UX_chuc_nang_ma_alive
 on dbo.chuc_nang(ma_chuc_nang)
 where xoa_mem = 0;
@@ -898,8 +959,19 @@ on dbo.quyen_han_chuc_nang(id_quyen_han, id_chuc_nang)
 where xoa_mem = 0;
 go
 
+-- ✅ Index cho hệ thống CHAT AI
+create index IX_phien_chat_trang_thai on dbo.phien_chat(trang_thai) where xoa_mem = 0;
+go
+create index IX_phien_chat_loai on dbo.phien_chat(loai) where xoa_mem = 0;
+go
+create index IX_phien_chat_thoi_gian on dbo.phien_chat(thoi_gian_bat_dau desc) where xoa_mem = 0;
+go
+create index IX_tin_nhan_phien_chat on dbo.tin_nhan(id_phien_chat) where xoa_mem = 0;
+go
+
+
 /* =========================================================
-   13) VIEW - THUMBNAIL SẢN PHẨM ONLINE
+   14) VIEW - THUMBNAIL SẢN PHẨM ONLINE
    ========================================================= */
 
 create or alter view dbo.vw_san_pham_thumb
@@ -933,624 +1005,69 @@ outer apply (
 where sp.xoa_mem = 0;
 go
 
-use DATN_SevenStrike;
+/* =========================================================
+   15) PROC RESET 00:00 - XÓA CỨNG HĐ TẠI QUẦY CHỜ XÁC NHẬN (NGÀY CŨ)
+   ========================================================= */
+
+create or alter procedure dbo.sp_pos_reset_xoa_hd_tai_quay_cho_xac_nhan
+as
+begin
+    set nocount on;
+
+    declare @today date = cast(sysdatetime() as date);
+
+    ;with ds as (
+        select hd.id
+        from dbo.hoa_don hd
+        where hd.xoa_mem = 0
+          and hd.loai_don = 0
+          and hd.trang_thai_hien_tai = 1
+          and cast(hd.ngay_tao as date) < @today
+    )
+    delete gd
+    from dbo.giao_dich_thanh_toan gd
+    join ds on ds.id = gd.id_hoa_don;
+
+    ;with ds as (
+        select hd.id
+        from dbo.hoa_don hd
+        where hd.xoa_mem = 0
+          and hd.loai_don = 0
+          and hd.trang_thai_hien_tai = 1
+          and cast(hd.ngay_tao as date) < @today
+    )
+    delete ls
+    from dbo.lich_su_hoa_don ls
+    join ds on ds.id = ls.id_hoa_don;
+
+    ;with ds as (
+        select hd.id
+        from dbo.hoa_don hd
+        where hd.xoa_mem = 0
+          and hd.loai_don = 0
+          and hd.trang_thai_hien_tai = 1
+          and cast(hd.ngay_tao as date) < @today
+    )
+    delete ct
+    from dbo.hoa_don_chi_tiet ct
+    join ds on ds.id = ct.id_hoa_don;
+
+    ;with ds as (
+        select hd.id
+        from dbo.hoa_don hd
+        where hd.xoa_mem = 0
+          and hd.loai_don = 0
+          and hd.trang_thai_hien_tai = 1
+          and cast(hd.ngay_tao as date) < @today
+    )
+    delete hd
+    from dbo.hoa_don hd
+    join ds on ds.id = hd.id;
+end
 go
 
-set nocount on;
-
-begin try
-    begin transaction;
-
-    /* =========================
-       1) DANH MỤC THUỘC TÍNH
-       ========================= */
-
-    -- XUẤT XỨ
-    if not exists (select 1 from dbo.xuat_xu)
-    begin
-        insert into dbo.xuat_xu(ten_xuat_xu, trang_thai, xoa_mem)
-        values
-        (N'Việt Nam', 1, 0),
-        (N'Nhật Bản', 1, 0),
-        (N'Thái Lan', 1, 0);
-    end
-
-    -- THƯƠNG HIỆU
-    if not exists (select 1 from dbo.thuong_hieu)
-    begin
-        insert into dbo.thuong_hieu(ten_thuong_hieu, trang_thai, xoa_mem)
-        values
-        (N'Nike', 1, 0),
-        (N'Adidas', 1, 0),
-        (N'Puma', 1, 0);
-    end
-
-    -- MÀU SẮC (hex unique)
-    if not exists (select 1 from dbo.mau_sac)
-    begin
-        insert into dbo.mau_sac(ten_mau_sac, ma_mau_hex, trang_thai, xoa_mem)
-        values
-        (N'Đen',  '#111827', 1, 0),
-        (N'Trắng','#FFFFFF', 1, 0),
-        (N'Đỏ',   '#DC2626', 1, 0),
-        (N'Xanh dương', '#2563EB', 1, 0),
-        (N'Vàng', '#F59E0B', 1, 0);
-    end
-
-    -- KÍCH THƯỚC (gia_tri unique, range 38-45)
-    if not exists (select 1 from dbo.kich_thuoc)
-    begin
-        insert into dbo.kich_thuoc(ten_kich_thuoc, gia_tri_kich_thuoc, trang_thai, xoa_mem)
-        values
-        (N'38', 38.0, 1, 0),
-        (N'39', 39.0, 1, 0),
-        (N'40', 40.0, 1, 0),
-        (N'41', 41.0, 1, 0),
-        (N'42', 42.0, 1, 0),
-        (N'43', 43.0, 1, 0),
-        (N'44', 44.0, 1, 0),
-        (N'45', 45.0, 1, 0);
-    end
-
-    -- LOẠI SÂN
-    if not exists (select 1 from dbo.loai_san)
-    begin
-        insert into dbo.loai_san(ten_loai_san, trang_thai, xoa_mem)
-        values
-        (N'Sân cỏ tự nhiên (FG)', 1, 0),
-        (N'Sân cỏ nhân tạo (TF)', 1, 0),
-        (N'Sân futsal (IC)', 1, 0);
-    end
-
-    -- VỊ TRÍ THI ĐẤU
-    if not exists (select 1 from dbo.vi_tri_thi_dau)
-    begin
-        insert into dbo.vi_tri_thi_dau(ten_vi_tri, trang_thai, xoa_mem)
-        values
-        (N'Tiền đạo', 1, 0),
-        (N'Tiền vệ', 1, 0),
-        (N'Hậu vệ', 1, 0),
-        (N'Thủ môn', 1, 0);
-    end
-
-    -- PHONG CÁCH CHƠI
-    if not exists (select 1 from dbo.phong_cach_choi)
-    begin
-        insert into dbo.phong_cach_choi(ten_phong_cach, trang_thai, xoa_mem)
-        values
-        (N'Tốc độ', 1, 0),
-        (N'Kỹ thuật', 1, 0),
-        (N'Sức mạnh', 1, 0);
-    end
-
-    -- CỔ GIÀY
-    if not exists (select 1 from dbo.co_giay)
-    begin
-        insert into dbo.co_giay(ten_co_giay, trang_thai, xoa_mem)
-        values
-        (N'Cổ thấp', 1, 0),
-        (N'Cổ cao', 1, 0);
-    end
-
-    -- FORM CHÂN
-    if not exists (select 1 from dbo.form_chan)
-    begin
-        insert into dbo.form_chan(ten_form_chan, trang_thai, xoa_mem)
-        values
-        (N'Form ôm', 1, 0),
-        (N'Form vừa', 1, 0),
-        (N'Form rộng', 1, 0);
-    end
-
-    -- CHẤT LIỆU
-    if not exists (select 1 from dbo.chat_lieu)
-    begin
-        insert into dbo.chat_lieu(ten_chat_lieu, trang_thai, xoa_mem)
-        values
-        (N'Da tổng hợp', 1, 0),
-        (N'Da thật', 1, 0),
-        (N'Vải dệt', 1, 0);
-    end
-
-    /* =========================
-       2) QUYỀN HẠN + NHÂN VIÊN
-       ========================= */
-
-    if not exists (select 1 from dbo.quyen_han)
-    begin
-        insert into dbo.quyen_han(ten_quyen_han, trang_thai, xoa_mem)
-        values
-        (N'ADMIN', 1, 0),
-        (N'NHAN_VIEN', 1, 0);
-    end
-
-    if not exists (select 1 from dbo.nhan_vien)
-    begin
-        declare @qhAdmin int = (select top 1 id from dbo.quyen_han where ten_quyen_han = N'ADMIN' and xoa_mem=0);
-        declare @qhNv int = (select top 1 id from dbo.quyen_han where ten_quyen_han = N'NHAN_VIEN' and xoa_mem=0);
-
-        insert into dbo.nhan_vien(
-            id_quyen_han, ten_nhan_vien, ten_tai_khoan, mat_khau, email, so_dien_thoai,
-            thanh_pho, quan, phuong, dia_chi_cu_the,
-            trang_thai, xoa_mem
-        )
-        values
-        (@qhAdmin, N'Quản trị hệ thống', 'admin', '123456', 'admin@sevenstrike.vn', '0900000001',
-         N'Hà Nội', N'Đống Đa', N'Phường Láng Hạ', N'Số 1 Demo', 1, 0),
-
-        (@qhNv, N'Nhân viên bán hàng', 'nvbanhang', '123456', 'nvbanhang@sevenstrike.vn', '0900000002',
-         N'Hà Nội', N'Cầu Giấy', N'Phường Dịch Vọng', N'Số 2 Demo', 1, 0);
-    end
-
-    /* =========================
-       3) KHÁCH HÀNG + ĐỊA CHỈ
-       ========================= */
-
-    if not exists (select 1 from dbo.khach_hang)
-    begin
-        insert into dbo.khach_hang(
-            ten_khach_hang, ten_tai_khoan, mat_khau, email, so_dien_thoai, gioi_tinh, ngay_sinh,
-            trang_thai, xoa_mem
-        )
-        values
-        (N'Nguyễn Văn A', 'kha', '123456', 'kha.a@gmail.com', '0911111111', 1, '1999-05-10', 1, 0),
-        (N'Trần Văn B',   'khb', '123456', 'khb.b@gmail.com', '0922222222', 1, '2000-01-20', 1, 0),
-        (N'Lê Thị C',     'khc', '123456', 'khc.c@gmail.com', '0933333333', 0, '2001-08-15', 1, 0),
-        (N'Phạm Văn D',   'khd', '123456', 'khd.d@gmail.com', '0944444444', 1, '1998-12-02', 1, 0);
-    end
-
-    if not exists (select 1 from dbo.dia_chi_khach_hang)
-    begin
-        declare @kh1 int = (select top 1 id from dbo.khach_hang where ten_tai_khoan='kha' and xoa_mem=0);
-        declare @kh2 int = (select top 1 id from dbo.khach_hang where ten_tai_khoan='khb' and xoa_mem=0);
-        declare @kh3 int = (select top 1 id from dbo.khach_hang where ten_tai_khoan='khc' and xoa_mem=0);
-        declare @kh4 int = (select top 1 id from dbo.khach_hang where ten_tai_khoan='khd' and xoa_mem=0);
-
-        insert into dbo.dia_chi_khach_hang(
-            id_khach_hang, ten_dia_chi, thanh_pho, quan, phuong, dia_chi_cu_the, mac_dinh, xoa_mem
-        )
-        values
-        (@kh1, N'Nhà riêng', N'Hà Nội', N'Đống Đa', N'Láng Hạ', N'Số 10 Demo', 1, 0),
-        (@kh2, N'Công ty',   N'Hà Nội', N'Cầu Giấy', N'Dịch Vọng', N'Số 20 Demo', 1, 0),
-        (@kh3, N'Nhà riêng', N'Hà Nội', N'Thanh Xuân', N'Khương Đình', N'Số 30 Demo', 1, 0),
-        (@kh4, N'Nhà riêng', N'Hà Nội', N'Hoàng Mai', N'Đại Kim', N'Số 40 Demo', 1, 0);
-    end
-
-    /* =========================
-       4) SẢN PHẨM + CTSP + ẢNH
-       ========================= */
-
-    if not exists (select 1 from dbo.san_pham)
-    begin
-        declare @thNike int = (select top 1 id from dbo.thuong_hieu where ten_thuong_hieu=N'Nike' and xoa_mem=0);
-        declare @thAdi  int = (select top 1 id from dbo.thuong_hieu where ten_thuong_hieu=N'Adidas' and xoa_mem=0);
-
-        declare @xxVN int = (select top 1 id from dbo.xuat_xu where ten_xuat_xu=N'Việt Nam' and xoa_mem=0);
-        declare @xxJP int = (select top 1 id from dbo.xuat_xu where ten_xuat_xu=N'Nhật Bản' and xoa_mem=0);
-
-        declare @vtTD int = (select top 1 id from dbo.vi_tri_thi_dau where ten_vi_tri=N'Tiền đạo' and xoa_mem=0);
-        declare @pcTD int = (select top 1 id from dbo.phong_cach_choi where ten_phong_cach=N'Tốc độ' and xoa_mem=0);
-
-        declare @cgThap int = (select top 1 id from dbo.co_giay where ten_co_giay=N'Cổ thấp' and xoa_mem=0);
-        declare @clDaTH int = (select top 1 id from dbo.chat_lieu where ten_chat_lieu=N'Da tổng hợp' and xoa_mem=0);
-
-        insert into dbo.san_pham(
-            id_thuong_hieu, id_xuat_xu, id_vi_tri_thi_dau, id_phong_cach_choi, id_co_giay, id_chat_lieu,
-            ten_san_pham, mo_ta_ngan, mo_ta_chi_tiet,
-            trang_thai_kinh_doanh, xoa_mem
-        )
-        values
-        (@thNike, @xxVN, @vtTD, @pcTD, @cgThap, @clDaTH,
-         N'Nike Mercurial Vapor 15 Pro', N'Giày tốc độ, bám sân tốt', N'Demo mô tả chi tiết Mercurial Vapor 15 Pro',
-         1, 0),
-
-        (@thAdi, @xxJP, @vtTD, @pcTD, @cgThap, @clDaTH,
-         N'Adidas X Crazyfast.1', N'Giày nhẹ, phù hợp bứt tốc', N'Demo mô tả chi tiết Adidas X Crazyfast.1',
-         1, 0);
-    end
-
-    if not exists (select 1 from dbo.chi_tiet_san_pham)
-    begin
-        declare @sp1 int = (select top 1 id from dbo.san_pham where ten_san_pham like N'Nike Mercurial%' and xoa_mem=0);
-        declare @sp2 int = (select top 1 id from dbo.san_pham where ten_san_pham like N'Adidas X Crazyfast%' and xoa_mem=0);
-
-        declare @msDen int = (select top 1 id from dbo.mau_sac where ten_mau_sac=N'Đen' and xoa_mem=0);
-        declare @msDo  int = (select top 1 id from dbo.mau_sac where ten_mau_sac=N'Đỏ' and xoa_mem=0);
-        declare @msTrang int = (select top 1 id from dbo.mau_sac where ten_mau_sac=N'Trắng' and xoa_mem=0);
-
-        declare @kt41 int = (select top 1 id from dbo.kich_thuoc where gia_tri_kich_thuoc=41.0 and xoa_mem=0);
-        declare @kt42 int = (select top 1 id from dbo.kich_thuoc where gia_tri_kich_thuoc=42.0 and xoa_mem=0);
-        declare @kt43 int = (select top 1 id from dbo.kich_thuoc where gia_tri_kich_thuoc=43.0 and xoa_mem=0);
-
-        declare @lsTF int = (select top 1 id from dbo.loai_san where ten_loai_san like N'%TF%' and xoa_mem=0);
-        declare @lsFG int = (select top 1 id from dbo.loai_san where ten_loai_san like N'%FG%' and xoa_mem=0);
-
-        declare @fcVua int = (select top 1 id from dbo.form_chan where ten_form_chan=N'Form vừa' and xoa_mem=0);
-
-        -- SP1: 4 biến thể
-        insert into dbo.chi_tiet_san_pham(
-            id_san_pham, id_mau_sac, id_kich_thuoc, id_loai_san, id_form_chan,
-            so_luong, gia_niem_yet, gia_ban, trang_thai, ghi_chu, xoa_mem
-        )
-        values
-        (@sp1, @msDen,  @kt41, @lsTF, @fcVua, 20, 2500000, 2200000, 1, N'Demo', 0),
-        (@sp1, @msDen,  @kt42, @lsTF, @fcVua, 15, 2500000, 2200000, 1, N'Demo', 0),
-        (@sp1, @msDo,   @kt42, @lsTF, @fcVua, 10, 2550000, 2250000, 1, N'Demo', 0),
-        (@sp1, @msDo,   @kt43, @lsFG, @fcVua,  8, 2650000, 2350000, 1, N'Demo', 0);
-
-        -- SP2: 4 biến thể
-        insert into dbo.chi_tiet_san_pham(
-            id_san_pham, id_mau_sac, id_kich_thuoc, id_loai_san, id_form_chan,
-            so_luong, gia_niem_yet, gia_ban, trang_thai, ghi_chu, xoa_mem
-        )
-        values
-        (@sp2, @msTrang, @kt41, @lsTF, @fcVua, 18, 2700000, 2400000, 1, N'Demo', 0),
-        (@sp2, @msTrang, @kt42, @lsTF, @fcVua, 12, 2700000, 2400000, 1, N'Demo', 0),
-        (@sp2, @msDen,   @kt42, @lsFG, @fcVua,  9, 2800000, 2500000, 1, N'Demo', 0),
-        (@sp2, @msDen,   @kt43, @lsFG, @fcVua,  6, 2800000, 2500000, 1, N'Demo', 0);
-    end
-
-    -- Ảnh CTSP (mỗi CTSP có đúng 1 ảnh đại diện để đúng unique index filtered)
-    if not exists (select 1 from dbo.anh_chi_tiet_san_pham)
-    begin
-        insert into dbo.anh_chi_tiet_san_pham(id_chi_tiet_san_pham, duong_dan_anh, la_anh_dai_dien, mo_ta, xoa_mem)
-        select
-            ctsp.id,
-            concat('/uploads/demo/ctsp_', ctsp.id, '_thumb.jpg'),
-            1,
-            N'Ảnh đại diện demo',
-            0
-        from dbo.chi_tiet_san_pham ctsp
-        where ctsp.xoa_mem = 0;
-
-        insert into dbo.anh_chi_tiet_san_pham(id_chi_tiet_san_pham, duong_dan_anh, la_anh_dai_dien, mo_ta, xoa_mem)
-        select
-            ctsp.id,
-            concat('/uploads/demo/ctsp_', ctsp.id, '_extra.jpg'),
-            0,
-            N'Ảnh phụ demo',
-            0
-        from dbo.chi_tiet_san_pham ctsp
-        where ctsp.xoa_mem = 0;
-    end
-
-    /* =========================
-       5) ĐỢT GIẢM GIÁ
-       ========================= */
-
-    if not exists (select 1 from dbo.dot_giam_gia)
-    begin
-        insert into dbo.dot_giam_gia(
-            ten_dot_giam_gia, loai_giam_gia, gia_tri_giam_gia,
-            ngay_bat_dau, ngay_ket_thuc,
-            muc_uu_tien, trang_thai, xoa_mem
-        )
-        values
-        (N'Demo Sale 10% - Tuần này', 0, 10,
-         dateadd(day, -3, cast(getdate() as date)),
-         dateadd(day, 10, cast(getdate() as date)),
-         10, 1, 0);
-    end
-
-    if not exists (select 1 from dbo.chi_tiet_dot_giam_gia)
-    begin
-        declare @dgg int = (select top 1 id from dbo.dot_giam_gia where xoa_mem=0 order by id desc);
-
-        insert into dbo.chi_tiet_dot_giam_gia(
-            id_dot_giam_gia, id_chi_tiet_san_pham,
-            so_luong_ap_dung, gia_tri_giam_rieng, so_tien_giam_toi_da_rieng,
-            trang_thai, ghi_chu, xoa_mem
-        )
-        select top 3
-            @dgg, ctsp.id,
-            null, null, 300000,
-            1, N'Demo áp dụng đợt giảm giá', 0
-        from dbo.chi_tiet_san_pham ctsp
-        where ctsp.xoa_mem=0
-        order by ctsp.id;
-    end
-
-    /* =========================
-       6) PHIẾU GIẢM GIÁ + CHI TIẾT (cá nhân)
-       ========================= */
-
-    if not exists (select 1 from dbo.phieu_giam_gia)
-    begin
-        insert into dbo.phieu_giam_gia(
-            ten_phieu_giam_gia, loai_phieu_giam_gia, gia_tri_giam_gia, so_tien_giam_toi_da,
-            hoa_don_toi_thieu, so_luong_su_dung, ngay_bat_dau, ngay_ket_thuc, trang_thai, mo_ta, xoa_mem
-        )
-        values
-        (N'PGG 10% - Tối đa 200K', 0, 10, 200000, 1000000, 9999,
-         dateadd(day, -1, cast(getdate() as date)), dateadd(day, 30, cast(getdate() as date)),
-         1, N'Voucher công khai demo', 0),
-
-        (N'PGG 100K', 1, 100000, 100000, 1500000, 9999,
-         dateadd(day, -1, cast(getdate() as date)), dateadd(day, 30, cast(getdate() as date)),
-         1, N'Voucher công khai demo', 0),
-
-        (N'PGG Cá nhân 15% - Tối đa 300K', 0, 15, 300000, 800000, 3,
-         dateadd(day, -1, cast(getdate() as date)), dateadd(day, 15, cast(getdate() as date)),
-         1, N'Voucher cá nhân: gửi mail khi tạo (BE)', 0);
-    end
-
-    if not exists (select 1 from dbo.phieu_giam_gia_chi_tiet)
-    begin
-        declare @pggCaNhan int =
-            (select top 1 id from dbo.phieu_giam_gia where ten_phieu_giam_gia like N'%Cá nhân 15%%' and xoa_mem=0);
-
-        insert into dbo.phieu_giam_gia_chi_tiet(id_phieu_giam_gia, id_khach_hang, xoa_mem)
-        select @pggCaNhan, kh.id, 0
-        from (
-            select top 3 id
-            from dbo.khach_hang
-            where xoa_mem=0
-            order by id
-        ) kh;
-    end
-
-    if not exists (select 1 from dbo.phieu_giam_gia_ca_nhan)
-    begin
-        declare @pggCaNhan2 int =
-            (select top 1 id from dbo.phieu_giam_gia where ten_phieu_giam_gia like N'%Cá nhân 15%%' and xoa_mem=0);
-
-        insert into dbo.phieu_giam_gia_ca_nhan(id_khach_hang, id_phieu_giam_gia, da_su_dung, xoa_mem)
-        select ct.id_khach_hang, ct.id_phieu_giam_gia, 0, 0
-        from dbo.phieu_giam_gia_chi_tiet ct
-        where ct.xoa_mem=0 and ct.id_phieu_giam_gia = @pggCaNhan2;
-    end
-
-    /* =========================
-       7) PHƯƠNG THỨC THANH TOÁN
-       ========================= */
-
-    if not exists (select 1 from dbo.phuong_thuc_thanh_toan)
-    begin
-        insert into dbo.phuong_thuc_thanh_toan(ten_phuong_thuc_thanh_toan, nha_cung_cap, trang_thai, xoa_mem)
-        values
-        (N'Tiền mặt', N'TAI_QUAY', 1, 0),
-        (N'Chuyển khoản', N'BANK', 1, 0),
-        (N'VNPay', N'VNPAY', 1, 0);
-    end
-
-    /* =========================
-       8) CA LÀM + LỊCH LÀM VIỆC + GIAO CA (BẢNG MỚI)
-       ========================= */
-
-    if not exists (select 1 from dbo.ca_lam)
-    begin
-        insert into dbo.ca_lam(ten_ca, gio_bat_dau, gio_ket_thuc, mo_ta, trang_thai, xoa_mem)
-        values
-        (N'Ca sáng',  '08:00', '12:00', N'Demo', 1, 0),
-        (N'Ca chiều', '13:30', '17:30', N'Demo', 1, 0);
-    end
-
-    declare @caSang int = (select top 1 id from dbo.ca_lam where ten_ca = N'Ca sáng' and xoa_mem=0);
-    declare @ngayHomNay date = cast(getdate() as date);
-
-    if not exists (select 1 from dbo.lich_lam_viec where xoa_mem=0 and id_ca_lam=@caSang and ngay_lam=@ngayHomNay)
-    begin
-        insert into dbo.lich_lam_viec(id_ca_lam, ngay_lam, ghi_chu, xoa_mem)
-        values (@caSang, @ngayHomNay, N'Lịch demo hôm nay', 0);
-    end
-
-    declare @llv int = (select top 1 id from dbo.lich_lam_viec where xoa_mem=0 and id_ca_lam=@caSang and ngay_lam=@ngayHomNay);
-    declare @nvBanHang int = (select top 1 id from dbo.nhan_vien where ten_tai_khoan='nvbanhang' and xoa_mem=0);
-
-    if not exists (select 1 from dbo.lich_lam_viec_nhan_vien where xoa_mem=0 and id_lich_lam_viec=@llv and id_nhan_vien=@nvBanHang)
-    begin
-        insert into dbo.lich_lam_viec_nhan_vien(id_lich_lam_viec, id_nhan_vien, xoa_mem)
-        values (@llv, @nvBanHang, 0);
-    end
-
-    -- Giao ca demo (mở ca) - trigger yêu cầu NV phải có trong lịch
-    if not exists (select 1 from dbo.giao_ca where xoa_mem=0 and id_lich_lam_viec=@llv and id_nhan_vien=@nvBanHang and trang_thai=0)
-    begin
-        insert into dbo.giao_ca(
-            id_lich_lam_viec, id_nhan_vien, id_giao_ca_truoc,
-            thoi_gian_nhan_ca, thoi_gian_ket_ca,
-            tien_ban_giao_du_kien, tien_dau_ca_nhap, da_xac_nhan_tien_dau_ca,
-            trang_thai, ghi_chu, xoa_mem
-        )
-        values
-        (@llv, @nvBanHang, null,
-         sysdatetime(), null,
-         1000000, 1000000, 1,
-         0, N'Giao ca demo - đang mở', 0);
-    end
-
-    declare @gcDangMo int =
-        (select top 1 id from dbo.giao_ca where xoa_mem=0 and id_lich_lam_viec=@llv and id_nhan_vien=@nvBanHang and trang_thai=0 order by id desc);
-
-    /* =========================
-       9) CHỨC NĂNG + MAP QUYỀN (BẢNG MỚI)
-       ========================= */
-
-    if not exists (select 1 from dbo.chuc_nang)
-    begin
-        insert into dbo.chuc_nang(ma_chuc_nang, ten_chuc_nang, mo_ta, trang_thai, xoa_mem)
-        values
-        ('BAN_HANG',       N'Bán hàng',         N'Demo', 1, 0),
-        ('QL_SAN_PHAM',    N'Quản lý sản phẩm',  N'Demo', 1, 0),
-        ('QL_HOA_DON',     N'Quản lý hóa đơn',   N'Demo', 1, 0),
-        ('QL_KHACH_HANG',  N'Quản lý khách hàng',N'Demo', 1, 0),
-        ('QL_GIAM_GIA',    N'Quản lý giảm giá',  N'Demo', 1, 0),
-        ('QL_VOUCHER',     N'Quản lý voucher',   N'Demo', 1, 0),
-        ('QL_LICH_LAM',    N'Quản lý lịch làm',  N'Demo', 1, 0),
-        ('THONG_KE',       N'Thống kê',          N'Demo', 1, 0);
-    end
-
-    declare @qhAdminId int = (select top 1 id from dbo.quyen_han where ten_quyen_han=N'ADMIN' and xoa_mem=0);
-    declare @qhNvId int    = (select top 1 id from dbo.quyen_han where ten_quyen_han=N'NHAN_VIEN' and xoa_mem=0);
-
-    -- ADMIN: tất cả chức năng
-    if not exists (select 1 from dbo.quyen_han_chuc_nang where xoa_mem=0 and id_quyen_han=@qhAdminId)
-    begin
-        insert into dbo.quyen_han_chuc_nang(id_quyen_han, id_chuc_nang, xoa_mem)
-        select @qhAdminId, cn.id, 0
-        from dbo.chuc_nang cn
-        where cn.xoa_mem=0;
-    end
-
-    -- NHÂN_VIÊN: một số chức năng cơ bản
-    if not exists (select 1 from dbo.quyen_han_chuc_nang where xoa_mem=0 and id_quyen_han=@qhNvId)
-    begin
-        insert into dbo.quyen_han_chuc_nang(id_quyen_han, id_chuc_nang, xoa_mem)
-        select @qhNvId, cn.id, 0
-        from dbo.chuc_nang cn
-        where cn.xoa_mem=0
-          and cn.ma_chuc_nang in ('BAN_HANG','QL_HOA_DON','QL_KHACH_HANG','QL_LICH_LAM');
-    end
-
-    /* =========================
-       10) HÓA ĐƠN + CHI TIẾT + LỊCH SỬ (CHỈ 1..5)
-       ========================= */
-
-    if not exists (select 1 from dbo.hoa_don)
-    begin
-        declare @kh int = (select top 1 id from dbo.khach_hang where ten_tai_khoan='kha' and xoa_mem=0);
-
-        declare @pggPublic int = (select top 1 id from dbo.phieu_giam_gia where ten_phieu_giam_gia like N'PGG 10%%' and xoa_mem=0);
-        declare @pggCaNhanId int = (select top 1 id from dbo.phieu_giam_gia where ten_phieu_giam_gia like N'%Cá nhân 15%%' and xoa_mem=0);
-        declare @pggcn int = (select top 1 id from dbo.phieu_giam_gia_ca_nhan where id_khach_hang=@kh and id_phieu_giam_gia=@pggCaNhanId and xoa_mem=0);
-
-        declare @ctspA int = (select top 1 id from dbo.chi_tiet_san_pham where xoa_mem=0 order by id);
-        declare @ctspB int = (select top 1 id from dbo.chi_tiet_san_pham where xoa_mem=0 order by id desc);
-
-        /* (1) ĐƠN TẠI QUẦY - ĐÃ THANH TOÁN (5) - GẮN GIAO CA */
-        insert into dbo.hoa_don(
-            id_khach_hang, id_nhan_vien, id_phieu_giam_gia, id_phieu_giam_gia_ca_nhan,
-            id_giao_ca,
-            loai_don, phi_van_chuyen, tong_tien, tong_tien_sau_giam,
-            ten_khach_hang, dia_chi_khach_hang, so_dien_thoai_khach_hang, email_khach_hang,
-            trang_thai_hien_tai, ngay_tao, ngay_thanh_toan, ghi_chu, xoa_mem
-        )
-        values
-        (null, null, null, null,
-         @gcDangMo,
-         0, 0, 2200000, 2200000,
-         N'Khách lẻ', N'Tại quầy', '0909999999', null,
-         5, sysdatetime(), sysdatetime(), N'Đơn tại quầy demo', 0);
-
-        declare @hdQuay int = scope_identity();
-
-        insert into dbo.hoa_don_chi_tiet(id_hoa_don, id_chi_tiet_san_pham, so_luong, don_gia, ghi_chu, xoa_mem)
-        values
-        (@hdQuay, @ctspA, 1, 2200000, N'Demo', 0);
-
-        insert into dbo.lich_su_hoa_don(id_hoa_don, trang_thai, ghi_chu, xoa_mem)
-        values
-        (@hdQuay, 1, N'Tạo đơn tại quầy', 0),
-        (@hdQuay, 5, N'Đã thanh toán tiền mặt', 0);
-
-        /* (2) ĐƠN GIAO HÀNG/ONLINE - ĐANG VẬN CHUYỂN (3) - dùng voucher cá nhân (đủ FK combo) */
-        insert into dbo.hoa_don(
-            id_khach_hang, id_nhan_vien, id_phieu_giam_gia, id_phieu_giam_gia_ca_nhan,
-            id_giao_ca,
-            loai_don, phi_van_chuyen, tong_tien, tong_tien_sau_giam,
-            ten_khach_hang, dia_chi_khach_hang, so_dien_thoai_khach_hang, email_khach_hang,
-            trang_thai_hien_tai, ngay_tao, ngay_thanh_toan, ghi_chu, xoa_mem
-        )
-        values
-        (@kh, @nvBanHang, @pggCaNhanId, @pggcn,
-         null,
-         1, 30000, 2400000, 2100000,
-         N'Nguyễn Văn A', N'Số 10 Demo, Láng Hạ, Đống Đa, Hà Nội', '0911111111', 'kha.a@gmail.com',
-         3, dateadd(hour, -5, sysdatetime()), null, N'Đơn giao hàng demo', 0);
-
-        declare @hdShip int = scope_identity();
-
-        insert into dbo.hoa_don_chi_tiet(id_hoa_don, id_chi_tiet_san_pham, so_luong, don_gia, ghi_chu, xoa_mem)
-        values
-        (@hdShip, @ctspB, 1, 2100000, N'Demo', 0);
-
-        insert into dbo.lich_su_hoa_don(id_hoa_don, trang_thai, ghi_chu, xoa_mem)
-        values
-        (@hdShip, 1, N'Tạo đơn - chờ xác nhận', 0),
-        (@hdShip, 2, N'Đã xác nhận - chờ giao hàng', 0),
-        (@hdShip, 3, N'Đang vận chuyển', 0);
-
-        /* Giao dịch thanh toán cho đơn online (demo) */
-        declare @ptVnpay int = (select top 1 id from dbo.phuong_thuc_thanh_toan where nha_cung_cap=N'VNPAY' and xoa_mem=0);
-
-        insert into dbo.giao_dich_thanh_toan(
-            id_hoa_don, id_phuong_thuc_thanh_toan, so_tien, trang_thai,
-            ma_yeu_cau, ma_giao_dich_ngoai, ma_tham_chieu,
-            duong_dan_thanh_toan, du_lieu_qr, thoi_gian_het_han,
-            du_lieu_phan_hoi, ghi_chu, xoa_mem
-        )
-        values
-        (@hdShip, @ptVnpay, 2100000, N'khoi_tao',
-         N'REQ_DEMO_001', null, null,
-         N'https://sandbox.vnpay.vn/demo-pay', N'QR_DEMO_DATA', dateadd(minute, 30, sysdatetime()),
-         null, N'Demo giao dịch', 0);
-
-        /* (3) ĐƠN ONLINE - ĐÃ THANH TOÁN (5) - dùng voucher công khai (nếu có) */
-        insert into dbo.hoa_don(
-            id_khach_hang, id_nhan_vien, id_phieu_giam_gia, id_phieu_giam_gia_ca_nhan,
-            id_giao_ca,
-            loai_don, phi_van_chuyen, tong_tien, tong_tien_sau_giam,
-            ten_khach_hang, dia_chi_khach_hang, so_dien_thoai_khach_hang, email_khach_hang,
-            trang_thai_hien_tai, ngay_tao, ngay_thanh_toan, ghi_chu, xoa_mem
-        )
-        values
-        (@kh, @nvBanHang, @pggPublic, null,
-         null,
-         1, 30000, 2500000, 2300000,
-         N'Nguyễn Văn A', N'Số 10 Demo, Láng Hạ, Đống Đa, Hà Nội', '0911111111', 'kha.a@gmail.com',
-         5, dateadd(hour, -2, sysdatetime()), sysdatetime(), N'Đơn online đã thanh toán demo', 0);
-
-        declare @hdPaid int = scope_identity();
-
-        insert into dbo.hoa_don_chi_tiet(id_hoa_don, id_chi_tiet_san_pham, so_luong, don_gia, ghi_chu, xoa_mem)
-        values
-        (@hdPaid, @ctspA, 1, 2300000, N'Demo', 0);
-
-        insert into dbo.lich_su_hoa_don(id_hoa_don, trang_thai, ghi_chu, xoa_mem)
-        values
-        (@hdPaid, 1, N'Tạo đơn', 0),
-        (@hdPaid, 2, N'Chờ giao hàng', 0),
-        (@hdPaid, 5, N'Đã thanh toán', 0);
-    end
-
-    commit transaction;
-    print N'✅ Seed demo data DONE (DB: DATN_SevenStrike_Test).';
-end try
-begin catch
-    if @@trancount > 0 rollback transaction;
-    print N'❌ Seed demo data FAILED: ' + error_message();
-    throw;
-end catch;
-
--- ── 1. Tạo bảng phien_chat ───────────────────────────────────
-CREATE TABLE phien_chat (
-    id                  INT IDENTITY(1,1) PRIMARY KEY,
-    khach_hang_id       INT NULL,
-    nhan_vien_id        INT NULL,
-    ten_khach           NVARCHAR(255) NULL,
-    loai                NVARCHAR(20)  NOT NULL DEFAULT 'KHACH_HANG',  -- KHACH_HANG | NOI_BO
-    trang_thai          NVARCHAR(50)  NULL,
-    thoi_gian_bat_dau   DATETIME2     NULL,
-    thoi_gian_ket_thuc  DATETIME2     NULL,
-
-    CONSTRAINT FK_phienchat_khachhang FOREIGN KEY (khach_hang_id) REFERENCES khach_hang(id),
-    CONSTRAINT FK_phienchat_nhanvien  FOREIGN KEY (nhan_vien_id)  REFERENCES nhan_vien(id)
-);
-
--- ── 2. Tạo bảng tin_nhan ─────────────────────────────────────
-CREATE TABLE tin_nhan (
-    id              INT IDENTITY(1,1) PRIMARY KEY,
-    phien_chat_id   INT           NOT NULL,
-    nguoi_gui       NVARCHAR(20)  NULL,   -- BOT | KHACH | NHAN_VIEN
-    ten_nguoi_gui   NVARCHAR(255) NULL,
-    noi_dung        NVARCHAR(MAX) NULL,
-    thoi_gian       DATETIME2     NULL,
-
-    CONSTRAINT FK_tinnhan_phienchat FOREIGN KEY (phien_chat_id) REFERENCES phien_chat(id)
-);
-
--- ── 3. Index tăng tốc query ──────────────────────────────────
-CREATE INDEX IDX_phienchat_trangthai    ON phien_chat(trang_thai);
-CREATE INDEX IDX_phienchat_loai         ON phien_chat(loai);
-CREATE INDEX IDX_phienchat_thoigian     ON phien_chat(thoi_gian_bat_dau DESC);
-CREATE INDEX IDX_tinnhan_phienchat      ON tin_nhan(phien_chat_id);
+/* =========================================================
+   DONE
+   ========================================================= */
+print N'✅ Đã tạo DB: DATN_SevenStrike_Test và tích hợp Module Chat AI';
+gou
