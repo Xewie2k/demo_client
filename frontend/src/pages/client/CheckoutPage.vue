@@ -242,13 +242,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCart } from '@/services/cart';
 import { useClientAuth } from '@/services/authClient';
 import apiClient from '@/services/apiClient';
 import vnAddressService from '@/services/vnAddressService';
 import Swal from 'sweetalert2';
+import { connectChat } from '@/chatAI/services/chatService';
 
 const { cart, clearCart } = useCart();
 const { customer, isLoggedIn } = useClientAuth();
@@ -470,9 +471,21 @@ const applyVoucher = () => {
     }
 };
 
+let voucherSub = null;
+
 onMounted(async () => {
   fetchVouchers();
   await loadProvinces();
+
+  const client = connectChat();
+  const waitConnected = () => new Promise(resolve => {
+    if (client.connected) { resolve(); return; }
+    const check = setInterval(() => { if (client.connected) { clearInterval(check); resolve(); } }, 100);
+  });
+  await waitConnected();
+  voucherSub = client.subscribe('/topic/vouchers/updated', () => {
+    fetchVouchers();
+  });
   if (isLoggedIn.value && customer.value) {
     form.tenKhachHang = customer.value.hoTen || '';
     form.email = customer.value.email || '';
@@ -491,6 +504,10 @@ onMounted(async () => {
       console.error('Failed to load default address', e);
     }
   }
+});
+
+onBeforeUnmount(() => {
+  if (voucherSub) voucherSub.unsubscribe();
 });
 
 const submitOrder = async () => {

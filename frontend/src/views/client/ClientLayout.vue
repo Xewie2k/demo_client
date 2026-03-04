@@ -85,13 +85,14 @@
             <!-- User: Logged In -->
             <div v-if="isLoggedIn" ref="userDropdownWrap" class="position-relative">
               <button
-                class="btn btn-link text-dark p-1"
+                class="btn btn-link text-dark p-1 d-flex align-items-center gap-1"
                 type="button"
                 @click.stop="showUserDropdown = !showUserDropdown"
                 style="line-height: 1;"
               >
-                <img v-if="customer.anhDaiDien" :src="baseUrl + customer.anhDaiDien" class="rounded-circle" width="26" height="26" style="object-fit: cover; vertical-align: middle;" alt="Avatar">
+                <img v-if="customer.anhDaiDien" :src="baseUrl + customer.anhDaiDien" class="rounded-circle" width="26" height="26" style="object-fit: cover;" alt="Avatar">
                 <i v-else class="bi bi-person-circle" style="font-size: 22px;"></i>
+                <span class="d-none d-md-block" style="font-size: 13px; font-weight: 600; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ tenNgan }}</span>
               </button>
               <transition name="dropdown-fade">
                 <div
@@ -260,6 +261,7 @@ const { cart } = useCart();
 const { customer, isLoggedIn, logout } = useClientAuth();
 const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 const cartCount = computed(() => cart.value.reduce((acc, item) => acc + item.quantity, 0));
+const tenNgan = computed(() => customer.value?.hoTen?.trim() || '');
 
 const searchQuery = ref('');
 const showMobileSearch = ref(false);
