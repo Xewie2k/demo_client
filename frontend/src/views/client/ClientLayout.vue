@@ -25,7 +25,7 @@
       <div class="container">
         <div class="row align-items-center">
           <!-- Left spacer (hidden on mobile) -->
-          <div class="col-md-3 d-none d-md-block"></div>
+          <div class="col-md-2 d-none d-md-block"></div>
 
           <!-- Logo + Brand (Center) -->
           <div class="col-md-6 col-6">
@@ -44,7 +44,7 @@
           </div>
 
           <!-- Search + Icons (Right) -->
-          <div class="col-md-3 col-6 d-flex align-items-center justify-content-end gap-3">
+          <div class="col-md-4 col-6 d-flex align-items-center justify-content-end gap-3">
             <!-- Search -->
             <div class="input-group d-none d-md-flex" style="max-width: 200px;">
               <input
@@ -90,9 +90,9 @@
                 @click.stop="showUserDropdown = !showUserDropdown"
                 style="line-height: 1;"
               >
+                <span class="d-none d-md-block" style="font-size: 14px; font-weight: 500; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #212529; line-height: 1.5; padding-bottom: 2px;">{{ tenNgan }}</span>
                 <img v-if="customer.anhDaiDien" :src="baseUrl + customer.anhDaiDien" class="rounded-circle" width="26" height="26" style="object-fit: cover;" alt="Avatar">
                 <i v-else class="bi bi-person-circle" style="font-size: 22px;"></i>
-                <span class="d-none d-md-block" style="font-size: 13px; font-weight: 600; max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{{ tenNgan }}</span>
               </button>
               <transition name="dropdown-fade">
                 <div

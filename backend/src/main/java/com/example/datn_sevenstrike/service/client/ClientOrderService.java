@@ -111,6 +111,7 @@ public class ClientOrderService {
         for (PhieuGiamGiaCaNhan cn : personalList) {
             PhieuGiamGia p = cn.getPhieuGiamGia();
             if (p == null || Boolean.TRUE.equals(p.getXoaMem())) continue;
+            if (!Boolean.TRUE.equals(p.getTrangThai())) continue;
 
             result.put(p.getId(), MyVoucherDTO.builder()
                     .id(p.getId())
