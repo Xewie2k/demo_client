@@ -18,7 +18,7 @@ public class HoaDonRequest {
     private Integer idPhieuGiamGia;
     private Integer idPhieuGiamGiaCaNhan;
 
-    private Boolean loaiDon; // 0: tại quầy | 1: giao hàng/online
+    private Integer loaiDon; // 0: tại quầy | 1: giao hàng (POS) | 2: online
 
     private BigDecimal phiVanChuyen;
     private BigDecimal tongTien;

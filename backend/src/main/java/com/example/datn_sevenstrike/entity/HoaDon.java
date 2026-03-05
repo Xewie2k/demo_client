@@ -37,9 +37,9 @@ public class HoaDon {
     @Column(name = "ma_hoa_don", insertable = false, updatable = false, length = 7)
     private String maHoaDon;
 
-    // 0: tại quầy | 1: giao hàng/online
+    // 0: tại quầy | 1: giao hàng (POS) | 2: online
     @Column(name = "loai_don", nullable = false)
-    private Boolean loaiDon;
+    private Integer loaiDon;
 
     @Column(name = "phi_van_chuyen", nullable = false, precision = 18, scale = 2)
     private BigDecimal phiVanChuyen;

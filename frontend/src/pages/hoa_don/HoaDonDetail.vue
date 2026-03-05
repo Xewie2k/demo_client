@@ -726,8 +726,9 @@ const trangThaiHienThi = computed(() => {
 
 const loaiDonText = computed(() => {
   const type = selectedHD.value?.loaiDon;
-  if (type === true) return "Online";
-  if (type === false) return "Tại cửa hàng";
+  if (type === 0) return "Tại quầy";
+  if (type === 1) return "Giao hàng";
+  if (type === 2) return "Online";
   return "Không xác định";
 });
 

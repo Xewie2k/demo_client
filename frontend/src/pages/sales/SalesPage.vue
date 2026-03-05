@@ -2592,7 +2592,7 @@ export default {
 
       const emailKh = this.selectedKh ? this.getKhEmail(this.selectedKh) || null : null;
 
-      const loaiDon = this.isCounter ? false : true;
+      const loaiDon = this.isCounter ? 0 : 1;
       const shipFee = this.isCounter ? 0 : this.phiVanChuyenNum;
 
       const idNhanVien = this.nguoiBan?.id ?? null;

@@ -386,7 +386,7 @@ public class ClientOrderService {
                 .tongTien(tongTien)
                 .tongTienSauGiam(thanhTien)
                 .phiVanChuyen(phiVanChuyen)
-                .loaiDon(true)
+                .loaiDon(2)
                 .trangThaiHienTai(1)
                 .ngayTao(LocalDateTime.now())
                 .ngayCapNhat(LocalDateTime.now())

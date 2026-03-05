@@ -155,7 +155,9 @@
                     :class="
                       hd.loaiDon === 'Online'
                         ? 'ss-pill-online'
-                        : 'ss-pill-store'
+                        : hd.loaiDon === 'Giao hàng'
+                          ? 'ss-pill-delivery'
+                          : 'ss-pill-store'
                     "
                   >
                     {{ hd.loaiDon }}
@@ -292,7 +294,7 @@ const loadHoaDon = async () => {
         nhanVien: hd.tenNhanVien ?? "",
         tongTien: tongThanhToan, // ✅ công thức chuẩn
         ngayTao: hd.ngayTao?.substring(0, 10) ?? "",
-        loaiDon: hd.loaiDon ? "Online" : "Tại cửa hàng",
+        loaiDon: hd.loaiDon === 2 ? "Online" : hd.loaiDon === 1 ? "Giao hàng" : "Tại quầy",
         trangThaiHienTai: Number(hd.trangThaiHienTai),
       };
     })

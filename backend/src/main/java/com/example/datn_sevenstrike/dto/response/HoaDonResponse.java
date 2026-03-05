@@ -24,7 +24,7 @@ public class HoaDonResponse {
 
     private String maHoaDon;
 
-    private Boolean loaiDon;
+    private Integer loaiDon;
 
     private BigDecimal phiVanChuyen;
     private BigDecimal tongTien;
@@ -62,7 +62,7 @@ public class HoaDonResponse {
             Integer idPhieuGiamGia,
             Integer idPhieuGiamGiaCaNhan,
             String maHoaDon,
-            Boolean loaiDon,
+            Integer loaiDon,
             BigDecimal phiVanChuyen,
             BigDecimal tongTien,
             BigDecimal tongTienSauGiam,
@@ -115,7 +115,7 @@ public class HoaDonResponse {
             Integer idNhanVien,
             String tenNhanVien,
             String maHoaDon,
-            Boolean loaiDon,
+            Integer loaiDon,
             BigDecimal tongTien,
             Integer trangThaiHienTai,
             LocalDateTime ngayTao

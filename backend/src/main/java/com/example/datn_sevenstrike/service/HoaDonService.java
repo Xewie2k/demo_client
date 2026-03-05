@@ -290,7 +290,7 @@ public class HoaDonService {
             return toResponse(hd);
         }
 
-        hd.setLoaiDon(false);
+        hd.setLoaiDon(0);
         if (hd.getPhiVanChuyen() == null) hd.setPhiVanChuyen(BigDecimal.ZERO);
 
         List<HoaDonChiTiet> items = hoaDonChiTietRepository.findAllByIdHoaDonAndXoaMemFalseOrderByIdAsc(idHoaDon);
@@ -406,7 +406,7 @@ public class HoaDonService {
         // Trừ tồn kho khi xác nhận đơn online (trạng thái 1 → 2)
         if (newStatus == TrangThaiHoaDon.CHO_GIAO_HANG.code
                 && oldStatus == TrangThaiHoaDon.CHO_XAC_NHAN.code
-                && Boolean.TRUE.equals(hd.getLoaiDon())) {
+                && hd.getLoaiDon() != null && hd.getLoaiDon() == 2) {
             List<HoaDonChiTiet> items = hoaDonChiTietRepository.findAllByIdHoaDonAndXoaMemFalseOrderByIdAsc(idHoaDon);
             for (HoaDonChiTiet ct : items) {
                 ChiTietSanPham ctsp = chiTietSanPhamRepository.findById(ct.getIdChiTietSanPham())
@@ -455,7 +455,7 @@ public class HoaDonService {
         if (hd.getXoaMem() == null) hd.setXoaMem(false);
         if (hd.getNgayTao() == null) hd.setNgayTao(LocalDateTime.now());
 
-        if (hd.getLoaiDon() == null) hd.setLoaiDon(false);
+        if (hd.getLoaiDon() == null) hd.setLoaiDon(0);
         if (hd.getPhiVanChuyen() == null) hd.setPhiVanChuyen(BigDecimal.ZERO);
 
         if (hd.getTenKhachHang() != null) hd.setTenKhachHang(hd.getTenKhachHang().trim());
@@ -476,7 +476,7 @@ public class HoaDonService {
             throw new BadRequestEx("Thiếu so_dien_thoai_khach_hang");
         }
 
-        if (Boolean.TRUE.equals(hd.getLoaiDon())) {
+        if (hd.getLoaiDon() != null && hd.getLoaiDon() >= 1) {
             if (hd.getDiaChiKhachHang() == null || hd.getDiaChiKhachHang().isBlank()) {
                 throw new BadRequestEx("Thiếu dia_chi_khach_hang (đơn giao hàng)");
             }
