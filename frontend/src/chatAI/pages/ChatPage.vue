@@ -132,7 +132,8 @@
         </div>
 
         <!-- Tin nhắn -->
-        <div class="chat-messages-admin flex-1 overflow-auto p-4" ref="messagesEl">
+        <div class="chat-messages-admin flex-1 overflow-auto p-4" ref="messagesEl"
+          :class="{ 'msgs--noibo': selectedSession?.loai === 'NOI_BO' }">
           <div
             v-for="msg in currentMessages"
             :key="msg.id || msg.thoiGian"
@@ -162,7 +163,7 @@
           />
           <button
             class="btn btn-sm text-white"
-            :style="`background: ${selectedSession.loai === 'NOI_BO' ? '#1e3a8a' : 'var(--ss-accent)'}; border-radius: 20px; padding: 0 16px;`"
+            style="background: var(--ss-accent); border-radius: 20px; padding: 0 16px;"
             @click="guiTinNhanVien"
             :disabled="!replyText.trim()"
           >
@@ -504,12 +505,12 @@ async function scrollToBottom() {
   max-width: 75%;
 }
 .admin-msg--bot   { align-self: flex-start; }
-.admin-msg--nv    { align-self: flex-start; }           /* Nhân viên → trái */
-.admin-msg--khach { align-self: flex-end; }             /* Khách hàng → phải */
+.admin-msg--nv    { align-self: flex-end; }             /* Nhân viên/Admin → phải (là mình) */
+.admin-msg--khach { align-self: flex-start; }           /* Khách hàng → trái (là người kia) */
 
 .admin-msg__meta { font-size: 11px; color: #9ca3af; margin-bottom: 4px; }
-.admin-msg--nv    .admin-msg__meta { text-align: left; }
-.admin-msg--khach .admin-msg__meta { text-align: right; }
+.admin-msg--nv    .admin-msg__meta { text-align: right; }
+.admin-msg--khach .admin-msg__meta { text-align: left; }
 
 .admin-msg__bubble {
   padding: 9px 14px;
@@ -519,8 +520,15 @@ async function scrollToBottom() {
   word-break: break-word;
 }
 .admin-msg--bot   .admin-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; }
-.admin-msg--nv    .admin-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 2px 12px 12px 12px; }
-.admin-msg--khach .admin-msg__bubble { background: var(--ss-accent); color: #fff; border-radius: 12px 2px 12px 12px; }
+
+/* Nhân viên/Admin (phải - là "tôi") → đỏ accent */
+.admin-msg--nv    .admin-msg__bubble { background: var(--ss-accent, #e53935); color: #fff; border-radius: 12px 2px 12px 12px; }
+
+/* Khách hàng (trái - là "người kia") → xám trung tính */
+.admin-msg--khach .admin-msg__bubble { background: #f3f4f6; color: #111827; border: 1px solid #e5e7eb; border-radius: 2px 12px 12px 12px; }
+
+/* Admin trong phiên Nội bộ (phải) → xanh navy */
+.msgs--noibo .admin-msg--nv .admin-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 12px 2px 12px 12px; }
 
 .header-noibo {
   background: #eff6ff;

@@ -18,11 +18,11 @@ public class PhienChat {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "khach_hang_id")
+    @JoinColumn(name = "id_khach_hang")
     private KhachHang khachHang;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "nhan_vien_id")
+    @JoinColumn(name = "id_nhan_vien")
     private NhanVien nhanVien;
 
     @Column(name = "ten_khach", length = 255)
@@ -40,4 +40,10 @@ public class PhienChat {
 
     @Column(name = "thoi_gian_ket_thuc")
     private LocalDateTime thoiGianKetThuc;
+
+    @Column(name = "xoa_mem", nullable = false)
+    private Boolean xoaMem = false;
+
+    @Column(name = "ma_phien_chat", insertable = false, updatable = false)
+    private String maPhienChat;
 }

@@ -469,7 +469,7 @@ async function scrollToBottom() {
 }
 .chat-msg--bot   .chat-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; white-space: pre-wrap; }
 .chat-msg--khach .chat-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 12px 2px 12px 12px; }
-.chat-msg--nv    .chat-msg__bubble { background: #1d4ed8; color: #fff; border-radius: 2px 12px 12px 12px; }
+.chat-msg--nv    .chat-msg__bubble { background: #f3f4f6; color: #111827; border: 1px solid #e5e7eb; border-radius: 2px 12px 12px 12px; }
 
 /* Typing animation */
 .chat-msg__bubble--typing { display: flex; gap: 5px; align-items: center; padding: 12px; }

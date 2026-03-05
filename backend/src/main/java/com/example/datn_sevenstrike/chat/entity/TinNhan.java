@@ -16,7 +16,7 @@ public class TinNhan {
     private Integer id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "phien_chat_id", nullable = false)
+    @JoinColumn(name = "id_phien_chat", nullable = false)
     private PhienChat phienChat;
 
     // BOT | KHACH | NHAN_VIEN
@@ -31,4 +31,11 @@ public class TinNhan {
 
     @Column(name = "thoi_gian")
     private LocalDateTime thoiGian;
+
+    @Builder.Default
+    @Column(name = "xoa_mem", nullable = false)
+    private Boolean xoaMem = false;
+
+    @Column(name = "ma_tin_nhan", insertable = false, updatable = false)
+    private String maTinNhan;
 }

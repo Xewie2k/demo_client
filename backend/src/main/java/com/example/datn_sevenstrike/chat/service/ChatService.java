@@ -46,6 +46,7 @@ public class ChatService {
         phien.setTrangThai(TRANG_THAI_BOT);
         phien.setThoiGianBatDau(LocalDateTime.now());
         phien.setLoai(loai);
+        phien.setXoaMem(false);
 
         if (LOAI_NOI_BO.equals(loai)) {
             // Nhân viên khởi tạo phiên nội bộ

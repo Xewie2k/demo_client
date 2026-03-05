@@ -129,7 +129,7 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import {
-  connectChat, subscribeTopic, sendStompMessage,
+  connectChat, sendStompMessage,
   khoiTaoPhien, layTinNhan, getPhien, disconnectChat
 } from '@/chatAI/services/chatService'
 import { useClientAuth } from '@/services/authClient'
@@ -149,14 +149,14 @@ const messagesEl  = ref(null)
 const showSuggestions    = ref(true)
 const showAllSuggestions = ref(false)
 const suggestions = [
-  'Làm thế nào để đặt hàng?',
-  'Chính sách đổi trả hàng?',
+  'Giày phù hợp với sân cỏ nhân tạo?',
+  'Chính sách đổi trả trong bao lâu?',
   'Phí vận chuyển là bao nhiêu?',
-  'Kiểm tra trạng thái đơn hàng',
-  'Có voucher giảm giá không?',
-  'Sản phẩm có bảo hành không?',
-  'Hướng dẫn thanh toán online',
-  'Liên hệ nhân viên hỗ trợ',
+  'Cách chọn size giày đúng?',
+  'Có voucher giảm giá cho đơn đầu tiên không?',
+  'Sản phẩm Nike/Adidas có chính hãng không?',
+  'Cách theo dõi trạng thái đơn hàng?',
+  'Gặp nhân viên hỗ trợ trực tiếp',
 ]
 const shouldShowSuggestions = computed(() => showSuggestions.value)
 const visibleSuggestions    = computed(() =>
@@ -443,9 +443,14 @@ async function scrollToBottom() {
   line-height: 1.5;
   word-break: break-word;
 }
+/* BOT (trái - người kia) → trắng, border xám */
 .chat-msg--bot   .chat-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; white-space: pre-wrap; }
+
+/* Khách (phải - là "tôi") → đỏ accent */
 .chat-msg--khach .chat-msg__bubble { background: var(--ss-accent, #ff4d4f); color: #fff; border-radius: 12px 2px 12px 12px; }
-.chat-msg--nv    .chat-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 2px 12px 12px 12px; }
+
+/* Nhân viên (trái - người kia) → xám trung tính, khớp với admin panel */
+.chat-msg--nv    .chat-msg__bubble { background: #f3f4f6; color: #111827; border: 1px solid #e5e7eb; border-radius: 2px 12px 12px 12px; }
 
 /* Typing animation */
 .chat-msg__bubble--typing { display: flex; gap: 5px; align-items: center; padding: 12px; }
