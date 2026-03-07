@@ -65,3 +65,8 @@ export const ketThucCa = async (idGiaoCa, payload) => {
     });
     return handleResponse(response);
 };
+
+export const getLichSuGiaoCa = async (pageNo = 0, pageSize = 20) => {
+    const response = await fetch(`http://localhost:8080/api/admin/giao-ca/page?pageNo=${pageNo}&pageSize=${pageSize}`);
+    return handleResponse(response);
+};

@@ -15,3 +15,23 @@ export const getAllCaLam = async () => {
   if (!res.ok) throw new Error("Load dữ liệu ca làm thất bại");
   return await unwrapJson(res);
 };
+
+export const createCaLam = async (payload) => {
+  const res = await fetch(API_CA_LAM, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Tạo ca làm thất bại");
+  return await unwrapJson(res);
+};
+
+export const updateCaLam = async (id, payload) => {
+  const res = await fetch(`${API_CA_LAM}/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Cập nhật ca làm thất bại");
+  return await unwrapJson(res);
+};
