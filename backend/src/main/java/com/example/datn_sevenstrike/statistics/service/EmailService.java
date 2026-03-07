@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 
-@Service
+@Service("statisticsEmailService")
 @RequiredArgsConstructor
 public class EmailService {
 
