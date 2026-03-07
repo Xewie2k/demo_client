@@ -17,7 +17,8 @@ export function useCart() {
   const addToCart = (product, variant, quantity) => {
     const existingItem = state.items.find(item => item.variantId === variant.id);
     if (existingItem) {
-      existingItem.quantity += quantity;
+      existingItem.quantity = Math.min(existingItem.quantity + quantity, variant.soLuong);
+      existingItem.maxStock = variant.soLuong;
     } else {
       state.items.push({
         productId: product.id,

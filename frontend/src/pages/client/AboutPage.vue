@@ -99,7 +99,7 @@
               </li>
               <li class="d-flex align-items-start gap-2 mb-3">
                 <i class="bi bi-check-circle-fill text-danger mt-1"></i>
-                <span class="text-muted">Dịch vụ hậu mãi và chính sách đổi trả linh hoạt</span>
+                <span class="text-muted">Dịch vụ hậu mãi và hỗ trợ đổi trả linh hoạt</span>
               </li>
               <li class="d-flex align-items-start gap-2">
                 <i class="bi bi-check-circle-fill text-danger mt-1"></i>
@@ -132,7 +132,7 @@
 const whyUs = [
   { icon: 'bi bi-shield-check', title: 'Chính hãng 100%', desc: 'Cam kết sản phẩm chính hãng từ các thương hiệu hàng đầu thế giới.' },
   { icon: 'bi bi-truck', title: 'Giao hàng nhanh', desc: 'Giao hàng toàn quốc trong 1-3 ngày, miễn phí cho đơn từ 500K.' },
-  { icon: 'bi bi-arrow-repeat', title: 'Đổi trả dễ dàng', desc: 'Chính sách đổi trả trong 7 ngày nếu sản phẩm lỗi hoặc sai size.' },
+  { icon: 'bi bi-arrow-repeat', title: 'Đổi trả dễ dàng', desc: 'Đổi trả trong 7 ngày nếu sản phẩm lỗi hoặc sai size.' },
   { icon: 'bi bi-headset', title: 'Hỗ trợ 24/7', desc: 'Đội ngũ tư vấn nhiệt tình, sẵn sàng hỗ trợ bạn mọi lúc.' },
 ];
 

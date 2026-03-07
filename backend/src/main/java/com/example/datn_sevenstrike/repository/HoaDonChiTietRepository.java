@@ -22,6 +22,19 @@ public interface HoaDonChiTietRepository extends JpaRepository<HoaDonChiTiet, In
 
     List<HoaDonChiTiet> findAllWithProductByIdHoaDon(Integer id);
 
+    // Tìm các dòng chi tiết đơn COD chờ xác nhận có chứa biến thể sản phẩm cụ thể
+    @Query("""
+        SELECT hdct FROM HoaDonChiTiet hdct
+        JOIN HoaDon hd ON hd.id = hdct.idHoaDon
+        WHERE hdct.idChiTietSanPham = :idCtsp
+          AND hd.trangThaiHienTai = 1
+          AND hd.loaiThanhToan = 0
+          AND hd.loaiDon = 2
+          AND hdct.xoaMem = false
+          AND hd.xoaMem = false
+    """)
+    List<HoaDonChiTiet> findPendingCODItemsByCtsp(@Param("idCtsp") Integer idCtsp);
+
     // Trả về idSanPham bán chạy nhất trong tháng hiện tại (đơn hoàn thành - trạng thái 5)
     @Query(value = """
         SELECT ctsp.id_san_pham

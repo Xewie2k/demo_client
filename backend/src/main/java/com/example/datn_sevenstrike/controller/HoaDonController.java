@@ -62,6 +62,24 @@ public class HoaDonController {
         service.delete(id);
     }
 
+    @PostMapping("/{id}/huy")
+    public HoaDonResponse huyDon(@PathVariable Integer id, @RequestBody(required = false) HuyDonBody body) {
+        Integer nhanVienId = body == null ? null : body.getNhanVienId();
+        String lyDo = body == null ? null : body.getLyDo();
+        return service.cancelOrder(id, nhanVienId, "NHAN_VIEN", lyDo);
+    }
+
+    @PostMapping("/{id}/xac-nhan-hoan-phi")
+    public HoaDonResponse xacNhanHoanPhi(@PathVariable Integer id, @RequestBody(required = false) HoanPhiBody body) {
+        Integer nhanVienId = body == null ? null : body.getNhanVienId();
+        return service.confirmHoanPhi(id, nhanVienId);
+    }
+
+    @GetMapping("/can-hoan-phi")
+    public List<HoaDonResponse> getDonCanHoanPhi() {
+        return service.getDonCanHoanPhi();
+    }
+
     @Data
     public static class ChangeStatusBody {
         private Integer trangThai; // chỉ nhận: 1,2,3,4,5
@@ -71,5 +89,16 @@ public class HoaDonController {
     @Data
     public static class NoteBody {
         private String ghiChu;
+    }
+
+    @Data
+    public static class HuyDonBody {
+        private Integer nhanVienId;
+        private String lyDo;
+    }
+
+    @Data
+    public static class HoanPhiBody {
+        private Integer nhanVienId;
     }
 }

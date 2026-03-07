@@ -20,6 +20,8 @@ public class HoaDonChiTietResponse {
 
     private Integer soLuong;
     private BigDecimal donGia;
+    // Giá cũ trước khi thay đổi (null nếu chưa thay đổi)
+    private BigDecimal donGiaCu;
 
     private BigDecimal thanhTien; // computed
 

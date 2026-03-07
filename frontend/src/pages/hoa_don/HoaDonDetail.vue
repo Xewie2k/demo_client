@@ -29,10 +29,19 @@
                 Trạng thái đơn hàng
               </h6>
 
-              <button class="btn btn-history" @click="moModalLichSu">
-                <i class="bi bi-clock-history me-1"></i>
-                Lịch sử thao tác
-              </button>
+              <div class="d-flex gap-2">
+                <button
+                  v-if="selectedHD.trangThai === 1"
+                  class="btn btn-outline-danger btn-sm"
+                  @click="showHuyModal = true"
+                >
+                  <i class="bi bi-x-circle me-1"></i> Hủy đơn
+                </button>
+                <button class="btn btn-history" @click="moModalLichSu">
+                  <i class="bi bi-clock-history me-1"></i>
+                  Lịch sử thao tác
+                </button>
+              </div>
             </div>
 
             <!-- TIMELINE -->
@@ -132,33 +141,31 @@
               </thead>
 
               <tbody>
-                <tr
+                <template
                   v-for="(sp, index) in selectedHD.sanPham"
                   :key="sp.id"
-                  class="text-center"
                 >
-                  <td>{{ index + 1 }}</td>
-
-                  <td class="fw-medium">
-                    {{ sp.maSanPham }}
-                  </td>
-
-                  <td class="text-start">
-                    {{ sp.tenSanPham }}
-                  </td>
-
-                  <td>{{ sp.size }}</td>
-
-                  <td>{{ sp.mauSac }}</td>
-
-                  <td>{{ sp.soLuong }}</td>
-
-                  <td>{{ sp.donGia.toLocaleString("vi-VN") }} đ</td>
-
-                  <td class="text-danger fw-medium">
-                    {{ sp.thanhTien.toLocaleString("vi-VN") }} đ
-                  </td>
-                </tr>
+                  <tr class="text-center">
+                    <td>{{ index + 1 }}</td>
+                    <td class="fw-medium">{{ sp.maSanPham }}</td>
+                    <td class="text-start">{{ sp.tenSanPham }}</td>
+                    <td>{{ sp.size }}</td>
+                    <td>{{ sp.mauSac }}</td>
+                    <td>{{ sp.soLuong }}</td>
+                    <td>{{ sp.donGia.toLocaleString("vi-VN") }} đ</td>
+                    <td class="text-danger fw-medium">
+                      {{ sp.thanhTien.toLocaleString("vi-VN") }} đ
+                    </td>
+                  </tr>
+                  <!-- Dòng vàng thông báo thay đổi giá -->
+                  <tr v-if="sp.donGiaCu" style="background-color: #fff3cd;">
+                    <td colspan="8" class="py-1 text-start ps-3 small" style="color: #856404;">
+                      <i class="bi bi-exclamation-triangle-fill me-1"></i>
+                      Giá đổi từ <strong>{{ sp.donGiaCu.toLocaleString("vi-VN") }} đ</strong>
+                      thành <strong>{{ sp.donGia.toLocaleString("vi-VN") }} đ</strong>
+                    </td>
+                  </tr>
+                </template>
 
                 <tr
                   v-if="!selectedHD.sanPham || selectedHD.sanPham.length === 0"
@@ -238,6 +245,24 @@
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- HOÀN PHÍ STATUS -->
+          <div v-if="selectedHD.daHoanPhi === false" class="card ss-card mt-3 border-warning">
+            <div class="card-body">
+              <h6 class="fw-bold mb-2 text-warning">
+                <i class="bi bi-cash-coin me-1"></i> Hoàn tiền
+              </h6>
+              <p class="text-muted small mb-3">Đơn hàng chuyển khoản đã bị hủy. Cần xác nhận đã hoàn tiền cho khách.</p>
+              <button class="btn btn-warning w-100" :disabled="hoanPhiLoading" @click="confirmHoanPhi">
+                <span v-if="hoanPhiLoading" class="spinner-border spinner-border-sm me-1"></span>
+                <i v-else class="bi bi-check-circle me-1"></i>
+                Xác nhận đã hoàn tiền
+              </button>
+            </div>
+          </div>
+          <div v-if="selectedHD.daHoanPhi === true" class="alert alert-success mt-3 small">
+            <i class="bi bi-check-circle-fill me-1"></i> Đã hoàn tiền cho khách hàng
           </div>
 
           <hr />
@@ -446,6 +471,32 @@
     </div>
   </div>
 
+  <!-- MODAL HỦY ĐƠN ADMIN -->
+  <div v-if="showHuyModal" class="modal d-block" style="background: rgba(0,0,0,0.5);" @click.self="showHuyModal = false">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Xác nhận hủy đơn hàng</h5>
+          <button type="button" class="btn-close" @click="showHuyModal = false"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted">Hủy đơn hàng <strong>{{ selectedHD.maHD }}</strong>?</p>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Lý do hủy (tùy chọn)</label>
+            <textarea v-model="huyLyDo" class="form-control form-control-sm" rows="2" placeholder="Nhập lý do..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary btn-sm" @click="showHuyModal = false">Không</button>
+          <button class="btn btn-danger btn-sm" :disabled="huyLoading" @click="huyDon">
+            <span v-if="huyLoading" class="spinner-border spinner-border-sm me-1"></span>
+            Hủy đơn hàng
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL LỊCH SỬ THAO TÁC -->
   <div class="modal fade" id="modalLichSu" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -480,6 +531,12 @@
 
               <div class="history-text">
                 {{ item.noiDung }}
+              </div>
+
+              <div v-if="item.nguoiThucHien" class="small text-muted mt-1">
+                <i class="bi bi-person me-1"></i>
+                {{ item.loaiNguoiThucHien === 'KHACH_HANG' ? 'Khách hàng' : item.loaiNguoiThucHien === 'NHAN_VIEN' ? 'Nhân viên' : 'Hệ thống' }}
+                (ID: {{ item.nguoiThucHien }})
               </div>
             </div>
           </div>
@@ -626,10 +683,59 @@ const loadLichSuLocal = (id) => {
   return data ? JSON.parse(data) : [];
 };
 
-const moModalLichSu = () => {
+const showHuyModal = ref(false);
+const huyLyDo = ref('');
+const huyLoading = ref(false);
+const hoanPhiLoading = ref(false);
+
+const moModalLichSu = async () => {
+  // Load lịch sử từ API thay vì localStorage
+  try {
+    const id = route.params.id;
+    const { data } = await axios.get(`http://localhost:8080/api/admin/lich-su-hoa-don/by-hoa-don/${id}`);
+    lichSuThaoTac.value = data.map(item => ({
+      thoiGian: item.thoiGian ? new Date(item.thoiGian).toLocaleString("vi-VN") : "—",
+      noiDung: item.ghiChu || (item.trangThaiLabel || ""),
+      nguoiThucHien: item.nguoiThucHien,
+      loaiNguoiThucHien: item.loaiNguoiThucHien,
+    })).reverse();
+  } catch (e) {
+    console.error("Không thể load lịch sử:", e);
+  }
   const el = document.getElementById("modalLichSu");
   const modal = Modal.getOrCreateInstance(el);
   modal.show();
+};
+
+const huyDon = async () => {
+  huyLoading.value = true;
+  try {
+    const id = route.params.id;
+    await axios.post(`${API_HD}/${id}/huy`, {
+      lyDo: huyLyDo.value || null,
+      nhanVienId: null,
+    });
+    showHuyModal.value = false;
+    huyLyDo.value = '';
+    await loadChiTiet(id);
+  } catch (err) {
+    alert(err.response?.data?.message || 'Không thể hủy đơn hàng');
+  } finally {
+    huyLoading.value = false;
+  }
+};
+
+const confirmHoanPhi = async () => {
+  hoanPhiLoading.value = true;
+  try {
+    const id = route.params.id;
+    await axios.post(`${API_HD}/${id}/xac-nhan-hoan-phi`, { nhanVienId: null });
+    await loadChiTiet(id);
+  } catch (err) {
+    alert(err.response?.data?.message || 'Không thể xác nhận hoàn phí');
+  } finally {
+    hoanPhiLoading.value = false;
+  }
 };
 
 const layThoiGianHienTai = () => {
@@ -770,9 +876,13 @@ const loadChiTiet = async (id) => {
           mauSac: sp.mauSac || "—",
           soLuong: sp.soLuong ?? 0,
           donGia: sp.donGia ?? 0,
+          donGiaCu: sp.donGiaCu ?? null,
           thanhTien: (sp.soLuong ?? 0) * (sp.donGia ?? 0),
         }))
       : [],
+
+    daHoanPhi: data.daHoanPhi ?? null,
+    loaiThanhToan: data.loaiThanhToan ?? null,
   };
 
   // =========================

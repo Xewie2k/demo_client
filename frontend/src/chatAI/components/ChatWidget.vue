@@ -1,4 +1,18 @@
 <template>
+  <!-- Toast notification (khi widget đóng mà có tin nhắn mới) -->
+  <transition name="toast-slide">
+    <div v-if="showToast && !isOpen" class="chat-toast" @click="openFromToast">
+      <div class="chat-toast__icon">
+        <span class="material-icons" style="font-size:16px">support_agent</span>
+      </div>
+      <div class="chat-toast__body">
+        <div class="chat-toast__title">SevenStrike Hỗ Trợ</div>
+        <div class="chat-toast__msg">{{ toastMessage }}</div>
+      </div>
+      <button class="chat-toast__close" @click.stop="showToast = false">×</button>
+    </div>
+  </transition>
+
   <!-- Bubble trigger -->
   <button
     class="chat-bubble"
@@ -47,7 +61,8 @@
           }"
         >
           <div class="chat-msg__name">{{ msg.tenNguoiGui }}</div>
-          <div class="chat-msg__bubble">{{ msg.noiDung }}</div>
+          <div class="chat-msg__bubble" v-if="msg.nguoiGui === 'KHACH'">{{ msg.noiDung }}</div>
+          <div class="chat-msg__bubble" v-else v-html="renderMessage(msg.noiDung)"></div>
         </div>
 
         <!-- Loading indicator -->
@@ -145,12 +160,47 @@ const unreadCount = ref(0)
 const phienChatId = ref(null)
 const messagesEl  = ref(null)
 
+// ── Toast notification ────────────────────────────────────────────────────────
+const showToast   = ref(false)
+const toastMessage = ref('')
+let toastTimer = null
+
+function showNewMessageToast(text) {
+  if (toastTimer) clearTimeout(toastTimer)
+  const preview = (text || '').length > 60 ? (text || '').slice(0, 60) + '...' : (text || 'Có tin nhắn mới')
+  toastMessage.value = preview
+  showToast.value = true
+  toastTimer = setTimeout(() => { showToast.value = false }, 5000)
+}
+
+function openFromToast() {
+  showToast.value = false
+  isOpen.value = true
+  unreadCount.value = 0
+  scrollToBottom()
+}
+
+// ── Render message với link sản phẩm ─────────────────────────────────────────
+function renderMessage(text) {
+  if (!text) return ''
+  const escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+  const linked = escaped.replace(
+    /\[([^\]]+)\]\((\/client\/[^)]+)\)/g,
+    '<a href="$2" style="color:var(--ss-accent);text-decoration:underline;" target="_self">$1</a>'
+  )
+  return linked.replace(/\n/g, '<br>')
+}
+
 // ── Gợi ý câu hỏi ─────────────────────────────────────────────────────────────
 const showSuggestions    = ref(true)
 const showAllSuggestions = ref(false)
 const suggestions = [
   'Giày phù hợp với sân cỏ nhân tạo?',
-  'Chính sách đổi trả trong bao lâu?',
+  'Đổi trả hàng như thế nào?',
   'Phí vận chuyển là bao nhiêu?',
   'Cách chọn size giày đúng?',
   'Có voucher giảm giá cho đơn đầu tiên không?',
@@ -242,7 +292,12 @@ onMounted(async () => {
         clearChatSession()
       }
 
-      if (!isOpen.value) unreadCount.value++
+      if (!isOpen.value) {
+        unreadCount.value++
+        if (data.nguoiGui === 'NHAN_VIEN' || data.nguoiGui === 'BOT') {
+          showNewMessageToast(data.noiDung)
+        }
+      }
       scrollToBottom()
     })
   } catch (e) {
@@ -330,7 +385,12 @@ async function batDauMoi() {
         clearChatSession()
       }
 
-      if (!isOpen.value) unreadCount.value++
+      if (!isOpen.value) {
+        unreadCount.value++
+        if (data.nguoiGui === 'NHAN_VIEN' || data.nguoiGui === 'BOT') {
+          showNewMessageToast(data.noiDung)
+        }
+      }
       scrollToBottom()
     })
   } catch (e) {
@@ -343,6 +403,8 @@ function toggleChat() {
   isOpen.value = !isOpen.value
   if (isOpen.value) {
     unreadCount.value = 0
+    showToast.value = false
+    if (toastTimer) { clearTimeout(toastTimer); toastTimer = null }
     scrollToBottom()
   }
 }
@@ -599,4 +661,44 @@ async function scrollToBottom() {
 .slide-up-leave-active { transition: opacity .2s ease, transform .2s ease; }
 .slide-up-enter-from,
 .slide-up-leave-to { opacity: 0; transform: translateY(8px); }
+
+/* ── Toast notification ───────────────────────────────────────────────────── */
+.chat-toast {
+  position: fixed;
+  bottom: 96px;
+  right: 28px;
+  width: 280px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,.18);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  cursor: pointer;
+  z-index: 9001;
+  border-left: 3px solid var(--ss-accent, #ff4d4f);
+}
+.chat-toast:hover { box-shadow: 0 6px 24px rgba(0,0,0,.22); }
+.chat-toast__icon {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--ss-accent, #ff4d4f);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.chat-toast__body { flex: 1; min-width: 0; }
+.chat-toast__title { font-size: 12px; font-weight: 700; color: #374151; margin-bottom: 2px; }
+.chat-toast__msg { font-size: 12px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-toast__close {
+  background: none; border: none; color: #9ca3af;
+  font-size: 16px; line-height: 1; cursor: pointer; padding: 0;
+  flex-shrink: 0;
+}
+.chat-toast__close:hover { color: #374151; }
+.toast-slide-enter-active,
+.toast-slide-leave-active { transition: opacity .25s ease, transform .25s ease; }
+.toast-slide-enter-from,
+.toast-slide-leave-to { opacity: 0; transform: translateY(12px); }
 </style>

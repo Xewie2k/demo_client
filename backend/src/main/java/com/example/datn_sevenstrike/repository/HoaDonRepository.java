@@ -55,4 +55,7 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, Integer> {
     List<HoaDonResponse> getDanhSachHoaDon();
 
     List<HoaDon> findAllByIdKhachHangAndXoaMemFalseOrderByIdDesc(Integer customerId);
+
+    // Đơn cần hoàn phí (chuyển khoản đã hủy, chưa hoàn tiền)
+    List<HoaDon> findAllByDaHoanPhiFalseAndXoaMemFalseOrderByIdDesc();
 }

@@ -151,7 +151,7 @@ const suggestions = [
   'Cách hoàn tiền cho khách?',
   'Thủ tục đổi trả hàng?',
   'Cách xuất hóa đơn?',
-  'Chính sách chiết khấu?',
+  'Quy định chiết khấu?',
   'Quy định ca làm việc?',
   'Cách cập nhật tồn kho?',
   'Báo cáo sự cố kỹ thuật',

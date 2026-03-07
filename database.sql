@@ -1,14 +1,14 @@
-﻿if db_id('DATN_SevenStrike_Test') is not null
+﻿if db_id('DATN_SevenStrike') is not null
 begin
-    alter database DATN_SevenStrike_Test set single_user with rollback immediate;
-    drop database DATN_SevenStrike_Test;
+    alter database DATN_SevenStrike set single_user with rollback immediate;
+    drop database DATN_SevenStrike;
 end
 go
 
-create database DATN_SevenStrike_Test;
+create database DATN_SevenStrike;
 go
 
-use DATN_SevenStrike_Test;
+use DATN_SevenStrike;
 go
 
 set nocount on;
@@ -579,6 +579,11 @@ create table dbo.hoa_don (
     ngay_cap_nhat datetime2 null,
     nguoi_cap_nhat int null,
 
+    -- ✅ [2026-03-06] Nghiệp vụ online: loại thanh toán (0=tiền mặt/COD, 1=chuyển khoản)
+    loai_thanh_toan int null,
+    -- ✅ [2026-03-06] Nghiệp vụ online: trạng thái hoàn phí (NULL=không cần, 0=chờ hoàn, 1=đã hoàn)
+    da_hoan_phi bit null,
+
     constraint FK_hd_kh foreign key (id_khach_hang) references dbo.khach_hang(id),
     constraint FK_hd_nv foreign key (id_nhan_vien) references dbo.nhan_vien(id),
     constraint FK_hd_pgg foreign key (id_phieu_giam_gia) references dbo.phieu_giam_gia(id),
@@ -607,6 +612,8 @@ create table dbo.hoa_don_chi_tiet (
 
     so_luong int not null check (so_luong > 0),
     don_gia decimal(18,2) not null check (don_gia >= 0),
+    -- ✅ [2026-03-06] Nghiệp vụ online: lưu giá cũ khi giá sản phẩm thay đổi trong đơn (hiển thị dòng vàng)
+    don_gia_cu decimal(18,2) null,
 
     thanh_tien as cast((so_luong * don_gia) as decimal(18,2)) persisted,
 
@@ -722,6 +729,11 @@ create table dbo.lich_su_hoa_don (
 
     -- ✅ thêm để lưu đúng ai thao tác (ai tạo ra dòng lịch sử)
     nguoi_cap_nhat int null,
+
+    -- ✅ [2026-03-06] Nghiệp vụ online: ID người thực hiện (khách hàng hoặc nhân viên)
+    nguoi_thuc_hien int null,
+    -- ✅ [2026-03-06] Nghiệp vụ online: loại người thực hiện ('KHACH_HANG' | 'NHAN_VIEN' | 'HE_THONG')
+    loai_nguoi_thuc_hien varchar(20) null,
 
     constraint FK_lshd_hd foreign key (id_hoa_don) references dbo.hoa_don(id),
 
@@ -1070,4 +1082,3 @@ go
    DONE
    ========================================================= */
 print N'✅ Đã tạo DB: DATN_SevenStrike_Test và tích hợp Module Chat AI';
-gou

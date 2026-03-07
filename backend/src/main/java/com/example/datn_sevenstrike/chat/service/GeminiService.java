@@ -96,15 +96,35 @@ public class GeminiService {
      * Gửi tin nhắn tới Gemini kèm ngữ cảnh sản phẩm thực tế nếu cần.
      */
     public String hoiGemini(String tinNhanKhach) {
-        String productContext = buildProductContext(tinNhanKhach);
+        ProductContextResult result = buildProductContextResult(tinNhanKhach);
         String fullPrompt = SYSTEM_PROMPT;
-        if (!productContext.isEmpty()) {
+        if (!result.context.isEmpty()) {
             fullPrompt += "\n\nDANH SÁCH SẢN PHẨM THỰC TẾ TỪ HỆ THỐNG (dùng để trả lời khách):\n"
-                        + productContext
+                        + result.context
                         + "\n\nDùng dữ liệu trên để gợi ý sản phẩm phù hợp. Chỉ đề cập sản phẩm có trong danh sách.";
         }
-        return goiGemini(fullPrompt, tinNhanKhach,
+        String geminiResponse = goiGemini(fullPrompt, tinNhanKhach,
                 "Xin lỗi, hiện tại tôi không thể xử lý yêu cầu của bạn. Vui lòng thử lại sau.");
+
+        // Nếu có sản phẩm phù hợp, thêm link xem sản phẩm vào cuối phản hồi
+        if (!result.products.isEmpty()) {
+            StringBuilder links = new StringBuilder("\n\n🔗 Xem sản phẩm:");
+            result.products.stream().limit(4).forEach(p ->
+                links.append("\n[").append(p.getTenSanPham()).append("](/client/products/").append(p.getId()).append(")")
+            );
+            geminiResponse += links.toString();
+        }
+        return geminiResponse;
+    }
+
+    // ── Inner class giữ kết quả context sản phẩm ──────────────────────────────
+    private static class ProductContextResult {
+        final String context;
+        final List<ProductClientDTO> products;
+        ProductContextResult(String context, List<ProductClientDTO> products) {
+            this.context = context;
+            this.products = products;
+        }
     }
 
     /**
@@ -116,11 +136,11 @@ public class GeminiService {
     }
 
     // ── Xây dựng ngữ cảnh sản phẩm từ CSDL ───────────────────────────────────
-    private String buildProductContext(String query) {
+    private ProductContextResult buildProductContextResult(String query) {
         String q = query.toLowerCase();
 
         // Chỉ fetch khi query liên quan đến sản phẩm
-        if (!PRODUCT_KEYWORDS.matcher(q).find()) return "";
+        if (!PRODUCT_KEYWORDS.matcher(q).find()) return new ProductContextResult("", List.of());
 
         try {
             List<ProductClientDTO> products;
@@ -191,19 +211,23 @@ public class GeminiService {
                 }
             }
 
-            if (products.isEmpty()) {
-                return "Không tìm thấy sản phẩm phù hợp với yêu cầu.";
-            }
-
-            return products.stream()
+            List<ProductClientDTO> available = products.stream()
                     .filter(ProductClientDTO::isHangCoSan)
                     .limit(8)
+                    .collect(Collectors.toList());
+
+            if (available.isEmpty()) {
+                return new ProductContextResult("Không tìm thấy sản phẩm phù hợp với yêu cầu.", List.of());
+            }
+
+            String context = available.stream()
                     .map(this::formatProduct)
                     .collect(Collectors.joining("\n"));
+            return new ProductContextResult(context, available);
 
         } catch (Exception e) {
             System.err.println("[GeminiService] Lỗi lấy dữ liệu sản phẩm: " + e.getMessage());
-            return "";
+            return new ProductContextResult("", List.of());
         }
     }
 

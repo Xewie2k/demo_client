@@ -22,4 +22,7 @@ public class LichSuHoaDonResponse {
     private String ghiChu;
 
     private Boolean xoaMem;
+
+    private Integer nguoiThucHien;
+    private String loaiNguoiThucHien;
 }

@@ -34,4 +34,12 @@ public class LichSuHoaDon {
 
     @Column(name = "xoa_mem", nullable = false)
     private Boolean xoaMem;
+
+    // ID người thực hiện (admin/nhân viên/khách hàng)
+    @Column(name = "nguoi_thuc_hien")
+    private Integer nguoiThucHien;
+
+    // "KHACH_HANG" | "NHAN_VIEN" | "HE_THONG"
+    @Column(name = "loai_nguoi_thuc_hien", length = 20)
+    private String loaiNguoiThucHien;
 }

@@ -184,6 +184,17 @@
                   >
                     <span class="material-icons-outlined">visibility</span>
                   </button>
+                  <button
+                    v-if="tabTrangThai === 'CAN_HOAN_PHI' && hd.daHoanPhi === false"
+                    class="btn btn-warning btn-sm ms-1"
+                    type="button"
+                    :disabled="hoanPhiLoadingId === hd.id"
+                    @click="confirmHoanPhiInList(hd)"
+                    title="Xác nhận đã hoàn tiền"
+                  >
+                    <span v-if="hoanPhiLoadingId === hd.id" class="spinner-border spinner-border-sm"></span>
+                    <i v-else class="bi bi-check-circle"></i>
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -210,6 +221,7 @@ const API_HD = "http://localhost:8080/api/admin/hoa-don";
 /* ================== DATA ================== */
 const hoaDonList = ref([]);
 const filteredHoaDon = ref([]);
+const hoanPhiLoadingId = ref(null);
 
 /* ================== FILTER ================= */
 const filterMaHD = ref("");
@@ -233,9 +245,10 @@ const TRANG_THAI = {
   DANG_VAN_CHUYEN: 3,
   DA_GIAO_HANG: 4,
   HOAN_THANH: 5,
+  HUY_DON: 6,
 };
 
-/* Tabs (đúng UI anh gửi) */
+/* Tabs */
 const tabList = [
   { label: "Tất cả", value: "ALL" },
   { label: "Chờ xác nhận", value: TRANG_THAI.CHO_XAC_NHAN },
@@ -243,6 +256,8 @@ const tabList = [
   { label: "Vận chuyển", value: TRANG_THAI.DANG_VAN_CHUYEN },
   { label: "Đã giao hàng", value: TRANG_THAI.DA_GIAO_HANG },
   { label: "Hoàn thành", value: TRANG_THAI.HOAN_THANH },
+  { label: "Đã hủy", value: TRANG_THAI.HUY_DON },
+  { label: "🔴 Cần hoàn phí", value: "CAN_HOAN_PHI" },
 ];
 
 /* Badge trạng thái (list) */
@@ -252,6 +267,7 @@ const trangThaiMap = {
   3: { label: "Đang vận chuyển", bg: "#fef3c7", color: "#92400e" },
   4: { label: "Đã giao hàng", bg: "#ecfeff", color: "#0e7490" },
   5: { label: "Hoàn thành", bg: "#dcfce7", color: "#15803d" },
+  6: { label: "Đã hủy", bg: "#fee2e2", color: "#dc2626" },
 };
 
 const hienTrangThai = (code) => {
@@ -275,31 +291,27 @@ const getTrangThaiStyle = (code) => {
 };
 
 /* ================== LOAD DATA ================== */
+const mapHoaDon = (hd) => {
+  const tongHang = Number(hd.tongTien ?? 0);
+  const giamGia = Number(hd.tongTienGiam ?? 0);
+  const phiShip = Number(hd.phiVanChuyen ?? 0);
+  return {
+    id: hd.id,
+    maHD: hd.maHoaDon,
+    khachHang: hd.tenKhachHang ?? "",
+    sdtKhachHang: hd.soDienThoaiKhachHang ?? "",
+    nhanVien: hd.tenNhanVien ?? "",
+    tongTien: tongHang - giamGia + phiShip,
+    ngayTao: hd.ngayTao?.substring(0, 10) ?? "",
+    loaiDon: hd.loaiDon === 2 ? "Online" : hd.loaiDon === 1 ? "Giao hàng" : "Tại quầy",
+    trangThaiHienTai: Number(hd.trangThaiHienTai),
+    daHoanPhi: hd.daHoanPhi,
+  };
+};
+
 const loadHoaDon = async () => {
   const res = await axios.get(API_HD);
-
-  hoaDonList.value = res.data
-    .map((hd) => {
-      const tongHang = Number(hd.tongTien ?? 0);
-      const giamGia = Number(hd.tongTienGiam ?? 0);
-      const phiShip = Number(hd.phiVanChuyen ?? 0);
-
-      const tongThanhToan = tongHang - giamGia + phiShip;
-
-      return {
-        id: hd.id,
-        maHD: hd.maHoaDon,
-        khachHang: hd.tenKhachHang ?? "",
-        sdtKhachHang: hd.soDienThoaiKhachHang ?? "",
-        nhanVien: hd.tenNhanVien ?? "",
-        tongTien: tongThanhToan, // ✅ công thức chuẩn
-        ngayTao: hd.ngayTao?.substring(0, 10) ?? "",
-        loaiDon: hd.loaiDon === 2 ? "Online" : hd.loaiDon === 1 ? "Giao hàng" : "Tại quầy",
-        trangThaiHienTai: Number(hd.trangThaiHienTai),
-      };
-    })
-    .sort((a, b) => new Date(b.ngayTao) - new Date(a.ngayTao));
-
+  hoaDonList.value = res.data.map(mapHoaDon).sort((a, b) => new Date(b.ngayTao) - new Date(a.ngayTao));
   filteredHoaDon.value = [...hoaDonList.value];
 };
 
@@ -307,6 +319,8 @@ const loadHoaDon = async () => {
 
 /* ================== FILTER CORE ================== */
 const apDungBoLoc = () => {
+  if (tabTrangThai.value === "CAN_HOAN_PHI") return; // Handled separately
+
   filteredHoaDon.value = hoaDonList.value.filter((hd) => {
     const ma = filterMaHD.value
       ? hd.maHD.toLowerCase().includes(filterMaHD.value.toLowerCase())
@@ -335,7 +349,17 @@ watch(
 );
 
 /* ================== ACTION ================== */
-const locTheoTrangThai = (value) => (tabTrangThai.value = value);
+const locTheoTrangThai = async (value) => {
+  tabTrangThai.value = value;
+  if (value === "CAN_HOAN_PHI") {
+    try {
+      const res = await axios.get(`${API_HD}/can-hoan-phi`);
+      filteredHoaDon.value = res.data.map(mapHoaDon);
+    } catch (e) {
+      console.error("Không load được danh sách cần hoàn phí:", e);
+    }
+  }
+};
 
 /**
  * ✅ Đặt lại bộ lọc (đổi tên hiển thị từ "Làm mới" -> "Đặt lại bộ lọc")
@@ -369,6 +393,20 @@ const xuatFile = () => {
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Danh sách hóa đơn");
   XLSX.writeFile(wb, "danh_sach_hoa_don.xlsx");
+};
+
+/* ================== HOÀN PHÍ NHANH ================== */
+const confirmHoanPhiInList = async (hd) => {
+  if (!confirm(`Xác nhận đã hoàn tiền cho đơn ${hd.maHD}?`)) return;
+  hoanPhiLoadingId.value = hd.id;
+  try {
+    await axios.post(`${API_HD}/${hd.id}/xac-nhan-hoan-phi`, { nhanVienId: null });
+    await locTheoTrangThai("CAN_HOAN_PHI");
+  } catch (e) {
+    alert(e.response?.data?.message || "Không thể xác nhận hoàn phí");
+  } finally {
+    hoanPhiLoadingId.value = null;
+  }
 };
 
 /* ================== INIT ================== */

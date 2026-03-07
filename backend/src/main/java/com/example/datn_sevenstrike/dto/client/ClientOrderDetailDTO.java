@@ -36,4 +36,9 @@ public class ClientOrderDetailDTO {
     // Payment
     private boolean daThanhToan;
     private String phuongThucThanhToan;
+
+    // 0=tiền mặt/COD, 1=chuyển khoản
+    private Integer loaiThanhToan;
+    // Khách hàng ID để frontend validate quyền sửa
+    private Integer idKhachHang;
 }

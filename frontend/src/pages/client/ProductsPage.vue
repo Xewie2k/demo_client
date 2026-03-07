@@ -100,7 +100,7 @@
                 <div class="mt-2 pt-2" style="border-top:1px solid #e8e8e8;">
                   <div class="small text-muted mb-1" style="font-size:0.72rem;">Chọn màu tùy chỉnh</div>
                   <div class="d-flex align-items-center gap-2">
-                    <input type="color" class="color-picker-input" v-model="customColorHex" title="Chọn màu">
+                    <input type="color" class="color-picker-input" :value="customColorHex || '#000000'" @input="customColorHex = $event.target.value" title="Chọn màu">
                     <span v-if="customColorHex" class="small text-muted" style="font-size:0.75rem;">{{ customColorHex }}</span>
                     <button v-if="customColorHex" class="btn btn-link btn-sm p-0 text-danger" @click="customColorHex=''">
                       <i class="bi bi-x-circle"></i>
@@ -488,7 +488,7 @@
             <div class="mt-2 pt-2" style="border-top:1px solid #e8e8e8;">
               <div class="small text-muted mb-1" style="font-size:0.72rem;">Chọn màu tùy chỉnh</div>
               <div class="d-flex align-items-center gap-2">
-                <input type="color" class="color-picker-input" v-model="customColorHex" title="Chọn màu">
+                <input type="color" class="color-picker-input" :value="customColorHex || '#000000'" @input="customColorHex = $event.target.value" title="Chọn màu">
                 <span v-if="customColorHex" class="small text-muted" style="font-size:0.75rem;">{{ customColorHex }}</span>
                 <button v-if="customColorHex" class="btn btn-link btn-sm p-0 text-danger" @click="customColorHex=''">
                   <i class="bi bi-x-circle"></i>

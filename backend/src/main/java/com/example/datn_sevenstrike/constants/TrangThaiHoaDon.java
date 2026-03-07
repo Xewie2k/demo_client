@@ -5,7 +5,8 @@ public enum TrangThaiHoaDon {
     CHO_GIAO_HANG(2, "Chờ giao hàng"),
     DANG_VAN_CHUYEN(3, "Đang vận chuyển"),
     DA_GIAO_HANG(4, "Đã giao hàng"),
-    HOAN_THANH(5, "Hoàn thành");
+    HOAN_THANH(5, "Hoàn thành"),
+    HUY_DON(6, "Đã hủy");
 
     public final int code;
     public final String label;
@@ -24,6 +25,6 @@ public enum TrangThaiHoaDon {
     }
 
     public static boolean isTerminal(Integer code) {
-        return code != null && code == HOAN_THANH.code;
+        return code != null && (code == HOAN_THANH.code || code == HUY_DON.code);
     }
 }

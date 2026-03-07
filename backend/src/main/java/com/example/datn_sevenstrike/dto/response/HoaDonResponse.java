@@ -51,6 +51,11 @@ public class HoaDonResponse {
     private LocalDateTime ngayCapNhat;
     private Integer nguoiCapNhat;
 
+    // 0=tiền mặt/COD, 1=chuyển khoản
+    private Integer loaiThanhToan;
+    // null=không cần hoàn, false=chờ hoàn phí, true=đã hoàn phí
+    private Boolean daHoanPhi;
+
     private List<HoaDonChiTietResponse> chiTietHoaDon;
 
     // 🔥 CONSTRUCTOR CHUẨN KHỚP 100% VỚI JPQL CỦA ANH
