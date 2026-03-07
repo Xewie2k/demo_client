@@ -185,6 +185,7 @@
       <RouterLink class="ss-nav-link" to="/admin/chat" title="Quản lý Chat">
         <span class="material-icons ss-ic">chat</span>
         <span class="ss-nav-label">Quản lý Chat</span>
+        <span v-if="unreadChatCount > 0" class="ss-chat-badge">{{ unreadChatCount > 99 ? '99+' : unreadChatCount }}</span>
       </RouterLink>
     </nav>
   </aside>
@@ -193,6 +194,7 @@
 <script setup>
 import { computed, reactive, watch } from "vue";
 import { RouterLink, useRoute } from "vue-router";
+import { useChatBadge } from "@/chatAI/services/useChatBadge";
 
 const route = useRoute();
 
@@ -233,6 +235,9 @@ const userRole = computed(() => {
 });
 
 const isAdmin = computed(() => userRole.value === "ADMIN");
+
+// Badge thông báo số tin nhắn / phiên chat chưa đọc
+const { unreadChatCount } = useChatBadge()
 
 const openGroup = reactive({
   product: false,
@@ -446,5 +451,28 @@ watch(
   background: rgba(255, 77, 79, 0.1);
   color: #ff4d4f;
   border: 1px solid rgba(255, 77, 79, 0.22);
+}
+
+/* Badge số thông báo chat */
+.ss-chat-badge {
+  background: #ff4d4f;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 999px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+  flex-shrink: 0;
+  margin-left: auto;
+  animation: badge-pulse 2s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.12); }
 }
 </style>

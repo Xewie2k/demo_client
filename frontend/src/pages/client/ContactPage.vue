@@ -102,7 +102,7 @@
                     <option value="">Chọn chủ đề</option>
                     <option value="product">Hỏi về sản phẩm</option>
                     <option value="order">Hỏi về đơn hàng</option>
-                    <option value="warranty">Bảo hành / Đổi trả</option>
+                    <option value="warranty">Bảo hành sản phẩm</option>
                     <option value="partnership">Hợp tác kinh doanh</option>
                     <option value="other">Khác</option>
                   </select>

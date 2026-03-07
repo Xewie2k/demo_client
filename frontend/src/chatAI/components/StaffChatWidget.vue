@@ -149,7 +149,6 @@ const showAllSuggestions = ref(false)
 const suggestions = [
   'Quy trình xử lý đơn hàng lỗi?',
   'Cách hoàn tiền cho khách?',
-  'Thủ tục đổi trả hàng?',
   'Cách xuất hóa đơn?',
   'Quy định chiết khấu?',
   'Quy định ca làm việc?',

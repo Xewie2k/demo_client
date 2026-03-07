@@ -214,7 +214,6 @@
                 <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Quy định sử dụng</a></li>
                 <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Bảo mật thông tin</a></li>
                 <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Vận chuyển & giao hàng</a></li>
-                <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Đổi trả hàng</a></li>
              </ul>
           </div>
 

@@ -200,7 +200,6 @@ const showSuggestions    = ref(true)
 const showAllSuggestions = ref(false)
 const suggestions = [
   'Giày phù hợp với sân cỏ nhân tạo?',
-  'Đổi trả hàng như thế nào?',
   'Phí vận chuyển là bao nhiêu?',
   'Cách chọn size giày đúng?',
   'Có voucher giảm giá cho đơn đầu tiên không?',

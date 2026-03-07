@@ -1,6 +1,7 @@
 package com.example.datn_sevenstrike.chat.service;
 
 import com.example.datn_sevenstrike.dto.client.ProductClientDTO;
+import com.example.datn_sevenstrike.dto.client.VariantClientDTO;
 import com.example.datn_sevenstrike.service.client.ClientOrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -88,7 +89,8 @@ public class GeminiService {
     private static final Pattern PRODUCT_KEYWORDS = Pattern.compile(
         "giày|sản phẩm|tìm|có bán|giá|mua|nike|adidas|puma|mizuno|new balance|" +
         "fg|ag|tf|ic\\b|futsal|size|cỡ|hàng|mới nhất|giảm giá|khuyến mãi|sale|" +
-        "bán chạy|phổ biến|rẻ nhất|đắt nhất|khoảng|dưới|trên|từ.*đến",
+        "bán chạy|phổ biến|rẻ nhất|đắt nhất|khoảng|dưới|trên|từ.*đến|" +
+        "màu|xanh|đỏ|trắng|đen|vàng|cam|tím|hồng|xám|nâu|bạc",
         Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE
     );
 
@@ -144,6 +146,7 @@ public class GeminiService {
 
         try {
             List<ProductClientDTO> products;
+            String colorKeyword = "";
 
             // 1. Sản phẩm mới nhất
             if (q.contains("mới nhất") || q.contains("mới về") || q.contains("hàng mới") || q.contains("mới ra")) {
@@ -187,10 +190,22 @@ public class GeminiService {
                     products = filterByLoaiSan(products, "ic");
                 }
 
-                // Lọc theo khoảng giá
+                // Lọc theo màu sắc + giá ở cấp biến thể (chính xác hơn)
+                colorKeyword = extractColorKeyword(q);
                 BigDecimal minPrice = extractMinPrice(q);
                 BigDecimal maxPrice = extractMaxPrice(q);
-                if (minPrice != null || maxPrice != null) {
+
+                if (!colorKeyword.isEmpty()) {
+                    // Lọc sản phẩm có ít nhất 1 biến thể khớp màu + giá
+                    final String color = colorKeyword;
+                    final BigDecimal min = minPrice;
+                    final BigDecimal max = maxPrice;
+                    products = products.stream()
+                            .filter(p -> p.getVariants() != null && p.getVariants().stream()
+                                    .anyMatch(v -> variantMatchesColorAndPrice(v, color, min, max)))
+                            .collect(Collectors.toList());
+                } else if (minPrice != null || maxPrice != null) {
+                    // Không có màu → lọc theo giá ở cấp sản phẩm (giaThapNhat)
                     final BigDecimal min = minPrice;
                     final BigDecimal max = maxPrice;
                     products = products.stream()
@@ -220,8 +235,9 @@ public class GeminiService {
                 return new ProductContextResult("Không tìm thấy sản phẩm phù hợp với yêu cầu.", List.of());
             }
 
+            final String colorFinal = colorKeyword;
             String context = available.stream()
-                    .map(this::formatProduct)
+                    .map(p -> formatProduct(p, colorFinal))
                     .collect(Collectors.joining("\n"));
             return new ProductContextResult(context, available);
 
@@ -239,27 +255,73 @@ public class GeminiService {
                 .collect(Collectors.toList());
     }
 
-    private String formatProduct(ProductClientDTO p) {
+    private String formatProduct(ProductClientDTO p, String colorFilter) {
         StringBuilder sb = new StringBuilder();
         sb.append("• ").append(p.getTenSanPham());
         if (p.getTenThuongHieu() != null) sb.append(" (").append(p.getTenThuongHieu()).append(")");
 
-        boolean hasDiscount = p.getPhanTramGiam() != null && p.getPhanTramGiam() > 0;
-        if (hasDiscount && p.getGiaSauGiamThapNhat() != null) {
-            sb.append(" — Giảm ").append(p.getPhanTramGiam()).append("%: ")
-              .append(formatPrice(p.getGiaSauGiamThapNhat())).append("đ");
-            if (p.getGiaGocThapNhat() != null)
-                sb.append(" (gốc ").append(formatPrice(p.getGiaGocThapNhat())).append("đ)");
-        } else if (p.getGiaThapNhat() != null) {
-            sb.append(" — Giá: ").append(formatPrice(p.getGiaThapNhat())).append("đ");
-            if (p.getGiaCaoNhat() != null && p.getGiaCaoNhat().compareTo(p.getGiaThapNhat()) > 0)
-                sb.append("–").append(formatPrice(p.getGiaCaoNhat())).append("đ");
+        // Nếu có lọc màu → hiển thị từng biến thể khớp (màu + size + giá)
+        if (!colorFilter.isEmpty() && p.getVariants() != null && !p.getVariants().isEmpty()) {
+            List<VariantClientDTO> matching = p.getVariants().stream()
+                    .filter(v -> v.getTenMauSac() != null
+                            && v.getTenMauSac().toLowerCase().contains(colorFilter)
+                            && v.getSoLuong() != null && v.getSoLuong() > 0)
+                    .limit(4)
+                    .collect(Collectors.toList());
+            for (VariantClientDTO v : matching) {
+                sb.append("\n  ↳ Màu ").append(v.getTenMauSac());
+                if (v.getTenKichThuoc() != null) sb.append(", Size ").append(v.getTenKichThuoc());
+                BigDecimal price = (v.getGiaSauGiam() != null && v.getPhanTramGiam() != null && v.getPhanTramGiam() > 0)
+                        ? v.getGiaSauGiam() : v.getGiaBan();
+                if (price != null) sb.append(" — ").append(formatPrice(price)).append("đ");
+                if (v.getPhanTramGiam() != null && v.getPhanTramGiam() > 0)
+                    sb.append(" (-").append(v.getPhanTramGiam()).append("%)");
+            }
+        } else {
+            // Hiển thị theo giá sản phẩm (tổng quan)
+            boolean hasDiscount = p.getPhanTramGiam() != null && p.getPhanTramGiam() > 0;
+            if (hasDiscount && p.getGiaSauGiamThapNhat() != null) {
+                sb.append(" — Giảm ").append(p.getPhanTramGiam()).append("%: ")
+                  .append(formatPrice(p.getGiaSauGiamThapNhat())).append("đ");
+                if (p.getGiaGocThapNhat() != null)
+                    sb.append(" (gốc ").append(formatPrice(p.getGiaGocThapNhat())).append("đ)");
+            } else if (p.getGiaThapNhat() != null) {
+                sb.append(" — Giá: ").append(formatPrice(p.getGiaThapNhat())).append("đ");
+                if (p.getGiaCaoNhat() != null && p.getGiaCaoNhat().compareTo(p.getGiaThapNhat()) > 0)
+                    sb.append("–").append(formatPrice(p.getGiaCaoNhat())).append("đ");
+            }
+            if (p.getKichThuocCoSan() != null && !p.getKichThuocCoSan().isEmpty())
+                sb.append(" | Size: ").append(String.join(", ", p.getKichThuocCoSan()));
         }
 
-        if (p.getKichThuocCoSan() != null && !p.getKichThuocCoSan().isEmpty())
-            sb.append(" | Size: ").append(String.join(", ", p.getKichThuocCoSan()));
-
         return sb.toString();
+    }
+
+    /** Kiểm tra biến thể có khớp màu + khoảng giá không */
+    private boolean variantMatchesColorAndPrice(VariantClientDTO v, String color,
+                                                 BigDecimal min, BigDecimal max) {
+        if (v.getTenMauSac() == null) return false;
+        if (!v.getTenMauSac().toLowerCase().contains(color)) return false;
+        if (v.getSoLuong() == null || v.getSoLuong() <= 0) return false;
+        BigDecimal price = (v.getGiaSauGiam() != null && v.getPhanTramGiam() != null && v.getPhanTramGiam() > 0)
+                ? v.getGiaSauGiam() : v.getGiaBan();
+        if (price == null) return true;
+        if (min != null && price.compareTo(min) < 0) return false;
+        if (max != null && price.compareTo(max) > 0) return false;
+        return true;
+    }
+
+    /** Trích xuất từ khóa màu sắc từ câu hỏi */
+    private String extractColorKeyword(String query) {
+        // Kiểm tra từ dài trước để tránh "xanh" match trước "xanh lá"
+        String[] colors = {
+            "xanh lá", "xanh dương", "xanh navy", "xanh đen", "xanh ngọc", "xanh",
+            "đỏ", "trắng", "đen", "vàng", "cam", "tím", "hồng", "xám", "nâu", "bạc"
+        };
+        for (String color : colors) {
+            if (query.contains(color)) return color;
+        }
+        return "";
     }
 
     private String formatPrice(BigDecimal price) {

@@ -189,12 +189,6 @@
                   <small class="text-muted" style="font-size: 0.7rem;">Hàng chính hãng</small>
                 </div>
               </div>
-              <div class="col-4">
-                <div class="text-center p-2 rounded-3" style="background-color: #f0fdf4;">
-                  <i class="bi bi-arrow-repeat text-success d-block mb-1" style="font-size: 1.3rem;"></i>
-                  <small class="text-muted" style="font-size: 0.7rem;">Đổi trả dễ dàng</small>
-                </div>
-              </div>
             </div>
           </div>
         </div>
