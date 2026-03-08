@@ -1,7 +1,6 @@
 <!-- File: src/pages/tai_khoan/capnhat_nhanvien.vue -->
 <template>
   <div class="update_page">
-    <!-- HEADER: Back + Title -->
     <div class="page-head">
       <button type="button" class="ss-btn ss-btn-back" @click="back">
         <i class="bi bi-arrow-left me-2"></i>
@@ -16,7 +15,6 @@
     <div class="card ss-card">
       <form @submit.prevent="submit">
         <div class="row">
-          <!-- AVATAR -->
           <div class="col-md-2 text-center">
             <div class="avatar-wrapper ss-border">
               <img v-if="nv.anhNhanVien" :src="getImageUrl(nv.anhNhanVien)" class="avatar-img" />
@@ -31,7 +29,6 @@
             </button>
           </div>
 
-          <!-- THÔNG TIN CÁ NHÂN -->
           <div class="col-md-5">
             <h6 class="section-title">Thông tin cá nhân</h6>
 
@@ -80,7 +77,6 @@
             </div>
           </div>
 
-          <!-- ĐỊA CHỈ -->
           <div class="col-md-5">
             <h6 class="section-title">Thông tin địa chỉ</h6>
 
@@ -89,7 +85,6 @@
               <select class="form-control ss-input" v-model="nv.thanhPho">
                 <option value="">Chọn thành phố</option>
 
-                <!-- nếu DB có giá trị nhưng không nằm trong list -> vẫn hiển thị -->
                 <option v-if="nv.thanhPho && !thanhphoOptions.includes(nv.thanhPho)" :value="nv.thanhPho">
                   {{ nv.thanhPho }}
                 </option>
@@ -133,7 +128,6 @@
           </div>
         </div>
 
-        <!-- ACTIONS -->
         <div class="d-flex justify-content-between align-items-center mt-4 actions">
           <button type="button" class="ss-btn ss-btn-state" @click="toggleStatus">
             {{ nv.trangThai ? "Hủy hoạt động" : "Kích hoạt" }}
@@ -171,7 +165,6 @@ const fileInput = ref(null);
 const listQuyenHan = ref([]);
 const BASE_URL = "http://localhost:8080";
 
-/** ✅ Map mã quyền -> text hiển thị */
 const mapTenQuyenHan = (raw) => {
   const v = String(raw ?? "").trim();
   if (!v) return v;
@@ -184,14 +177,13 @@ const mapTenQuyenHan = (raw) => {
   return v;
 };
 
-/** ====== VN Address list (name + code) ====== */
 const provinces = ref([]);
 const districts = ref([]);
 const wards = ref([]);
 
-const thanhphoOptions = ref([]); // ["Hà Nội", ...]
-const quanOptions = ref([]); // ["Huyện Gia Lâm", ...]
-const phuongOptions = ref([]); // ["Xã Dương Xá", ...]
+const thanhphoOptions = ref([]);
+const quanOptions = ref([]);
+const phuongOptions = ref([]);
 
 const nv = ref({
   idQuyenHan: null,
@@ -224,17 +216,14 @@ const normalizeDateToInput = (v) => {
   if (!v) return "";
   const s = String(v).trim();
 
-  // yyyy-mm-ddTHH:mm:ss...
   if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
 
-  // dd/MM/yyyy
   const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (m) return `${m[3]}-${m[2]}-${m[1]}`;
 
   return s;
 };
 
-/** unwrap response nếu BE trả {data:{...}} hoặc {content:...} */
 const unwrapDetail = (data) => {
   if (!data) return null;
   if (data?.data) return unwrapDetail(data.data);
@@ -242,11 +231,10 @@ const unwrapDetail = (data) => {
   return data;
 };
 
-/** map key snake_case -> camelCase (để fill chắc chắn) */
 const mapNhanVien = (raw) => {
   const x = unwrapDetail(raw) || {};
   return {
-    idQuyenHan: x.idQuyenHan ?? x.id_quyen_han ?? x.idQuyenHan ?? null,
+    idQuyenHan: x.idQuyenHan ?? x.id_quyen_han ?? null,
     tenNhanVien: x.tenNhanVien ?? x.ten_nhan_vien ?? "",
     tenTaiKhoan: x.tenTaiKhoan ?? x.ten_tai_khoan ?? x.username ?? "",
     email: x.email ?? "",
@@ -271,7 +259,6 @@ const getAllQH = async () => {
   }
 };
 
-/** Load danh sách tỉnh (để select có option) */
 const loadProvinces = async () => {
   provinces.value = await vnAddressService.getProvinces();
   thanhphoOptions.value = (provinces.value || []).map((p) => p.name);
@@ -306,14 +293,12 @@ const loadNhanVien = async () => {
     const raw = await detailNhanVien(id);
     const mapped = mapNhanVien(raw);
 
-    // merge vào nv để không mất default keys
     nv.value = {
       ...nv.value,
       ...mapped,
       idQuyenHan: mapped.idQuyenHan !== null && mapped.idQuyenHan !== "" ? Number(mapped.idQuyenHan) : null,
     };
 
-    // sau khi có thanhPho/quan/phuong => load option tương ứng để select hiển thị đúng
     await loadDistrictsByProvinceName(nv.value.thanhPho);
     await loadWardsByDistrictName(nv.value.quan);
   } catch (error) {
@@ -341,28 +326,43 @@ const onFileChange = (event) => {
 
   const reader = new FileReader();
   reader.onload = (e) => {
-    nv.value.anhNhanVien = e.target?.result; // preview base64
+    nv.value.anhNhanVien = e.target?.result;
   };
   reader.readAsDataURL(file);
 };
 
-/** luôn gửi FormData (data) để đồng nhất */
 const buildFormData = () => {
   const payload = { ...nv.value };
 
-  // nếu đang preview base64 thì bỏ khỏi JSON
   if (typeof payload.anhNhanVien === "string" && payload.anhNhanVien.startsWith("data:")) {
-    delete payload.anhNhanVien;
+    payload.anhNhanVien = null;
   }
 
-  // ép kiểu
   payload.idQuyenHan = payload.idQuyenHan ? Number(payload.idQuyenHan) : null;
   payload.ngaySinh = payload.ngaySinh || null;
   payload.ghiChu = payload.ghiChu || null;
+  payload.thanhPho = payload.thanhPho || null;
+  payload.quan = payload.quan || null;
+  payload.phuong = payload.phuong || null;
+  payload.diaChiCuThe = payload.diaChiCuThe || null;
+  payload.email = payload.email || null;
+  payload.soDienThoai = payload.soDienThoai || null;
+  payload.tenNhanVien = payload.tenNhanVien || null;
+  payload.tenTaiKhoan = payload.tenTaiKhoan || null;
+  payload.matKhau = payload.matKhau || null;
 
   const fd = new FormData();
-  fd.append("data", JSON.stringify(payload));
-  if (avatarFile.value) fd.append("file", avatarFile.value);
+  fd.append(
+    "data",
+    new Blob([JSON.stringify(payload)], {
+      type: "application/json",
+    })
+  );
+
+  if (avatarFile.value) {
+    fd.append("file", avatarFile.value);
+  }
+
   return fd;
 };
 
@@ -400,7 +400,6 @@ const cancel = async () => {
 
 const back = () => router.push("/admin/tai-khoan/nhan-vien");
 
-/** khi đổi Thành phố/Quận => load lại option & reset phần phụ thuộc */
 watch(
   () => nv.value.thanhPho,
   async (newVal, oldVal) => {
@@ -430,7 +429,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ✅ Đồng bộ 1 font + cỡ chữ như trang Phiếu giảm giá */
 .update_page {
   margin: 20px;
   font-family: inherit;
@@ -438,7 +436,6 @@ onMounted(async () => {
   font-size: 13px;
 }
 
-/* ✅ tuyệt đối không in đậm trong trang */
 :deep(.fw-bold),
 :deep(.fw-semibold),
 :deep(b),
@@ -454,7 +451,6 @@ onMounted(async () => {
   margin-bottom: 16px;
 }
 
-/* ✅ Title theo style voucher (không in đậm) */
 .page-title {
   text-align: center;
   font-weight: 400 !important;
@@ -469,7 +465,6 @@ onMounted(async () => {
   height: 1px;
 }
 
-/* Card + border đỏ nhạt (giữ cấu trúc, chỉnh nhẹ cho đúng vibe voucher) */
 .ss-card {
   background: #fff;
   padding: 24px;
@@ -478,7 +473,6 @@ onMounted(async () => {
   box-shadow: none !important;
 }
 
-/* ✅ Section title không in đậm, size giống voucher */
 .section-title {
   font-weight: 400 !important;
   font-size: 14px;
@@ -486,7 +480,6 @@ onMounted(async () => {
   color: rgba(17, 24, 39, 0.82);
 }
 
-/* Labels giống voucher */
 .form-label {
   font-weight: 400 !important;
   font-size: 13px;
@@ -494,7 +487,6 @@ onMounted(async () => {
   margin-bottom: 6px;
 }
 
-/* Inputs */
 .ss-input {
   border-radius: 10px !important;
   border: 1px solid rgba(17, 24, 39, 0.14) !important;
@@ -508,14 +500,12 @@ onMounted(async () => {
   box-shadow: 0 0 0 0.18rem rgba(255, 77, 79, 0.14) !important;
 }
 
-/* Textarea vẫn theo font/weight */
 textarea.ss-input {
   height: auto;
   font-size: 13px;
   font-weight: 400 !important;
 }
 
-/* Avatar */
 .avatar-wrapper {
   position: relative;
   width: 96px;
@@ -541,18 +531,15 @@ textarea.ss-input {
   color: #9ca3af;
 }
 
-/* ===== Buttons ===== */
 .ss-btn {
   border-radius: 10px;
   height: 36px;
   padding: 0 14px;
   font-weight: 400 !important;
   font-size: 13px;
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   border: 1px solid rgba(17, 24, 39, 0.14);
   background: #fff;
   color: rgba(17, 24, 39, 0.88);
@@ -570,7 +557,6 @@ textarea.ss-input {
   font-size: 12px;
 }
 
-/* Back (giữ màu đỏ nhạt) */
 .ss-btn-back {
   background: rgba(255, 77, 79, 0.08);
   color: rgba(17, 24, 39, 0.88);
@@ -580,7 +566,6 @@ textarea.ss-input {
   background: rgba(255, 77, 79, 0.12);
 }
 
-/* Primary */
 .ss-btn-primary {
   border: none !important;
   color: #fff !important;
@@ -591,7 +576,6 @@ textarea.ss-input {
   filter: brightness(0.98);
 }
 
-/* State */
 .ss-btn-state {
   border: none !important;
   background: linear-gradient(90deg, #111827 0%, #ff4d4f 100%) !important;
@@ -602,19 +586,16 @@ textarea.ss-input {
   filter: brightness(0.98);
 }
 
-/* Danger */
 .ss-btn-danger {
   border: none !important;
   background: linear-gradient(90deg, #ef4444 0%, #991b1b 100%) !important;
   color: #fff !important;
 }
 
-/* Fix nút cập nhật bị co quá nhỏ */
 .ss-btn-submit {
   min-width: 118px;
 }
 
-/* Footer actions */
 .actions {
   border-top: 1px solid rgba(17, 24, 39, 0.10);
   padding-top: 16px;

@@ -17,28 +17,23 @@ public class ClientOrderDetailDTO {
     private LocalDateTime ngayTao;
     private String trangThai;        // Label (vd: "Đang vận chuyển")
     private Integer trangThaiHienTai; // Numeric code 1–5
-    
+
     // Receiver Info
     private String tenNguoiNhan;
     private String soDienThoai;
     private String diaChi;
-    
+
     // Costs
     private BigDecimal tamTinh;
     private BigDecimal phiVanChuyen;
     private BigDecimal giamGia;
     private BigDecimal tongTien;
-    
+
     // Lists
     private List<ClientOrderItemDTO> items;
     private List<ClientTimelineDTO> timeline;
-    
+
     // Payment
     private boolean daThanhToan;
     private String phuongThucThanhToan;
-
-    // 0=tiền mặt/COD, 1=chuyển khoản
-    private Integer loaiThanhToan;
-    // Khách hàng ID để frontend validate quyền sửa
-    private Integer idKhachHang;
 }

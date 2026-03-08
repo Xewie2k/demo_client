@@ -69,14 +69,14 @@
     <!-- Summary -->
     <div class="card p-3 mb-4">
       <div class="row text-center">
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="stat-box">
             <div class="stat-title">Tổng số đơn hàng</div>
             <div class="stat-value">{{ totalOrders }}</div>
           </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="stat-box">
             <div class="stat-title">Tổng doanh thu</div>
             <div class="stat-value text-success">
@@ -85,11 +85,20 @@
           </div>
         </div>
 
-        <div class="col-md-4">
+        <div class="col-md-3">
           <div class="stat-box">
             <div class="stat-title">Doanh thu thực tế</div>
             <div class="stat-value text-primary">
               {{ formatMoney(realRevenue) }}
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-3">
+          <div class="stat-box">
+            <div class="stat-title">Doanh thu dự kiến</div>
+            <div class="stat-value text-warning">
+              {{ formatMoney(expectedRevenue) }}
             </div>
           </div>
         </div>
@@ -119,7 +128,6 @@
           <h6>Biểu đồ doanh thu theo thời gian</h6>
           <div style="height: 300px">
             <RevenueChart :chart="revenueChart" :type="chartType" />
-
           </div>
         </div>
       </div>
@@ -180,8 +188,9 @@
           <table class="table table-bordered mt-3">
             <thead>
               <tr>
-                <th>#</th>
+                <th>STT</th>
                 <th>Tên sản phẩm</th>
+                <th>Giá</th>
                 <th>Số lượng bán</th>
               </tr>
             </thead>
@@ -190,6 +199,9 @@
               <tr v-for="(item, index) in topProducts" :key="index">
                 <td>{{ index + 1 }}</td>
                 <td>{{ item.productName }}</td>
+                <td class="text-success">
+                  {{ formatMoney(item.price) }}
+                </td>
                 <td>{{ item.quantity }}</td>
               </tr>
             </tbody>
@@ -221,6 +233,8 @@ const fromDate = ref("");
 const toDate = ref("");
 
 const today = ref(new Date());
+
+const expectedRevenue = ref(0);
 
 const chartType = ref("line");
 
@@ -287,28 +301,38 @@ const loadStatistics = async () => {
       toDate: currentRange.value.to,
     };
 
-    const [ordersRes, revenueRes, realRevenueRes, chartRes, statusRes] =
-      await Promise.all([
-        axios.get("http://localhost:8080/api/statistic/total-orders", {
-          params,
-        }),
-        axios.get("http://localhost:8080/api/statistic/total-revenue", {
-          params,
-        }),
-        axios.get("http://localhost:8080/api/statistic/real-revenue", {
-          params,
-        }),
-        axios.get("http://localhost:8080/api/statistic/revenue-chart", {
-          params,
-        }),
-        axios.get("http://localhost:8080/api/statistic/order-status", {
-          params,
-        }),
-      ]);
+    const [
+      ordersRes,
+      revenueRes,
+      realRevenueRes,
+      expectedRevenueRes,
+      chartRes,
+      statusRes,
+    ] = await Promise.all([
+      axios.get("http://localhost:8080/api/statistic/total-orders", {
+        params,
+      }),
+      axios.get("http://localhost:8080/api/statistic/total-revenue", {
+        params,
+      }),
+      axios.get("http://localhost:8080/api/statistic/real-revenue", {
+        params,
+      }),
+      axios.get("http://localhost:8080/api/statistic/expected-revenue", {
+        params,
+      }),
+      axios.get("http://localhost:8080/api/statistic/revenue-chart", {
+        params,
+      }),
+      axios.get("http://localhost:8080/api/statistic/order-status", {
+        params,
+      }),
+    ]);
 
     totalOrders.value = ordersRes.data || 0;
     totalRevenue.value = revenueRes.data || 0;
     realRevenue.value = realRevenueRes.data || 0;
+    expectedRevenue.value = expectedRevenueRes.data || 0;
     revenueChart.value = chartRes.data || [];
     orderStatus.value = statusRes.data || [];
 

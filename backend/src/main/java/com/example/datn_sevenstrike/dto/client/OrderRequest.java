@@ -20,9 +20,4 @@ public class OrderRequest {
     private String ghiChu;
     private Integer idPhieuGiamGia;
     private List<OrderItemRequest> items;
-    private Integer loaiThanhToan;
-    // 0=tiền mặt/COD, 1=chuyển khoản
-    private Integer idPhuongThucThanhToan; // ✅ Trường mới cần thêm
-
-
 }

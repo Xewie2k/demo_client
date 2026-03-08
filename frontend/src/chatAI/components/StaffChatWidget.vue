@@ -149,8 +149,9 @@ const showAllSuggestions = ref(false)
 const suggestions = [
   'Quy trình xử lý đơn hàng lỗi?',
   'Cách hoàn tiền cho khách?',
+  'Thủ tục đổi trả hàng?',
   'Cách xuất hóa đơn?',
-  'Quy định chiết khấu?',
+  'Chính sách chiết khấu?',
   'Quy định ca làm việc?',
   'Cách cập nhật tồn kho?',
   'Báo cáo sự cố kỹ thuật',
@@ -468,7 +469,7 @@ async function scrollToBottom() {
 }
 .chat-msg--bot   .chat-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; white-space: pre-wrap; }
 .chat-msg--khach .chat-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 12px 2px 12px 12px; }
-.chat-msg--nv    .chat-msg__bubble { background: #f3f4f6; color: #111827; border: 1px solid #e5e7eb; border-radius: 2px 12px 12px 12px; }
+.chat-msg--nv    .chat-msg__bubble { background: #1d4ed8; color: #fff; border-radius: 2px 12px 12px 12px; }
 
 /* Typing animation */
 .chat-msg__bubble--typing { display: flex; gap: 5px; align-items: center; padding: 12px; }

@@ -6,8 +6,8 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import "material-icons/iconfont/material-icons.css";
 import "@/assets/styles/admin.css";
-import 'bootstrap-icons/font/bootstrap-icons.css'
-import 'nouislider/dist/nouislider.min.css';
+import "bootstrap-icons/font/bootstrap-icons.css";
+import "nouislider/dist/nouislider.min.css";
 
 import vSelect from "vue-select";
 import "vue-select/dist/vue-select.css";
@@ -18,8 +18,11 @@ import Toast from "primevue/toast";
 import "primeicons/primeicons.css";
 import "@/assets/styles/theme.css";
 
-
 import Aura from "@primeuix/themes/aura";
+
+if (typeof window !== "undefined" && !window.global) {
+  window.global = window;
+}
 
 const app = createApp(App);
 

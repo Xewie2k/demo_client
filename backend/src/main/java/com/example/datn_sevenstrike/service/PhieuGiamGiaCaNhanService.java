@@ -8,10 +8,8 @@ import com.example.datn_sevenstrike.exception.NotFoundEx;
 import com.example.datn_sevenstrike.repository.PhieuGiamGiaCaNhanRepository;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +19,6 @@ public class PhieuGiamGiaCaNhanService {
 
     private final PhieuGiamGiaCaNhanRepository repo;
     private final ModelMapper mapper;
-    private final SimpMessagingTemplate messagingTemplate;
 
     public List<PhieuGiamGiaCaNhanResponse> all() {
         return repo.findAllByXoaMemFalseOrderByIdDesc()
@@ -63,9 +60,7 @@ public class PhieuGiamGiaCaNhanService {
             throw new BadRequestEx("Khách đã có voucher này (xoa_mem=0)");
         }
 
-        PhieuGiamGiaCaNhanResponse result = toResponse(repo.save(e));
-        messagingTemplate.convertAndSend("/topic/vouchers/updated", (Object) "created");
-        return result;
+        return toResponse(repo.save(e));
     }
 
     @Transactional
@@ -92,9 +87,7 @@ public class PhieuGiamGiaCaNhanService {
         if (db.getXoaMem() == null) db.setXoaMem(false);
 
         validate(db);
-        PhieuGiamGiaCaNhanResponse result = toResponse(repo.save(db));
-        messagingTemplate.convertAndSend("/topic/vouchers/updated", (Object) "updated");
-        return result;
+        return toResponse(repo.save(db));
     }
 
     // ✅ dùng khi checkout/đặt hàng: đánh dấu đã dùng
@@ -112,7 +105,6 @@ public class PhieuGiamGiaCaNhanService {
                 .orElseThrow(() -> new NotFoundEx("Không tìm thấy PhieuGiamGiaCaNhan id=" + id));
         db.setXoaMem(true);
         repo.save(db);
-        messagingTemplate.convertAndSend("/topic/vouchers/updated", (Object) "deleted");
     }
 
     private void validate(PhieuGiamGiaCaNhan e) {

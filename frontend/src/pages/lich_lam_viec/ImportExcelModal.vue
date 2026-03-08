@@ -166,7 +166,7 @@ const ketQuaImport = ref(null);
 // Tính toán các cột hiển thị dựa trên dữ liệu excel
 const cacCotXemTruoc = computed(() => {
   if (duLieuTuExcel.value.length === 0) return [];
-
+  
   return Object.keys(duLieuTuExcel.value[0]).filter(key => key !== 'rowNum');
 });
 

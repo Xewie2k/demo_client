@@ -6,55 +6,48 @@
         <div class="bg-white p-4 rounded-3 shadow-sm mb-4">
             <h5 class="fw-bold mb-4" style="color: var(--ss-accent);">THÔNG TIN THANH TOÁN</h5>
 
-            <form @submit.prevent="submitOrder" novalidate>
+            <form @submit.prevent="submitOrder">
               <div class="row g-3">
                   <div class="col-md-6">
                     <label class="form-label fw-bold text-secondary small">Họ và tên <span class="text-danger">*</span></label>
-                    <input type="text" :class="['form-control rounded-1', errors.tenKhachHang && 'is-invalid']" v-model="form.tenKhachHang" placeholder="Nguyễn Văn A">
-                    <div v-if="errors.tenKhachHang" class="text-danger small mt-1">{{ errors.tenKhachHang }}</div>
+                    <input type="text" class="form-control rounded-1" v-model="form.tenKhachHang" required placeholder="Nguyễn Văn A">
                   </div>
                   <div class="col-md-6">
                     <label class="form-label fw-bold text-secondary small">Số điện thoại <span class="text-danger">*</span></label>
-                    <input type="tel" :class="['form-control rounded-1', errors.soDienThoai && 'is-invalid']" v-model="form.soDienThoai" placeholder="0123456789">
-                    <div v-if="errors.soDienThoai" class="text-danger small mt-1">{{ errors.soDienThoai }}</div>
+                    <input type="tel" class="form-control rounded-1" v-model="form.soDienThoai" required placeholder="0123456789">
                   </div>
                   <div class="col-12">
                     <label class="form-label fw-bold text-secondary small">Email <span class="text-danger">*</span></label>
-                    <input type="text" :class="['form-control rounded-1', errors.email && 'is-invalid']" v-model="form.email" placeholder="email@example.com">
-                    <div v-if="errors.email" class="text-danger small mt-1">{{ errors.email }}</div>
-                    <div v-else class="form-text text-muted small">Hóa đơn và link theo dõi đơn hàng sẽ được gửi qua email này.</div>
+                    <input type="email" class="form-control rounded-1" v-model="form.email" required placeholder="email@example.com">
+                    <div class="form-text text-muted small">Hóa đơn và link theo dõi đơn hàng sẽ được gửi qua email này.</div>
                   </div>
                   <div class="col-12">
                     <label class="form-label fw-bold text-secondary small">Địa chỉ cụ thể <span class="text-danger">*</span></label>
                     <div class="input-group">
-                       <input type="text" :class="['form-control rounded-1', errors.diaChi && 'is-invalid']" v-model="form.diaChi" placeholder="Số nhà, ngõ, đường...">
+                       <input type="text" class="form-control rounded-1" v-model="form.diaChi" required placeholder="Số nhà, ngõ, đường...">
                        <button v-if="isLoggedIn" class="btn btn-dark px-4 rounded-1" type="button" data-bs-toggle="modal" data-bs-target="#addressModal">CHỌN</button>
                     </div>
-                    <div v-if="errors.diaChi" class="text-danger small mt-1">{{ errors.diaChi }}</div>
                   </div>
                   <div class="col-md-4">
                      <label class="form-label fw-bold text-secondary small">Tỉnh/Thành phố <span class="text-danger">*</span></label>
-                     <select :class="['form-select rounded-1', errors.city && 'is-invalid']" v-model="addressCodes.city" @change="onCityChange">
+                     <select class="form-select rounded-1" v-model="addressCodes.city" @change="onCityChange">
                         <option value="">Chọn Tỉnh/Thành</option>
                         <option v-for="p in provinces" :key="p.code" :value="p.code">{{ p.name }}</option>
                      </select>
-                     <div v-if="errors.city" class="text-danger small mt-1">{{ errors.city }}</div>
                   </div>
                    <div class="col-md-4">
                      <label class="form-label fw-bold text-secondary small">Quận/Huyện <span class="text-danger">*</span></label>
-                     <select :class="['form-select rounded-1', errors.district && 'is-invalid']" v-model="addressCodes.district" @change="onDistrictChange" :disabled="!addressCodes.city">
+                     <select class="form-select rounded-1" v-model="addressCodes.district" @change="onDistrictChange" :disabled="!addressCodes.city">
                         <option value="">Chọn Quận/Huyện</option>
                         <option v-for="d in districts" :key="d.code" :value="d.code">{{ d.name }}</option>
                      </select>
-                     <div v-if="errors.district" class="text-danger small mt-1">{{ errors.district }}</div>
                   </div>
                    <div class="col-md-4">
                      <label class="form-label fw-bold text-secondary small">Xã/Phường <span class="text-danger">*</span></label>
-                     <select :class="['form-select rounded-1', errors.ward && 'is-invalid']" v-model="addressCodes.ward" @change="onWardChange" :disabled="!addressCodes.district">
+                     <select class="form-select rounded-1" v-model="addressCodes.ward" @change="onWardChange" :disabled="!addressCodes.district">
                         <option value="">Chọn Xã/Phường</option>
                         <option v-for="w in wards" :key="w.code" :value="w.code">{{ w.name }}</option>
                      </select>
-                     <div v-if="errors.ward" class="text-danger small mt-1">{{ errors.ward }}</div>
                   </div>
                   
                   <div class="col-12">
@@ -242,43 +235,18 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from 'vue';
+import { ref, reactive, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useCart } from '@/services/cart';
 import { useClientAuth } from '@/services/authClient';
 import apiClient from '@/services/apiClient';
 import vnAddressService from '@/services/vnAddressService';
 import Swal from 'sweetalert2';
-import { connectChat } from '@/chatAI/services/chatService';
 
 const { cart, clearCart } = useCart();
 const { customer, isLoggedIn } = useClientAuth();
 const router = useRouter();
 const loading = ref(false);
-const errors = ref({});
-
-const PHONE_REGEX = /^(0[3|5|7|8|9])[0-9]{8}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function validate() {
-  errors.value = {};
-  if (!form.tenKhachHang.trim()) errors.value.tenKhachHang = 'Vui lòng nhập họ và tên';
-  if (!form.soDienThoai.trim()) {
-    errors.value.soDienThoai = 'Vui lòng nhập số điện thoại';
-  } else if (!PHONE_REGEX.test(form.soDienThoai)) {
-    errors.value.soDienThoai = 'Số điện thoại không hợp lệ (VD: 0912345678)';
-  }
-  if (!form.email.trim()) {
-    errors.value.email = 'Vui lòng nhập email';
-  } else if (!EMAIL_REGEX.test(form.email)) {
-    errors.value.email = 'Email không đúng định dạng';
-  }
-  if (!form.diaChi.trim()) errors.value.diaChi = 'Vui lòng nhập địa chỉ cụ thể';
-  if (!addressCodes.city) errors.value.city = 'Vui lòng chọn Tỉnh/Thành phố';
-  if (!addressCodes.district) errors.value.district = 'Vui lòng chọn Quận/Huyện';
-  if (!addressCodes.ward) errors.value.ward = 'Vui lòng chọn Xã/Phường';
-  return Object.keys(errors.value).length === 0;
-}
 const vouchers = ref([]);
 const selectedVoucher = ref(null);
 const tempSelectedVoucher = ref(null); // For modal selection before applying
@@ -445,17 +413,8 @@ const formatPrice = (value) => {
 
 const fetchVouchers = async () => {
     try {
-        if (isLoggedIn.value && customer.value?.id) {
-            // Đã đăng nhập: lấy cả voucher cá nhân + công khai
-            const res = await apiClient.get('/api/client/my-coupons', {
-                params: { customerId: customer.value.id }
-            });
-            vouchers.value = res.data.filter(v => v.trangThaiHienThi === 'available');
-        } else {
-            // Chưa đăng nhập: chỉ lấy voucher công khai
-            const res = await apiClient.get('/api/client/vouchers');
-            vouchers.value = res.data;
-        }
+        const res = await apiClient.get('/api/client/vouchers');
+        vouchers.value = res.data;
     } catch (e) {
         console.error("Failed to fetch vouchers", e);
     }
@@ -471,21 +430,9 @@ const applyVoucher = () => {
     }
 };
 
-let voucherSub = null;
-
 onMounted(async () => {
   fetchVouchers();
   await loadProvinces();
-
-  const client = connectChat();
-  const waitConnected = () => new Promise(resolve => {
-    if (client.connected) { resolve(); return; }
-    const check = setInterval(() => { if (client.connected) { clearInterval(check); resolve(); } }, 100);
-  });
-  await waitConnected();
-  voucherSub = client.subscribe('/topic/vouchers/updated', () => {
-    fetchVouchers();
-  });
   if (isLoggedIn.value && customer.value) {
     form.tenKhachHang = customer.value.hoTen || '';
     form.email = customer.value.email || '';
@@ -506,13 +453,12 @@ onMounted(async () => {
   }
 });
 
-onBeforeUnmount(() => {
-  if (voucherSub) voucherSub.unsubscribe();
-});
-
 const submitOrder = async () => {
-    if (!validate()) return;
-
+    if (!form.tenKhachHang || !form.soDienThoai || !form.email || !form.diaChi || !address.city) {
+        Swal.fire('Lỗi', 'Vui lòng điền đầy đủ thông tin giao hàng.', 'error');
+        return;
+    }
+    
     if (displayItems.value.length === 0) {
         Swal.fire('Lỗi', 'Không có sản phẩm để thanh toán.', 'error');
         return;
@@ -531,7 +477,7 @@ const submitOrder = async () => {
                 idChiTietSanPham: item.variantId,
                 soLuong: item.quantity
             })),
-            loaiThanhToan: paymentMethod.value === 'VNPAY' ? 1 : 0
+            phuongThucThanhToan: paymentMethod.value // e.g. "COD" or "VNPAY"
         };
         
         // Assume backend creates order and returns Order Object (id, total, etc)

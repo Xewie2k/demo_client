@@ -14,30 +14,27 @@
         <div v-if="successMsg" class="alert alert-success py-2 small rounded-3">{{ successMsg }}</div>
         <div v-if="errorMsg" class="alert alert-danger py-2 small rounded-3">{{ errorMsg }}</div>
 
-        <form @submit.prevent="saveProfile" novalidate>
+        <form @submit.prevent="saveProfile">
           <div class="mb-3">
             <label class="form-label small fw-semibold text-secondary">Tên khách hàng</label>
             <div class="input-group">
               <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
-              <input type="text" :class="['form-control border-start-0 ps-0', errors.tenKhachHang && 'is-invalid']" v-model="form.tenKhachHang">
+              <input type="text" class="form-control border-start-0 ps-0" v-model="form.tenKhachHang" required>
             </div>
-            <div v-if="errors.tenKhachHang" class="text-danger small mt-1">{{ errors.tenKhachHang }}</div>
           </div>
           <div class="mb-3">
             <label class="form-label small fw-semibold text-secondary">Email</label>
             <div class="input-group">
               <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
-              <input type="text" :class="['form-control border-start-0 ps-0', errors.email && 'is-invalid']" v-model="form.email">
+              <input type="email" class="form-control border-start-0 ps-0" v-model="form.email" required>
             </div>
-            <div v-if="errors.email" class="text-danger small mt-1">{{ errors.email }}</div>
           </div>
           <div class="mb-3">
             <label class="form-label small fw-semibold text-secondary">Số điện thoại</label>
             <div class="input-group">
               <span class="input-group-text bg-light border-end-0"><i class="bi bi-telephone text-muted"></i></span>
-              <input type="tel" :class="['form-control border-start-0 ps-0', errors.soDienThoai && 'is-invalid']" v-model="form.soDienThoai">
+              <input type="tel" class="form-control border-start-0 ps-0" v-model="form.soDienThoai">
             </div>
-            <div v-if="errors.soDienThoai" class="text-danger small mt-1">{{ errors.soDienThoai }}</div>
           </div>
           <div class="row mb-3">
             <div class="col-md-6">
@@ -50,8 +47,7 @@
             </div>
             <div class="col-md-6">
               <label class="form-label small fw-semibold text-secondary">Ngày sinh</label>
-              <input type="date" :class="['form-control', errors.ngaySinh && 'is-invalid']" v-model="form.ngaySinh">
-              <div v-if="errors.ngaySinh" class="text-danger small mt-1">{{ errors.ngaySinh }}</div>
+              <input type="date" class="form-control" v-model="form.ngaySinh">
             </div>
           </div>
           <button type="submit" class="btn text-white px-4" style="background-color: var(--ss-accent);" :disabled="saving">
@@ -92,32 +88,7 @@ const loading = ref(true);
 const saving = ref(false);
 const successMsg = ref('');
 const errorMsg = ref('');
-const errors = ref({});
 const profile = ref(null);
-
-const PHONE_REGEX = /^(0[3|5|7|8|9])[0-9]{8}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function validate() {
-  errors.value = {};
-  if (!form.tenKhachHang.trim()) {
-    errors.value.tenKhachHang = 'Vui lòng nhập tên khách hàng';
-  } else if (form.tenKhachHang.trim().length < 2) {
-    errors.value.tenKhachHang = 'Tên tối thiểu 2 ký tự';
-  }
-  if (!form.email.trim()) {
-    errors.value.email = 'Vui lòng nhập email';
-  } else if (!EMAIL_REGEX.test(form.email)) {
-    errors.value.email = 'Email không đúng định dạng';
-  }
-  if (form.soDienThoai && !PHONE_REGEX.test(form.soDienThoai)) {
-    errors.value.soDienThoai = 'Số điện thoại không hợp lệ (VD: 0912345678)';
-  }
-  if (form.ngaySinh && new Date(form.ngaySinh) > new Date()) {
-    errors.value.ngaySinh = 'Ngày sinh không được là ngày tương lai';
-  }
-  return Object.keys(errors.value).length === 0;
-}
 
 const form = reactive({
   tenKhachHang: '',
@@ -144,10 +115,9 @@ const fetchProfile = async () => {
 };
 
 const saveProfile = async () => {
+  saving.value = true;
   successMsg.value = '';
   errorMsg.value = '';
-  if (!validate()) return;
-  saving.value = true;
   try {
     const res = await apiClient.put(`/api/client/account/profile/${customer.value.id}`, form);
     profile.value = res.data;

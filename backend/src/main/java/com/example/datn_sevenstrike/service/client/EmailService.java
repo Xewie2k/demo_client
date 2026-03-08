@@ -1,3 +1,4 @@
+// File: src/main/java/com/example/datn_sevenstrike/service/client/EmailService.java
 package com.example.datn_sevenstrike.service.client;
 
 import com.example.datn_sevenstrike.entity.HoaDon;
@@ -5,6 +6,10 @@ import com.example.datn_sevenstrike.entity.HoaDonChiTiet;
 import com.example.datn_sevenstrike.repository.HoaDonChiTietRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
@@ -14,12 +19,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.text.NumberFormat;
-import java.util.List;
-import java.util.Locale;
-
-@Service
+@Service("clientEmailService") // ✅ đổi tên bean để không đụng statistics EmailService
 @RequiredArgsConstructor
 public class EmailService {
 
@@ -170,7 +170,6 @@ public class EmailService {
         sb.append("<th style='padding:10px 8px;text-align:right;font-size:13px;color:#666;border-bottom:1px solid #eee;'>Thành tiền</th>");
         sb.append("</tr>");
 
-        // Dòng sản phẩm
         for (HoaDonChiTiet item : details) {
             String productName;
             try {

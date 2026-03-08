@@ -26,9 +26,7 @@
           </div>
 
           <div class="form-group">
-            <label class="label"
-              >Tên đợt giảm giá: <span class="text-red">*</span></label
-            >
+            <label class="label">Tên đợt giảm giá: <span class="text-red">*</span></label>
             <input
               v-model="formData.tenDotGiamGia"
               type="text"
@@ -41,9 +39,7 @@
           <!-- ✅ BỎ PHẦN CHỌN LOẠI GIẢM (mặc định giảm theo %) -->
 
           <div class="form-group">
-            <label class="label"
-              >Giá trị giảm (%): <span class="text-red">*</span></label
-            >
+            <label class="label">Giá trị giảm (%): <span class="text-red">*</span></label>
             <input
               v-model.number="formData.giaTriGiamGia"
               type="number"
@@ -65,9 +61,7 @@
           </div>
 
           <div class="form-group">
-            <label class="label"
-              >Ngày bắt đầu: <span class="text-red">*</span></label
-            >
+            <label class="label">Ngày bắt đầu: <span class="text-red">*</span></label>
             <input
               v-model="formData.ngayBatDau"
               type="date"
@@ -78,9 +72,7 @@
           </div>
 
           <div class="form-group">
-            <label class="label"
-              >Ngày kết thúc: <span class="text-red">*</span></label
-            >
+            <label class="label">Ngày kết thúc: <span class="text-red">*</span></label>
             <input
               v-model="formData.ngayKetThuc"
               type="date"
@@ -221,7 +213,6 @@
               <colgroup>
                 <col style="width: 40px" />
                 <col style="width: 50px" />
-                <col style="width: 60px" />
                 <col style="width: 150px" />
                 <col />
               </colgroup>
@@ -229,7 +220,6 @@
                 <tr>
                   <th></th>
                   <th class="text-center">#</th>
-                  <th class="text-center">Ảnh</th>
                   <th class="text-center">Mã SP</th>
                   <th class="text-center">Tên sản phẩm</th>
                 </tr>
@@ -237,7 +227,7 @@
 
               <tbody>
                 <tr v-if="filteredParentProducts.length === 0">
-                  <td colspan="5" class="text-center text-muted py-4">
+                  <td colspan="4" class="text-center text-muted py-4">
                     Không tìm thấy dữ liệu
                   </td>
                 </tr>
@@ -260,13 +250,6 @@
                         :checked="isGroupSelected(group.idSanPham)"
                         @change="handleParentCheck(group.idSanPham, $event.target.checked)"
                       />
-                    </td>
-
-                    <td class="text-center td-click" @click="toggleExpand(group.idSanPham)">
-                      <div class="thumb-wrap">
-                        <img :src="getGroupThumb(group)" class="product-thumb" @error="onImgError" alt="thumb" />
-                        <span v-if="displayPercent" class="discount-badge">-{{ displayPercent }}%</span>
-                      </div>
                     </td>
 
                     <td class="text-center td-click" @click="toggleExpand(group.idSanPham)">
@@ -297,13 +280,6 @@
                         v-model="selectedVariantIds"
                         @change="onSourceCheckboxChange"
                       />
-                    </td>
-
-                    <td class="text-center">
-                      <div class="thumb-wrap">
-                        <img :src="getVariantThumb(v)" class="product-thumb-sm" @error="onImgError" alt="thumb" />
-                        <span v-if="displayPercent" class="discount-badge sm">-{{ displayPercent }}%</span>
-                      </div>
                     </td>
 
                     <td class="text-center text-muted small">{{ v.maChiTietSanPham }}</td>
@@ -636,10 +612,13 @@
                   {{ (currentDetailPage - 1) * detailItemsPerPage + index + 1 }}
                 </td>
 
+                <!-- ✅ CHỈ HIỂN THỊ ẢNH CTSP Ở BẢNG DƯỚI -->
                 <td class="text-center">
                   <div class="thumb-wrap">
                     <img :src="getVariantThumb(item)" class="product-thumb-sm" @error="onImgError" alt="thumb" />
-                    <span v-if="displayPercent" class="discount-badge sm">-{{ displayPercent }}%</span>
+                    <span v-if="displayPercent" :class="['discount-badge', 'sm', mauGiamGiaClass]">
+                      -{{ displayPercent }}%
+                    </span>
                   </div>
                 </td>
 
@@ -651,7 +630,9 @@
                 <td class="text-center price-cell">
                   <template v-if="displayPercent">
                     <span class="price-original">{{ formatCurrency(getGiaBienThe(item)) }}</span>
-                    <span class="price-discounted">{{ formatCurrency(getGiaBienThe(item) * (1 - displayPercent / 100)) }}</span>
+                    <span class="price-discounted">
+                      {{ formatCurrency(getGiaBienThe(item) * (1 - displayPercent / 100)) }}
+                    </span>
                   </template>
                   <template v-else>
                     {{ formatCurrency(getGiaBienThe(item)) }}
@@ -753,6 +734,19 @@ const displayPercent = computed(() => {
   const v = Number(formData.giaTriGiamGia);
   if (!Number.isFinite(v) || v < 1 || v > 100) return null;
   return Math.round(v);
+});
+
+/* ✅ MÀU BADGE THEO KHOẢNG GIẢM:
+   - < 50%  : đỏ
+   - 50-70% : vàng
+   - > 70%  : xanh lá
+*/
+const mauGiamGiaClass = computed(() => {
+  const p = Number(displayPercent.value ?? 0);
+  if (!Number.isFinite(p) || p <= 0) return "ss-badge-low";
+  if (p < 50) return "ss-badge-low";
+  if (p <= 70) return "ss-badge-mid";
+  return "ss-badge-high";
 });
 
 const rawVariants = ref([]);
@@ -1081,13 +1075,6 @@ const priceStep = computed(() => {
   return 50000;
 });
 
-/**
- * ✅ LOGIC “KHÔNG BỊ SOI”:
- * - Khi bounds thay đổi do thêm/bớt biến thể:
- *   + Nếu min đang ở sát biên min cũ -> tự kéo về min mới (khi có giá rẻ hơn)
- *   + Nếu max đang ở sát biên max cũ -> tự kéo về max mới (khi có giá đắt hơn)
- * - Nếu user đã kéo để lọc (không còn ở sát biên) thì KHÔNG tự nhảy nữa, chỉ clamp vào bounds.
- */
 const lastBounds = reactive({ min: 0, max: 0, step: 1000 });
 
 watch(
@@ -1111,26 +1098,27 @@ watch(
     const curMin = Number(detailFilters.minPrice);
     const curMax = Number(detailFilters.maxPrice);
 
-    // init lần đầu khi vừa bắt đầu chọn sản phẩm
-    const firstInit = !lastBounds.max || !Number.isFinite(curMin) || !Number.isFinite(curMax) || (curMin === 0 && curMax === 0);
+    const firstInit =
+      !lastBounds.max ||
+      !Number.isFinite(curMin) ||
+      !Number.isFinite(curMax) ||
+      (curMin === 0 && curMax === 0);
+
     if (firstInit) {
       detailFilters.minPrice = b.min;
       detailFilters.maxPrice = b.max;
     } else {
-      // ✅ bám min nếu đang ở sát min cũ và min mới nhỏ hơn (thêm biến thể rẻ hơn)
       const minWasAtEdge = curMin <= prevMin + prevStep;
       if (b.min < prevMin && minWasAtEdge) {
         detailFilters.minPrice = b.min;
       }
 
-      // ✅ bám max nếu đang ở sát max cũ và max mới lớn hơn (thêm biến thể đắt hơn)
       const maxWasAtEdge = curMax >= prevMax - prevStep;
       if (b.max > prevMax && maxWasAtEdge) {
         detailFilters.maxPrice = b.max;
       }
     }
 
-    // ✅ clamp chắc chắn nằm trong bounds
     detailFilters.minPrice = Math.max(b.min, Math.min(Number(detailFilters.minPrice), b.max));
     detailFilters.maxPrice = Math.max(b.min, Math.min(Number(detailFilters.maxPrice), b.max));
 
@@ -1168,9 +1156,6 @@ const onMaxRangeInput = () => {
   if (detailFilters.maxPrice < detailFilters.minPrice) detailFilters.maxPrice = detailFilters.minPrice;
 };
 
-/* =========================
-   variantsDisplay: match exact hoặc match includes
-   ========================= */
 const variantsDisplay = computed(() => {
   let list = allSelectedVariants.value;
 
@@ -1300,7 +1285,6 @@ const removeAll = () => {
   clearDetailFilters();
   currentDetailPage.value = 1;
 
-  // reset meta để lần chọn mới init chuẩn
   lastBounds.min = 0;
   lastBounds.max = 0;
   lastBounds.step = priceStep.value || 1000;
@@ -1469,7 +1453,6 @@ onMounted(loadData);
 .text-primary { color:#2563eb; }
 .text-muted { color:#94a3b8; }
 
-.product-thumb { width:40px; height:40px; object-fit: cover; border-radius:4px; border:1px solid #eee; background:#fff; }
 .product-thumb-sm { width:32px; height:32px; object-fit: cover; border-radius:4px; border:1px solid #eee; background:#fff; }
 
 .btn-expand { background:none; border:none; cursor:pointer; color:#64748b; width:24px; height:24px; }
@@ -1491,7 +1474,7 @@ onMounted(loadData);
 .price-original { text-decoration: line-through; color: #94a3b8; font-size: 12px; display: block; }
 .price-discounted { color: #ef4444; font-weight: 600; font-size: 14px; display: block; }
 
-/* ✅ Badge -% trên ảnh */
+/* ✅ Badge -% trên ảnh (có phân loại màu theo khoảng giảm) */
 .thumb-wrap { position: relative; display: inline-block; vertical-align: middle; }
 .discount-badge {
   position: absolute;
@@ -1511,6 +1494,11 @@ onMounted(loadData);
   z-index: 2;
 }
 .discount-badge.sm { font-size: 8px; padding: 1px 3px; top: -3px; right: -3px; }
+
+/* ✅ Màu theo khoảng giảm */
+.discount-badge.ss-badge-low { background: #ef4444; box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3); }
+.discount-badge.ss-badge-mid { background: #f59e0b; box-shadow: 0 2px 6px rgba(245, 158, 11, 0.32); }
+.discount-badge.ss-badge-high { background: #22c55e; box-shadow: 0 2px 6px rgba(34, 197, 94, 0.32); }
 
 /* ✅ Combobox giống ProductManagePage.vue */
 .ss-combo { position: relative; min-width: 160px; }

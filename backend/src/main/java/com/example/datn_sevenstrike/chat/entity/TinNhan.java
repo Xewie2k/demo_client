@@ -31,11 +31,4 @@ public class TinNhan {
 
     @Column(name = "thoi_gian")
     private LocalDateTime thoiGian;
-
-    @Builder.Default
-    @Column(name = "xoa_mem", nullable = false)
-    private Boolean xoaMem = false;
-
-    @Column(name = "ma_tin_nhan", insertable = false, updatable = false)
-    private String maTinNhan;
 }

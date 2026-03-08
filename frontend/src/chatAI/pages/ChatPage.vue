@@ -1,3 +1,4 @@
+<!-- File: src/chatAI/pages/ChatPage.vue -->
 <template>
   <div class="chat-admin-page d-flex" style="height: calc(100vh - 60px);">
 
@@ -69,15 +70,9 @@
         >
           <div class="d-flex justify-content-between align-items-start">
             <span class="fw-semibold" style="font-size:13px">{{ session.tenKhach }}</span>
-            <div class="d-flex align-items-center gap-1">
-              <span
-                v-if="sessionUnreadMap[session.id] > 0"
-                class="session-unread-badge"
-              >{{ sessionUnreadMap[session.id] > 99 ? '99+' : sessionUnreadMap[session.id] }}</span>
-              <span class="session-badge" :class="`badge-${session.trangThai}`">
-                {{ labelTrangThai(session.trangThai) }}
-              </span>
-            </div>
+            <span class="session-badge" :class="`badge-${session.trangThai}`">
+              {{ labelTrangThai(session.trangThai) }}
+            </span>
           </div>
           <div class="text-muted mt-1" style="font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
             {{ session.tinNhanCuoi || '(chưa có tin nhắn)' }}
@@ -138,8 +133,7 @@
         </div>
 
         <!-- Tin nhắn -->
-        <div class="chat-messages-admin flex-1 overflow-auto p-4" ref="messagesEl"
-          :class="{ 'msgs--noibo': selectedSession?.loai === 'NOI_BO' }">
+        <div class="chat-messages-admin flex-1 overflow-auto p-4" ref="messagesEl">
           <div
             v-for="msg in currentMessages"
             :key="msg.id || msg.thoiGian"
@@ -169,7 +163,7 @@
           />
           <button
             class="btn btn-sm text-white"
-            style="background: var(--ss-accent); border-radius: 20px; padding: 0 16px;"
+            :style="`background: ${selectedSession.loai === 'NOI_BO' ? '#1e3a8a' : 'var(--ss-accent)'}; border-radius: 20px; padding: 0 16px;`"
             @click="guiTinNhanVien"
             :disabled="!replyText.trim()"
           >
@@ -194,7 +188,6 @@ import {
   connectChat, sendStompMessage,
   layDanhSachPhien, layTinNhan, nhanPhien, dongPhien
 } from '@/chatAI/services/chatService'
-import { resetChatUnread, setCurrentSession, useChatBadge } from '@/chatAI/services/useChatBadge'
 
 // ── Dữ liệu ─────────────────────────────────────────────────────────────────
 const sessions            = ref([])
@@ -213,9 +206,6 @@ const tabs = [
   { label: 'Chờ nhận',       value: 'CHO_NHAN_VIEN' },
   { label: 'Đã đóng',        value: 'DA_DONG' },
 ]
-
-// Badge số tin chưa đọc theo từng phiên
-const { sessionUnreadMap } = useChatBadge()
 
 // ── Computed ──────────────────────────────────────────────────────────────────
 const currentSessions = computed(() =>
@@ -277,7 +267,6 @@ let subscriptionChat  = null
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 onMounted(async () => {
-  resetChatUnread()
   await loadSessions('KHACH_HANG')
   if (isAdmin.value) {
     await loadSessions('NOI_BO')
@@ -326,7 +315,6 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
-  setCurrentSession(null)   // user rời trang → tin nhắn mới trong mọi phiên sẽ được đếm
   if (subscriptionAdmin) subscriptionAdmin.unsubscribe()
   if (subscriptionNoiBo) subscriptionNoiBo.unsubscribe()
   if (subscriptionChat)  subscriptionChat.unsubscribe()
@@ -362,7 +350,6 @@ async function loadSessions(loai) {
 async function chonPhien(session) {
   if (subscriptionChat) subscriptionChat.unsubscribe()
 
-  setCurrentSession(session.id)   // clear badge phiên này + đánh dấu đang xem
   selectedId.value      = session.id
   currentMessages.value = []
 
@@ -495,21 +482,6 @@ async function scrollToBottom() {
 .session-item--active { background: #fff5f5 !important; border-left: 3px solid var(--ss-accent); }
 .session-item--active.session-item--noibo { background: #eff6ff !important; border-left: 3px solid #1e3a8a; }
 
-.session-unread-badge {
-  background: #ff4d4f;
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  border-radius: 999px;
-  min-width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 5px;
-  flex-shrink: 0;
-}
-
 .session-badge {
   font-size: 10px;
   padding: 2px 7px;
@@ -533,12 +505,12 @@ async function scrollToBottom() {
   max-width: 75%;
 }
 .admin-msg--bot   { align-self: flex-start; }
-.admin-msg--nv    { align-self: flex-end; }             /* Nhân viên/Admin → phải (là mình) */
-.admin-msg--khach { align-self: flex-start; }           /* Khách hàng → trái (là người kia) */
+.admin-msg--nv    { align-self: flex-start; }           /* Nhân viên → trái */
+.admin-msg--khach { align-self: flex-end; }             /* Khách hàng → phải */
 
 .admin-msg__meta { font-size: 11px; color: #9ca3af; margin-bottom: 4px; }
-.admin-msg--nv    .admin-msg__meta { text-align: right; }
-.admin-msg--khach .admin-msg__meta { text-align: left; }
+.admin-msg--nv    .admin-msg__meta { text-align: left; }
+.admin-msg--khach .admin-msg__meta { text-align: right; }
 
 .admin-msg__bubble {
   padding: 9px 14px;
@@ -548,15 +520,8 @@ async function scrollToBottom() {
   word-break: break-word;
 }
 .admin-msg--bot   .admin-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; }
-
-/* Nhân viên/Admin (phải - là "tôi") → đỏ accent */
-.admin-msg--nv    .admin-msg__bubble { background: var(--ss-accent, #e53935); color: #fff; border-radius: 12px 2px 12px 12px; }
-
-/* Khách hàng (trái - là "người kia") → xám trung tính */
-.admin-msg--khach .admin-msg__bubble { background: #f3f4f6; color: #111827; border: 1px solid #e5e7eb; border-radius: 2px 12px 12px 12px; }
-
-/* Admin trong phiên Nội bộ (phải) → xanh navy */
-.msgs--noibo .admin-msg--nv .admin-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 12px 2px 12px 12px; }
+.admin-msg--nv    .admin-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 2px 12px 12px 12px; }
+.admin-msg--khach .admin-msg__bubble { background: var(--ss-accent); color: #fff; border-radius: 12px 2px 12px 12px; }
 
 .header-noibo {
   background: #eff6ff;

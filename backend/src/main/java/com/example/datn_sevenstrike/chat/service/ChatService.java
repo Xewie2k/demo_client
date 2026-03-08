@@ -1,11 +1,20 @@
 package com.example.datn_sevenstrike.chat.service;
 
-import com.example.datn_sevenstrike.chat.dto.*;
-import com.example.datn_sevenstrike.chat.entity.*;
-import com.example.datn_sevenstrike.chat.repository.*;
-import com.example.datn_sevenstrike.entity.*;
-import com.example.datn_sevenstrike.repository.*;
+import com.example.datn_sevenstrike.chat.dto.DongPhienRequest;
+import com.example.datn_sevenstrike.chat.dto.GuiTinNhanRequest;
+import com.example.datn_sevenstrike.chat.dto.KhoiTaoPhienRequest;
+import com.example.datn_sevenstrike.chat.dto.PhienChatDTO;
+import com.example.datn_sevenstrike.chat.dto.TinNhanDTO;
+import com.example.datn_sevenstrike.chat.entity.PhienChat;
+import com.example.datn_sevenstrike.chat.entity.TinNhan;
+import com.example.datn_sevenstrike.chat.repository.PhienChatRepository;
+import com.example.datn_sevenstrike.chat.repository.TinNhanRepository;
+import com.example.datn_sevenstrike.entity.KhachHang;
+import com.example.datn_sevenstrike.entity.NhanVien;
+import com.example.datn_sevenstrike.repository.KhachHangRepository;
+import com.example.datn_sevenstrike.repository.NhanVienRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +27,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ChatService {
 
     private final PhienChatRepository phienChatRepo;
@@ -27,49 +37,64 @@ public class ChatService {
     private final GeminiService geminiService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    // ─── Trạng thái phiên ────────────────────────────────────────────────────
-    public static final String TRANG_THAI_BOT       = "BOT_DANG_XU_LY";
-    public static final String TRANG_THAI_CHO_NV    = "CHO_NHAN_VIEN";
+    public static final String TRANG_THAI_BOT = "BOT_DANG_XU_LY";
+    public static final String TRANG_THAI_CHO_NV = "CHO_NHAN_VIEN";
     public static final String TRANG_THAI_DANG_XU_LY = "DANG_XU_LY";
-    public static final String TRANG_THAI_DA_DONG   = "DA_DONG";
+    public static final String TRANG_THAI_DA_DONG = "DA_DONG";
 
-    // ─── Loại phiên ──────────────────────────────────────────────────────────
     public static final String LOAI_KHACH_HANG = "KHACH_HANG";
-    public static final String LOAI_NOI_BO     = "NOI_BO";
+    public static final String LOAI_NOI_BO = "NOI_BO";
 
-    // ─── Khởi tạo phiên chat mới ─────────────────────────────────────────────
     @Transactional
     public PhienChatDTO khoiTaoPhien(KhoiTaoPhienRequest req) {
-        String loai = (req.getLoai() != null && !req.getLoai().isBlank()) ? req.getLoai() : LOAI_KHACH_HANG;
+        if (req == null) {
+            throw new RuntimeException("Yêu cầu khởi tạo phiên chat không hợp lệ");
+        }
+
+        String loai = normalizeLoai(req.getLoai());
+        String tenKhachMacDinh = LOAI_NOI_BO.equals(loai) ? "Nhân viên" : "Khách vãng lai";
+
+        log.info("[CHAT_SERVICE] Bắt đầu khởi tạo phiên - loai={}, tenKhach={}, khachHangId={}, nhanVienId={}",
+                loai, req.getTenKhach(), req.getKhachHangId(), req.getNhanVienId());
 
         PhienChat phien = new PhienChat();
         phien.setTrangThai(TRANG_THAI_BOT);
         phien.setThoiGianBatDau(LocalDateTime.now());
         phien.setLoai(loai);
-        phien.setXoaMem(false);
+        phien.setTenKhach(normalizeText(req.getTenKhach(), tenKhachMacDinh));
 
         if (LOAI_NOI_BO.equals(loai)) {
-            // Nhân viên khởi tạo phiên nội bộ
-            phien.setTenKhach(req.getTenKhach() != null ? req.getTenKhach() : "Nhân viên");
             if (req.getNhanVienId() != null) {
-                nhanVienRepo.findById(req.getNhanVienId()).ifPresent(nv -> {
-                    phien.setNhanVien(nv); // Lưu để phân quyền đóng phiên
-                    phien.setTenKhach(nv.getTenNhanVien() != null ? nv.getTenNhanVien() : req.getTenKhach());
-                });
+                Optional<NhanVien> optionalNhanVien = nhanVienRepo.findById(req.getNhanVienId());
+                if (optionalNhanVien.isPresent()) {
+                    NhanVien nv = optionalNhanVien.get();
+                    phien.setNhanVien(nv);
+                    phien.setTenKhach(normalizeText(nv.getTenNhanVien(), phien.getTenKhach()));
+                } else {
+                    log.warn("[CHAT_SERVICE] Không tìm thấy nhân viên id={} khi tạo phiên nội bộ", req.getNhanVienId());
+                }
             }
         } else {
-            phien.setTenKhach(req.getTenKhach() != null ? req.getTenKhach() : "Khách vãng lai");
             if (req.getKhachHangId() != null) {
-                khachHangRepo.findById(req.getKhachHangId()).ifPresent(phien::setKhachHang);
+                Optional<KhachHang> optionalKhachHang = khachHangRepo.findById(req.getKhachHangId());
+                if (optionalKhachHang.isPresent()) {
+                    phien.setKhachHang(optionalKhachHang.get());
+                } else {
+                    log.warn("[CHAT_SERVICE] Không tìm thấy khách hàng id={} khi tạo phiên khách hàng", req.getKhachHangId());
+                }
             }
         }
 
-        PhienChat saved = phienChatRepo.save(phien);
+        log.info("[CHAT_SERVICE] Trước saveAndFlush phien_chat - tenKhach={}, loai={}, trangThai={}",
+                phien.getTenKhach(), phien.getLoai(), phien.getTrangThai());
 
-        // Gửi tin nhắn chào hỏi từ bot (khác nhau theo loại phiên)
+        PhienChat saved = phienChatRepo.saveAndFlush(phien);
+
+        log.info("[CHAT_SERVICE] Đã lưu phien_chat id={}", saved.getId());
+
         String loiChao = LOAI_NOI_BO.equals(loai)
-                ? "Xin chào " + saved.getTenKhach() + "! Tôi là trợ lý AI nội bộ SevenStrike. " +
-                  "Tôi có thể hỗ trợ bạn về quy trình bán hàng, hóa đơn, lịch làm việc và chính sách nội bộ. Bạn cần hỗ trợ gì?"
+                ? "Xin chào " + saved.getTenKhach() + "! Tôi là trợ lý AI nội bộ SevenStrike. "
+                + "Tôi có thể hỗ trợ bạn về quy trình bán hàng, hóa đơn, lịch làm việc và chính sách nội bộ. Bạn cần hỗ trợ gì?"
                 : "Xin chào! Tôi là trợ lý AI của SevenStrike. Tôi có thể giúp bạn về sản phẩm, đơn hàng, và chính sách mua hàng. Bạn cần hỗ trợ gì?";
 
         TinNhan loiChaoTin = TinNhan.builder()
@@ -79,18 +104,25 @@ public class ChatService {
                 .noiDung(loiChao)
                 .thoiGian(LocalDateTime.now())
                 .build();
-        tinNhanRepo.save(loiChaoTin);
 
-        return toDTO(saved);
+        log.info("[CHAT_SERVICE] Trước saveAndFlush tin_nhan mở đầu cho phienChatId={}", saved.getId());
+
+        tinNhanRepo.saveAndFlush(loiChaoTin);
+
+        log.info("[CHAT_SERVICE] Đã lưu tin nhắn mở đầu cho phienChatId={}", saved.getId());
+
+        PhienChatDTO dto = toDTO(saved);
+
+        log.info("[CHAT_SERVICE] Khởi tạo phiên thành công - phienChatId={}", dto.getId());
+
+        return dto;
     }
 
-    // ─── Xử lý tin nhắn từ khách → gọi Gemini hoặc chuyển nhân viên ─────────
     @Transactional
     public void xuLyTinNhanKhach(Integer phienChatId, GuiTinNhanRequest req) {
         PhienChat phien = phienChatRepo.findById(phienChatId)
                 .orElseThrow(() -> new RuntimeException("Phiên chat không tồn tại: " + phienChatId));
 
-        // Lưu tin nhắn của khách
         TinNhan tinNhanKhach = TinNhan.builder()
                 .phienChat(phien)
                 .nguoiGui("KHACH")
@@ -100,19 +132,16 @@ public class ChatService {
                 .build();
         TinNhan savedKhach = tinNhanRepo.save(tinNhanKhach);
 
-        // Broadcast tin nhắn khách
         TinNhanDTO khachDTO = toTinNhanDTO(savedKhach);
         messagingTemplate.convertAndSend("/topic/chat/" + phienChatId, khachDTO);
 
-        // Nếu đang ở chế độ BOT → xử lý escalate hoặc gọi Gemini
         if (TRANG_THAI_BOT.equals(phien.getTrangThai())) {
             boolean isNoiBo = LOAI_NOI_BO.equals(phien.getLoai());
             String noiDung = req.getNoiDung() != null ? req.getNoiDung().trim() : "";
 
-            // Kiểm tra yêu cầu escalate trực tiếp (bypass Gemini để đảm bảo độ tin cậy)
             boolean isDirectEscalate =
                     noiDung.contains("Tôi cần gặp Admin") ||
-                    noiDung.contains("Tôi muốn nói chuyện với nhân viên hỗ trợ");
+                            noiDung.contains("Tôi muốn nói chuyện với nhân viên hỗ trợ");
 
             if (isDirectEscalate) {
                 xuLyEscalate(phien, isNoiBo);
@@ -124,7 +153,6 @@ public class ChatService {
                 if ("CHUYEN_NHAN_VIEN".equals(geminiReply)) {
                     xuLyEscalate(phien, isNoiBo);
                 } else {
-                    // Lưu và broadcast câu trả lời của bot
                     TinNhan botReply = TinNhan.builder()
                             .phienChat(phien)
                             .nguoiGui("BOT")
@@ -137,10 +165,8 @@ public class ChatService {
                 }
             }
         }
-        // Nếu CHO_NHAN_VIEN hoặc DANG_XU_LY → chỉ broadcast, không gọi AI
     }
 
-    // ─── Xử lý escalate: chuyển phiên sang chờ nhân viên/admin ──────────────
     private void xuLyEscalate(PhienChat phien, boolean isNoiBo) {
         phien.setTrangThai(TRANG_THAI_CHO_NV);
         phienChatRepo.save(phien);
@@ -159,12 +185,10 @@ public class ChatService {
         TinNhan savedNotify = tinNhanRepo.save(botNotify);
         messagingTemplate.convertAndSend("/topic/chat/" + phien.getId(), toTinNhanDTO(savedNotify));
 
-        // Thông báo đến đúng topic theo loại phiên
         String notifyTopic = isNoiBo ? "/topic/admin/noibo-notifications" : "/topic/admin/notifications";
         messagingTemplate.convertAndSend(notifyTopic, toDTO(phien));
     }
 
-    // ─── Nhân viên gửi tin nhắn ──────────────────────────────────────────────
     @Transactional
     public void nhanVienGuiTin(Integer phienChatId, GuiTinNhanRequest req) {
         PhienChat phien = phienChatRepo.findById(phienChatId)
@@ -181,7 +205,6 @@ public class ChatService {
         messagingTemplate.convertAndSend("/topic/chat/" + phienChatId, toTinNhanDTO(saved));
     }
 
-    // ─── Nhân viên nhận phiên ────────────────────────────────────────────────
     @Transactional
     public PhienChatDTO nhanVienNhanPhien(Integer phienChatId, Integer nhanVienId) {
         PhienChat phien = phienChatRepo.findById(phienChatId)
@@ -193,11 +216,11 @@ public class ChatService {
         phien.setTrangThai(TRANG_THAI_DANG_XU_LY);
         PhienChat saved = phienChatRepo.save(phien);
 
-        // Thông báo cho khách (kèm tên và mã nhân viên)
         String tenNV = saved.getNhanVien() != null
-                ? (saved.getNhanVien().getTenNhanVien() != null ? saved.getNhanVien().getTenNhanVien() : "Nhân viên")
+                ? normalizeText(saved.getNhanVien().getTenNhanVien(), "Nhân viên")
                 : "Nhân viên";
         String maNV = saved.getNhanVien() != null ? String.valueOf(saved.getNhanVien().getId()) : "";
+
         TinNhan notify = TinNhan.builder()
                 .phienChat(saved)
                 .nguoiGui("BOT")
@@ -208,7 +231,6 @@ public class ChatService {
         TinNhan savedNotify = tinNhanRepo.save(notify);
         messagingTemplate.convertAndSend("/topic/chat/" + phienChatId, toTinNhanDTO(savedNotify));
 
-        // Cập nhật danh sách phiên đến đúng topic theo loại phiên
         boolean isNoiBo = LOAI_NOI_BO.equals(saved.getLoai());
         String notifyTopic = isNoiBo ? "/topic/admin/noibo-notifications" : "/topic/admin/notifications";
         messagingTemplate.convertAndSend(notifyTopic, toDTO(saved));
@@ -216,19 +238,16 @@ public class ChatService {
         return toDTO(saved);
     }
 
-    // ─── Đóng phiên (WS endpoint gọi overload này) ───────────────────────────
     @Transactional
     public void dongPhien(Integer phienChatId) {
         dongPhien(phienChatId, null);
     }
 
-    // ─── Đóng phiên (REST endpoint — có kiểm tra quyền) ─────────────────────
     @Transactional
     public void dongPhien(Integer phienChatId, DongPhienRequest req) {
         PhienChat phien = phienChatRepo.findById(phienChatId)
                 .orElseThrow(() -> new RuntimeException("Phiên chat không tồn tại"));
 
-        // Kiểm tra quyền: nhân viên chỉ được đóng phiên mình phụ trách
         if (req != null && "NHAN_VIEN".equals(req.getVaiTro())) {
             Integer nvId = phien.getNhanVien() != null ? phien.getNhanVien().getId() : null;
             if (!Objects.equals(nvId, req.getNguoiDongId())) {
@@ -250,23 +269,19 @@ public class ChatService {
         TinNhan saved = tinNhanRepo.save(notify);
         messagingTemplate.convertAndSend("/topic/chat/" + phienChatId, toTinNhanDTO(saved));
 
-        // Broadcast cập nhật session đến ChatPage để đồng bộ real-time
         String notifyTopic = LOAI_NOI_BO.equals(phien.getLoai())
                 ? "/topic/admin/noibo-notifications"
                 : "/topic/admin/notifications";
         messagingTemplate.convertAndSend(notifyTopic, toDTO(phien));
     }
 
-    // ─── Lấy danh sách phiên (cho admin) ────────────────────────────────────
     public List<PhienChatDTO> layDanhSachPhien(String trangThai, String loai) {
         List<PhienChat> list;
         if (loai != null && !loai.isBlank()) {
-            // Lọc theo loại + trạng thái
             list = (trangThai != null && !trangThai.isBlank())
                     ? phienChatRepo.findByLoaiAndTrangThaiOrderByThoiGianBatDauDesc(loai, trangThai)
                     : phienChatRepo.findByLoaiAndTrangThaiNotOrderByThoiGianBatDauDesc(loai, TRANG_THAI_DA_DONG);
         } else {
-            // Không lọc loại
             list = (trangThai != null && !trangThai.isBlank())
                     ? phienChatRepo.findByTrangThaiOrderByThoiGianBatDauDesc(trangThai)
                     : phienChatRepo.findByTrangThaiNotOrderByThoiGianBatDauDesc(TRANG_THAI_DA_DONG);
@@ -274,21 +289,21 @@ public class ChatService {
         return list.stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    // ─── Lấy thông tin một phiên ─────────────────────────────────────────────
     public Optional<PhienChatDTO> findById(Integer id) {
         return phienChatRepo.findById(id).map(this::toDTO);
     }
 
-    // ─── Lấy lịch sử tin nhắn ───────────────────────────────────────────────
     public List<TinNhanDTO> layTinNhan(Integer phienChatId) {
         return tinNhanRepo.findByPhienChat_IdOrderByThoiGianAsc(phienChatId)
-                .stream().map(this::toTinNhanDTO).collect(Collectors.toList());
+                .stream()
+                .map(this::toTinNhanDTO)
+                .collect(Collectors.toList());
     }
 
-    // ─── Mappers ─────────────────────────────────────────────────────────────
     private PhienChatDTO toDTO(PhienChat p) {
         List<TinNhan> tinNhans = tinNhanRepo.findByPhienChat_IdOrderByThoiGianAsc(p.getId());
         String tinNhanCuoi = tinNhans.isEmpty() ? null : tinNhans.get(tinNhans.size() - 1).getNoiDung();
+
         return PhienChatDTO.builder()
                 .id(p.getId())
                 .tenKhach(p.getTenKhach())
@@ -310,5 +325,19 @@ public class ChatService {
                 .noiDung(t.getNoiDung())
                 .thoiGian(t.getThoiGian())
                 .build();
+    }
+
+    private String normalizeLoai(String loai) {
+        if (loai == null || loai.isBlank()) {
+            return LOAI_KHACH_HANG;
+        }
+        return loai.trim().toUpperCase();
+    }
+
+    private String normalizeText(String value, String defaultValue) {
+        if (value == null || value.isBlank()) {
+            return defaultValue;
+        }
+        return value.trim();
     }
 }
