@@ -14,4 +14,6 @@ public interface GiaoDichThanhToanRepository extends JpaRepository<GiaoDichThanh
     Optional<GiaoDichThanhToan> findByIdAndXoaMemFalse(Integer id);
 
     List<GiaoDichThanhToan> findAllByIdHoaDonAndXoaMemFalseOrderByThoiGianTaoDesc(Integer idHoaDon);
+
+    List<GiaoDichThanhToan> findAllByIdHoaDon(Integer hoaDonId);
 }

@@ -33,7 +33,7 @@ public class VNPayService {
         vnp_Params.put("vnp_TmnCode", vnp_TmnCode);
 
         // FIX: Ép kiểu long để tránh lỗi tràn số
-        vnp_Params.put("vnp_Amount", String.valueOf((long) total * 100));
+        vnp_Params.put("vnp_Amount", String.valueOf(((long) total) * 100));
 
         vnp_Params.put("vnp_CurrCode", "VND");
         vnp_Params.put("vnp_TxnRef", vnp_TxnRef);
@@ -87,7 +87,7 @@ public class VNPayService {
 
         String queryUrl = query.toString();
         // FIX: Trim secretKey để tránh lỗi dư khoảng trắng
-        String vnp_SecureHash = hmacSHA512(vnPayConfig.getSecretKey().trim(), hashData.toString());
+        String vnp_SecureHash = hmacSHA512(vnPayConfig.getSecretKey() != null ? vnPayConfig.getSecretKey().trim() : "", hashData.toString());
         queryUrl += "&vnp_SecureHash=" + vnp_SecureHash;
 
         return vnPayConfig.getVnp_PayUrl() + "?" + queryUrl;
@@ -149,7 +149,7 @@ public class VNPayService {
                 }
             }
         }
-        return hmacSHA512(vnPayConfig.getSecretKey().trim(), sb.toString());
+        return hmacSHA512(vnPayConfig.getSecretKey() != null ? vnPayConfig.getSecretKey().trim() : "", sb.toString());
     }
 
     // --- 4. Hàm mã hóa HMAC SHA512 ---

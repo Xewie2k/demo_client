@@ -58,7 +58,7 @@ public class HoaDonResponse {
 
     private List<HoaDonChiTietResponse> chiTietHoaDon;
 
-    // 🔥 CONSTRUCTOR CHUẨN KHỚP 100% VỚI JPQL CỦA ANH
+    // 🔥 CONSTRUCTOR CHUẨN KHỚP 100% VỚI JPQL CỦA ANH (Đã thêm daHoanPhi)
     public HoaDonResponse(
             Integer id,
             Integer idKhachHang,
@@ -84,7 +84,8 @@ public class HoaDonResponse {
             Boolean xoaMem,
             Integer nguoiTao,
             LocalDateTime ngayCapNhat,
-            Integer nguoiCapNhat
+            Integer nguoiCapNhat,
+            Boolean daHoanPhi // ✅ Thêm tham số này để khớp JPQL
     ) {
         this.id = id;
         this.idKhachHang = idKhachHang;
@@ -111,6 +112,7 @@ public class HoaDonResponse {
         this.nguoiTao = nguoiTao;
         this.ngayCapNhat = ngayCapNhat;
         this.nguoiCapNhat = nguoiCapNhat;
+        this.daHoanPhi = daHoanPhi;
     }
 
     // Constructor rút gọn (nếu anh đang dùng ở chỗ khác)

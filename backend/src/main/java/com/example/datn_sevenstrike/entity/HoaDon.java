@@ -90,10 +90,6 @@ public class HoaDon {
     @Column(name = "nguoi_cap_nhat")
     private Integer nguoiCapNhat;
 
-    // 0=tiền mặt/COD, 1=chuyển khoản
-    @Column(name = "loai_thanh_toan")
-    private Integer loaiThanhToan;
-
     // null=không cần hoàn, false=chờ hoàn phí, true=đã hoàn phí
     @Column(name = "da_hoan_phi")
     private Boolean daHoanPhi;

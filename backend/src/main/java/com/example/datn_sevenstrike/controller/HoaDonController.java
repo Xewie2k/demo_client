@@ -69,6 +69,20 @@ public class HoaDonController {
         return service.cancelOrder(id, nhanVienId, "NHAN_VIEN", lyDo);
     }
 
+    @PostMapping("/{id}/xac-nhan-huy-theo-yeu-cau")
+    public HoaDonResponse xacNhanHuyTheoYeuCau(@PathVariable Integer id, @RequestBody(required = false) HuyDonBody body) {
+        Integer nhanVienId = body == null ? null : body.getNhanVienId();
+        String lyDo = body == null ? null : body.getLyDo();
+        return service.adminConfirmCancel(id, nhanVienId, lyDo);
+    }
+
+    @PostMapping("/{id}/tu-choi-huy")
+    public HoaDonResponse tuChoiHuy(@PathVariable Integer id, @RequestBody(required = false) HuyDonBody body) {
+        Integer nhanVienId = body == null ? null : body.getNhanVienId();
+        String lyDo = body == null ? null : body.getLyDo();
+        return service.adminRejectCancel(id, nhanVienId, lyDo);
+    }
+
     @PostMapping("/{id}/xac-nhan-hoan-phi")
     public HoaDonResponse xacNhanHoanPhi(@PathVariable Integer id, @RequestBody(required = false) HoanPhiBody body) {
         Integer nhanVienId = body == null ? null : body.getNhanVienId();
@@ -78,6 +92,18 @@ public class HoaDonController {
     @GetMapping("/can-hoan-phi")
     public List<HoaDonResponse> getDonCanHoanPhi() {
         return service.getDonCanHoanPhi();
+    }
+
+    @PutMapping("/{id}/thong-tin-giao-hang")
+    public HoaDonResponse updateThongTinGiaoHang(@PathVariable Integer id,
+                                                   @RequestBody ThongTinGiaoHangBody body) {
+        return service.adminUpdateThongTinGiaoHang(
+                id,
+                body.getTenKhachHang(),
+                body.getSoDienThoaiKhachHang(),
+                body.getEmailKhachHang(),
+                body.getDiaChiKhachHang()
+        );
     }
 
     @Data
@@ -100,5 +126,13 @@ public class HoaDonController {
     @Data
     public static class HoanPhiBody {
         private Integer nhanVienId;
+    }
+
+    @Data
+    public static class ThongTinGiaoHangBody {
+        private String tenKhachHang;
+        private String soDienThoaiKhachHang;
+        private String emailKhachHang;
+        private String diaChiKhachHang;
     }
 }

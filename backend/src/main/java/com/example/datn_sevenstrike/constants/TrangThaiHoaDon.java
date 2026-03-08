@@ -6,7 +6,8 @@ public enum TrangThaiHoaDon {
     DANG_VAN_CHUYEN(3, "Đang vận chuyển"),
     DA_GIAO_HANG(4, "Đã giao hàng"),
     HOAN_THANH(5, "Hoàn thành"),
-    HUY_DON(6, "Đã hủy");
+    HUY_DON(6, "Đã hủy"),
+    YEU_CAU_HUY(7, "Yêu cầu hủy");
 
     public final int code;
     public final String label;

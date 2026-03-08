@@ -567,7 +567,7 @@ create table dbo.hoa_don (
     email_khach_hang varchar(255) null,
 
     trang_thai_hien_tai int not null default 1,
-    constraint CK_hd_trang_thai_code check (trang_thai_hien_tai in (1,2,3,4,5,6)),
+    constraint CK_hd_trang_thai_code check (trang_thai_hien_tai in (1,2,3,4,5,6,7)),
 
     ngay_tao datetime2 not null default sysdatetime(),
     ngay_thanh_toan datetime2 null,
@@ -579,8 +579,6 @@ create table dbo.hoa_don (
     ngay_cap_nhat datetime2 null,
     nguoi_cap_nhat int null,
 
-    -- ✅ [2026-03-06] Nghiệp vụ online: loại thanh toán (0=tiền mặt/COD, 1=chuyển khoản)
-    loai_thanh_toan int null,
     -- ✅ [2026-03-06] Nghiệp vụ online: trạng thái hoàn phí (NULL=không cần, 0=chờ hoàn, 1=đã hoàn)
     da_hoan_phi bit null,
 
@@ -612,8 +610,6 @@ create table dbo.hoa_don_chi_tiet (
 
     so_luong int not null check (so_luong > 0),
     don_gia decimal(18,2) not null check (don_gia >= 0),
-    -- ✅ [2026-03-06] Nghiệp vụ online: lưu giá cũ khi giá sản phẩm thay đổi trong đơn (hiển thị dòng vàng)
-    don_gia_cu decimal(18,2) null,
 
     thanh_tien as cast((so_luong * don_gia) as decimal(18,2)) persisted,
 
@@ -712,7 +708,7 @@ create table dbo.giao_dich_thanh_toan (
 go
 
 /* =========================================================
-   10) LỊCH SỬ HÓA ĐƠN (1..6)
+   10) LỊCH SỬ HÓA ĐƠN (1..7)
    ========================================================= */
 
 create table dbo.lich_su_hoa_don (
@@ -720,7 +716,7 @@ create table dbo.lich_su_hoa_don (
     id_hoa_don int not null,
 
     trang_thai int not null,
-    constraint CK_lshd_trang_thai_code check (trang_thai in (1,2,3,4,5,6)),
+    constraint CK_lshd_trang_thai_code check (trang_thai in (1,2,3,4,5,6,7)),
 
     thoi_gian datetime2 not null default sysdatetime(),
     ghi_chu nvarchar(255) null,

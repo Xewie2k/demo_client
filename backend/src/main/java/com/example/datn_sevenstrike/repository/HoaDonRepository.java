@@ -45,7 +45,8 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, Integer> {
             hd.xoaMem,
             hd.nguoiTao,
             hd.ngayCapNhat,
-            hd.nguoiCapNhat
+            hd.nguoiCapNhat,
+            hd.daHoanPhi
         )
         FROM HoaDon hd
         LEFT JOIN NhanVien nv ON hd.idNhanVien = nv.id

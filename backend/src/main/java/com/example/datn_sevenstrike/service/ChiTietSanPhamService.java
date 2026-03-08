@@ -100,7 +100,6 @@ public class ChiTietSanPhamService {
         if (req.getIdFormChan() != null) db.setIdFormChan(req.getIdFormChan());
 
         if (req.getGiaNiemYet() != null) db.setGiaNiemYet(req.getGiaNiemYet());
-        BigDecimal giaOld = db.getGiaBan();
         if (req.getGiaBan() != null) db.setGiaBan(req.getGiaBan());
         if (req.getSoLuong() != null) db.setSoLuong(req.getSoLuong());
         if (req.getTrangThai() != null) db.setTrangThai(req.getTrangThai());
@@ -111,9 +110,7 @@ public class ChiTietSanPhamService {
         validateDuplicateUpdate(db);
 
         try {
-            ChiTietSanPhamResponse result = toResponse(repo.save(db));
-            propagateGiaToOrders(id, giaOld, db.getGiaBan());
-            return result;
+            return toResponse(repo.save(db));
         } catch (DataIntegrityViolationException ex) {
             throw new BadRequestEx("Không thể cập nhật CTSP: dữ liệu không hợp lệ hoặc biến thể đã tồn tại.");
         }
@@ -181,40 +178,6 @@ public class ChiTietSanPhamService {
                 e.getId()
         );
         if (exists) throw new BadRequestEx("Biến thể này đã tồn tại (trùng màu/size/loại sân/form).");
-    }
-
-    private void propagateGiaToOrders(Integer idCtsp, BigDecimal giaOld, BigDecimal giaNew) {
-        if (giaNew == null || giaOld == null || giaOld.compareTo(giaNew) == 0) return;
-        List<HoaDonChiTiet> affected = hoaDonChiTietRepo.findPendingCODItemsByCtsp(idCtsp);
-        if (affected.isEmpty()) return;
-        Set<Integer> affectedOrderIds = new HashSet<>();
-        for (HoaDonChiTiet hdct : affected) {
-            if (hdct.getDonGia() != null && hdct.getDonGia().compareTo(giaNew) != 0) {
-                hdct.setDonGiaCu(hdct.getDonGia());
-                hdct.setDonGia(giaNew);
-                affectedOrderIds.add(hdct.getIdHoaDon());
-            }
-        }
-        hoaDonChiTietRepo.saveAll(affected);
-        for (Integer hdId : affectedOrderIds) {
-            recalcOrderTotal(hdId);
-        }
-    }
-
-    private void recalcOrderTotal(Integer hdId) {
-        HoaDon hd = hoaDonRepo.findById(hdId).orElse(null);
-        if (hd == null) return;
-        List<HoaDonChiTiet> items = hoaDonChiTietRepo
-                .findAllByIdHoaDonAndXoaMemFalseOrderByIdAsc(hdId);
-        BigDecimal newTongTien = items.stream()
-                .map(i -> i.getDonGia().multiply(BigDecimal.valueOf(i.getSoLuong())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        hd.setTongTien(newTongTien);
-        // tongTienGiam là computed = tongTien - tongTienSauGiam
-        // → tongTienSauGiam_mới = tongTien_mới - tongTienGiam (giữ nguyên phi + voucher)
-        BigDecimal giam = hd.getTongTienGiam() != null ? hd.getTongTienGiam() : BigDecimal.ZERO;
-        hd.setTongTienSauGiam(newTongTien.subtract(giam));
-        hoaDonRepo.save(hd);
     }
 
     private ChiTietSanPhamResponse toResponse(ChiTietSanPham e) {

@@ -1,4 +1,15 @@
 <template>
+  <!-- Toast notification -->
+  <Teleport to="body">
+    <div
+      v-if="toast.show"
+      :class="`position-fixed top-0 end-0 m-3 alert alert-${toast.type} shadow`"
+      style="z-index:9999; min-width:260px; border-radius:10px;"
+    >
+      <i :class="`bi bi-${toast.type === 'success' ? 'check-circle-fill' : 'x-circle-fill'} me-2`"></i>
+      {{ toast.msg }}
+    </div>
+  </Teleport>
   <div class="container py-5">
     <!-- Logged-in user mode -->
     <div v-if="isLoggedIn">
@@ -26,6 +37,12 @@
         <div v-if="myOrdersLoading" class="text-center py-5">
           <div class="spinner-border" style="color: var(--ss-accent);" role="status"></div>
         </div>
+        
+        <div v-else-if="myOrdersError" class="text-center py-5">
+          <i class="bi bi-exclamation-circle text-danger" style="font-size: 2rem;"></i>
+          <p class="text-danger mt-3">{{ myOrdersError }}</p>
+          <button class="btn btn-outline-dark btn-sm" @click="fetchMyOrders">Thử lại</button>
+        </div>
 
         <div v-else-if="myOrders.length === 0" class="text-center py-5">
           <i class="bi bi-clipboard-x text-muted" style="font-size: 3rem;"></i>
@@ -52,9 +69,13 @@
             </div>
             <div class="card-body p-4">
               <!-- Action buttons for selectedOrder -->
+              <div v-if="selectedOrder.trangThaiHienTai === 7" class="alert alert-warning small mb-3">
+                <i class="bi bi-hourglass-split me-1"></i>
+                Yêu cầu hủy đơn của bạn đang chờ cửa hàng xác nhận.
+              </div>
               <div v-if="selectedOrder.trangThaiHienTai === 1" class="mb-4 d-flex gap-2 flex-wrap">
                 <button class="btn btn-outline-danger btn-sm" @click="openCancelModal('selected')">
-                  <i class="bi bi-x-circle me-1"></i> Hủy đơn hàng
+                  <i class="bi bi-x-circle me-1"></i> Yêu cầu hủy đơn
                 </button>
                 <template v-if="selectedOrder.loaiThanhToan === 0">
                   <button class="btn btn-outline-primary btn-sm" @click="openDeliveryModal('selected')">
@@ -119,10 +140,10 @@
                         <td class="text-end fw-bold pe-3" style="color: var(--ss-accent);">{{ formatCurrency(item.donGia * item.soLuong) }}</td>
                       </tr>
                       <!-- Dòng vàng thay đổi giá -->
-                      <tr v-if="item.donGiaCu" style="background-color: #fff3cd;">
+                      <tr v-if="item.donGiaCu && item.donGia !== item.donGiaCu" style="background-color: #fff3cd;">
                         <td colspan="5" class="py-1 ps-3 small" style="color: #856404;">
                           <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                          Giá đổi từ <strong>{{ formatCurrency(item.donGiaCu) }}</strong> thành <strong>{{ formatCurrency(item.donGia) }}</strong>
+                          Giá trong đơn: <strong>{{ formatCurrency(item.donGia) }}</strong> — Giá hiện tại: <strong>{{ formatCurrency(item.donGiaCu) }}</strong>
                         </td>
                       </tr>
                     </template>
@@ -256,14 +277,18 @@
                     <h6 class="mb-0 fw-bold">Đơn hàng {{ trackedOrder.maHoaDon }}</h6>
                     <small class="text-muted">{{ formatDate(trackedOrder.ngayTao) }}</small>
                   </div>
-                  <span class="badge px-3 py-2" :class="trackedOrder.trangThaiHienTai === 6 ? 'bg-danger' : 'bg-dark'">{{ getStatusName(trackedOrder.trangThaiHienTai) }}</span>
+                  <span class="badge px-3 py-2" :class="trackedOrder.trangThaiHienTai === 6 ? 'bg-danger' : trackedOrder.trangThaiHienTai === 7 ? 'bg-warning text-dark' : 'bg-dark'">{{ getStatusName(trackedOrder.trangThaiHienTai) }}</span>
                 </div>
               </div>
               <div class="card-body p-4">
                 <!-- Action buttons for trackedOrder -->
+                <div v-if="trackedOrder.trangThaiHienTai === 7" class="alert alert-warning small mb-3">
+                  <i class="bi bi-hourglass-split me-1"></i>
+                  Yêu cầu hủy đơn của bạn đang chờ cửa hàng xác nhận.
+                </div>
                 <div v-if="trackedOrder.trangThaiHienTai === 1" class="mb-4 d-flex gap-2 flex-wrap">
                   <button class="btn btn-outline-danger btn-sm" @click="openCancelModal('tracked')">
-                    <i class="bi bi-x-circle me-1"></i> Hủy đơn hàng
+                    <i class="bi bi-x-circle me-1"></i> Yêu cầu hủy đơn
                   </button>
                   <template v-if="trackedOrder.loaiThanhToan === 0">
                     <button class="btn btn-outline-primary btn-sm" @click="openDeliveryModal('tracked')">
@@ -279,7 +304,7 @@
                 <div class="position-relative my-5 mx-3">
                   <div class="progress" style="height: 3px;">
                     <div class="progress-bar" role="progressbar"
-                      :style="{ width: calcProgressWidth(trackedOrder) + '%', backgroundColor: trackedOrder.trangThaiHienTai >= 6 ? '#dc3545' : 'var(--ss-accent)' }">
+                      :style="{ width: calcProgressWidth(trackedOrder) + '%', backgroundColor: trackedOrder.trangThaiHienTai === 6 ? '#dc3545' : trackedOrder.trangThaiHienTai === 7 ? '#f97316' : 'var(--ss-accent)' }">
                     </div>
                   </div>
                   <div class="d-flex justify-content-between position-absolute top-0 w-100 translate-middle-y">
@@ -290,15 +315,18 @@
                         <i :class="step.icon"></i>
                       </div>
                       <small class="d-block mt-2 fw-bold"
-                        :style="isStepActive(trackedOrder, step.code) ? { color: trackedOrder.trangThaiHienTai >= 6 ? '#dc3545' : 'var(--ss-accent)' } : {}"
+                        :style="isStepActive(trackedOrder, step.code) ? { color: trackedOrder.trangThaiHienTai === 6 ? '#dc3545' : trackedOrder.trangThaiHienTai === 7 ? '#f97316' : 'var(--ss-accent)' } : {}"
                         :class="isStepActive(trackedOrder, step.code) ? '' : 'text-muted'" style="font-size: 12px;">
                         {{ step.label }}
                       </small>
                     </div>
                   </div>
                 </div>
-                <div v-if="trackedOrder.trangThaiHienTai >= 6" class="alert alert-danger text-center py-2" style="font-size:0.9rem;">
+                <div v-if="trackedOrder.trangThaiHienTai === 6" class="alert alert-danger text-center py-2" style="font-size:0.9rem;">
                   <i class="bi bi-x-circle-fill me-1"></i> Đơn hàng này đã bị hủy
+                </div>
+                <div v-if="trackedOrder.trangThaiHienTai === 7" class="alert alert-warning text-center py-2" style="font-size:0.9rem;">
+                  <i class="bi bi-exclamation-triangle-fill me-1"></i> Yêu cầu hủy đang chờ cửa hàng xác nhận
                 </div>
 
                 <hr class="my-4">
@@ -320,9 +348,9 @@
                           <span class="fw-bold">{{ formatCurrency(item.thanhTien) }}</span>
                         </div>
                         <!-- Dòng vàng thay đổi giá -->
-                        <div v-if="item.donGiaCu" class="mb-2 px-2 py-1 rounded small" style="background-color:#fff3cd; color:#856404;">
+                        <div v-if="item.donGiaCu && item.donGia !== item.donGiaCu" class="mb-2 px-2 py-1 rounded small" style="background-color:#fff3cd; color:#856404;">
                           <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                          Giá đổi từ <strong>{{ formatCurrency(item.donGiaCu) }}</strong> → <strong>{{ formatCurrency(item.donGia) }}</strong>
+                          Giá trong đơn: <strong>{{ formatCurrency(item.donGia) }}</strong> — Giá hiện tại: <strong>{{ formatCurrency(item.donGiaCu) }}</strong>
                         </div>
                       </template>
                       <hr class="my-2">
@@ -409,11 +437,15 @@
               <h5 class="mb-0 fw-bold">Đơn hàng {{ order.maHoaDon }}</h5>
               <small class="text-muted">Ngày đặt: {{ formatDate(order.ngayTao) }}</small>
             </div>
-            <span class="badge px-3 py-2" :class="order.trangThaiHienTai === 6 ? 'bg-danger' : 'bg-dark'">{{ getStatusName(order.trangThaiHienTai) }}</span>
+            <span class="badge px-3 py-2" :class="order.trangThaiHienTai === 6 ? 'bg-danger' : order.trangThaiHienTai === 7 ? 'bg-warning text-dark' : 'bg-dark'">{{ getStatusName(order.trangThaiHienTai) }}</span>
           </div>
         </div>
         <div class="card-body p-4">
           <!-- Action buttons for guest -->
+          <div v-if="order.trangThaiHienTai === 7" class="alert alert-warning small mb-3">
+            <i class="bi bi-hourglass-split me-1"></i>
+            Yêu cầu hủy đơn đang chờ cửa hàng xác nhận.
+          </div>
           <div v-if="order.trangThaiHienTai === 1" class="mb-4 d-flex gap-2 flex-wrap">
             <template v-if="order.loaiThanhToan === 0">
               <button class="btn btn-outline-primary btn-sm" @click="openDeliveryModal('guest')">
@@ -429,7 +461,7 @@
           <div class="position-relative my-5 mx-3">
             <div class="progress" style="height: 3px;">
               <div class="progress-bar" role="progressbar"
-                :style="{ width: calcProgressWidth(order) + '%', backgroundColor: order.trangThaiHienTai >= 6 ? '#dc3545' : 'var(--ss-accent)' }">
+                :style="{ width: calcProgressWidth(order) + '%', backgroundColor: order.trangThaiHienTai === 6 ? '#dc3545' : order.trangThaiHienTai === 7 ? '#f97316' : 'var(--ss-accent)' }">
               </div>
             </div>
             <div class="d-flex justify-content-between position-absolute top-0 w-100 translate-middle-y">
@@ -440,15 +472,18 @@
                   <i :class="step.icon"></i>
                 </div>
                 <small class="d-block mt-2 fw-bold"
-                  :style="isStepActive(order, step.code) ? { color: order.trangThaiHienTai >= 6 ? '#dc3545' : 'var(--ss-accent)' } : {}"
+                  :style="isStepActive(order, step.code) ? { color: order.trangThaiHienTai === 6 ? '#dc3545' : order.trangThaiHienTai === 7 ? '#f97316' : 'var(--ss-accent)' } : {}"
                   :class="isStepActive(order, step.code) ? '' : 'text-muted'" style="font-size: 12px;">
                   {{ step.label }}
                 </small>
               </div>
             </div>
           </div>
-          <div v-if="order.trangThaiHienTai >= 6" class="alert alert-danger text-center py-2" style="font-size:0.9rem;">
+          <div v-if="order.trangThaiHienTai === 6" class="alert alert-danger text-center py-2" style="font-size:0.9rem;">
             <i class="bi bi-x-circle-fill me-1"></i> Đơn hàng này đã bị hủy
+          </div>
+          <div v-if="order.trangThaiHienTai === 7" class="alert alert-warning text-center py-2" style="font-size:0.9rem;">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i> Yêu cầu hủy đang chờ cửa hàng xác nhận
           </div>
 
           <hr class="my-4">
@@ -470,9 +505,9 @@
                     <span class="fw-bold">{{ formatCurrency(item.thanhTien) }}</span>
                   </div>
                   <!-- Dòng vàng thay đổi giá -->
-                  <div v-if="item.donGiaCu" class="mb-2 px-2 py-1 rounded small" style="background-color:#fff3cd; color:#856404;">
+                  <div v-if="item.donGiaCu && item.donGia !== item.donGiaCu" class="mb-2 px-2 py-1 rounded small" style="background-color:#fff3cd; color:#856404;">
                     <i class="bi bi-exclamation-triangle-fill me-1"></i>
-                    Giá đổi từ <strong>{{ formatCurrency(item.donGiaCu) }}</strong> → <strong>{{ formatCurrency(item.donGia) }}</strong>
+                    Giá trong đơn: <strong>{{ formatCurrency(item.donGia) }}</strong> — Giá hiện tại: <strong>{{ formatCurrency(item.donGiaCu) }}</strong>
                   </div>
                 </template>
                 <hr class="my-2">
@@ -520,7 +555,7 @@
             <button type="button" class="btn-close" @click="showCancelModal = false"></button>
           </div>
           <div class="modal-body">
-            <p class="text-muted">Bạn có chắc chắn muốn hủy đơn hàng không?</p>
+            <p class="text-muted">Gửi yêu cầu hủy đơn hàng? Cửa hàng sẽ xem xét và xác nhận.</p>
             <div v-if="actionOrderData && actionOrderData.loaiThanhToan === 1" class="alert alert-warning small">
               <i class="bi bi-info-circle me-1"></i>
               Đây là đơn chuyển khoản. Sau khi hủy, cửa hàng sẽ liên hệ để hoàn tiền cho bạn.
@@ -534,7 +569,7 @@
             <button class="btn btn-secondary btn-sm" @click="showCancelModal = false">Không</button>
             <button class="btn btn-danger btn-sm" :disabled="cancelLoading" @click="doCancel">
               <span v-if="cancelLoading" class="spinner-border spinner-border-sm me-1"></span>
-              Hủy đơn hàng
+              Gửi yêu cầu hủy
             </button>
           </div>
         </div>
@@ -560,7 +595,15 @@
             </div>
             <div class="mb-3">
               <label class="form-label small fw-semibold">Địa chỉ</label>
-              <input v-model="deliveryForm.diaChiKhachHang" type="text" class="form-control form-control-sm">
+              <div class="input-group input-group-sm">
+                <input v-model="deliveryForm.diaChiKhachHang" type="text" class="form-control">
+                <button
+                  v-if="isLoggedIn && savedAddresses.length"
+                  class="btn btn-dark px-3"
+                  type="button"
+                  @click="showAddressPickModal = true; tempSelectedAddress = null;"
+                >CHỌN</button>
+              </div>
             </div>
           </div>
           <div class="modal-footer">
@@ -569,6 +612,43 @@
               <span v-if="deliveryLoading" class="spinner-border spinner-border-sm me-1"></span>
               Lưu thay đổi
             </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal chọn địa chỉ nhanh -->
+    <div v-if="showAddressPickModal" class="modal d-block" style="background: rgba(0,0,0,0.6); z-index: 1060;" @click.self="showAddressPickModal = false">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header border-0 pb-0">
+            <h5 class="modal-title fw-bold">Chọn địa chỉ giao hàng</h5>
+            <button type="button" class="btn-close" @click="showAddressPickModal = false"></button>
+          </div>
+          <div class="modal-body">
+            <div class="d-flex flex-column gap-2">
+              <div
+                v-for="addr in savedAddresses"
+                :key="addr.id"
+                class="d-flex align-items-center justify-content-between p-3 rounded-3 border"
+                style="cursor: pointer; transition: all 0.2s;"
+                :class="tempSelectedAddress && tempSelectedAddress.id === addr.id ? 'border-danger bg-danger-subtle' : 'bg-white'"
+                @click="tempSelectedAddress = addr"
+              >
+                <div>
+                  <div class="fw-bold">
+                    {{ addr.tenDiaChi }}
+                    <span v-if="addr.macDinh" class="badge ms-1" style="background-color: var(--ss-accent); font-size: 10px;">Mặc định</span>
+                  </div>
+                  <div class="small text-secondary">{{ [addr.diaChiCuThe, addr.phuong, addr.quan, addr.thanhPho].filter(Boolean).join(', ') }}</div>
+                </div>
+                <i v-if="tempSelectedAddress && tempSelectedAddress.id === addr.id" class="bi bi-check-circle-fill ms-2" style="color: var(--ss-accent); font-size: 1.2rem;"></i>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer border-0 pt-0">
+            <button type="button" class="btn btn-secondary rounded-1 btn-sm" @click="showAddressPickModal = false">Đóng</button>
+            <button type="button" class="btn btn-sm rounded-1 text-white" style="background-color: var(--ss-accent); border: none;" @click="applyAddress" :disabled="!tempSelectedAddress">Áp dụng</button>
           </div>
         </div>
       </div>
@@ -627,6 +707,7 @@ import { useRoute, useRouter } from 'vue-router';
 import apiClient from '@/services/apiClient';
 import { useClientAuth } from '@/services/authClient';
 import OrderTimeline from '@/components/client/OrderTimeline.vue';
+import vnAddressService from '@/services/vnAddressService';
 
 const route = useRoute();
 const router = useRouter();
@@ -643,6 +724,7 @@ const guestEmail = ref(''); // email đã dùng để tra cứu (guest)
 const activeTab = ref('my-orders');
 const myOrders = ref([]);
 const myOrdersLoading = ref(true);
+const myOrdersError = ref(null);
 const selectedOrder = ref(null);
 
 // Tracking form (logged-in tab 2)
@@ -655,6 +737,13 @@ const trackingEmailUsed = ref(''); // email đã dùng khi trackByCode thành c�
 // Guest form
 const guestForm = reactive({ maHoaDon: '', email: '' });
 
+// Toast
+const toast = reactive({ show: false, type: 'success', msg: '' });
+const showToast = (msg, type = 'success') => {
+  toast.msg = msg; toast.type = type; toast.show = true;
+  setTimeout(() => { toast.show = false; }, 3000);
+};
+
 // Action modal state
 const showCancelModal = ref(false);
 const cancelReason = ref('');
@@ -662,6 +751,10 @@ const cancelLoading = ref(false);
 const showDeliveryModal = ref(false);
 const deliveryLoading = ref(false);
 const deliveryForm = ref({ tenKhachHang: '', soDienThoaiKhachHang: '', diaChiKhachHang: '' });
+// Saved addresses (quick select)
+const savedAddresses = ref([]);
+const tempSelectedAddress = ref(null);
+const showAddressPickModal = ref(false);
 const showItemsModal = ref(false);
 const itemsLoading = ref(false);
 const editItems = ref([]);
@@ -696,9 +789,11 @@ const isStepActive = (o, code) => {
 };
 const calcStepStyle = (o, code) => {
   const active = isStepActive(o, code);
-  const cancelled = o?.trangThaiHienTai >= 6;
+  const st = o?.trangThaiHienTai;
   if (active) {
-    return { borderColor: cancelled ? '#dc3545' : 'var(--ss-accent)', color: cancelled ? '#dc3545' : 'var(--ss-accent)', backgroundColor: cancelled ? '#fff5f5' : '#fff5f5' };
+    const color = st === 6 ? '#dc3545' : st === 7 ? '#f97316' : 'var(--ss-accent)';
+    const bg = st === 6 ? '#fff5f5' : st === 7 ? '#fff7ed' : '#fff5f5';
+    return { borderColor: color, color, backgroundColor: bg };
   }
   return {};
 };
@@ -713,7 +808,7 @@ const calcSelectedTamTinh = computed(() =>
 );
 
 const getStatusName = (code) => {
-  const map = { 1: 'Chờ xác nhận', 2: 'Chờ giao hàng', 3: 'Đang vận chuyển', 4: 'Đã giao hàng', 5: 'Hoàn thành', 6: 'Đã hủy' };
+  const map = { 1: 'Chờ xác nhận', 2: 'Chờ giao hàng', 3: 'Đang vận chuyển', 4: 'Đã giao hàng', 5: 'Hoàn thành', 6: 'Đã hủy', 7: 'Yêu cầu hủy' };
   return map[code] || 'Không xác định';
 };
 
@@ -759,11 +854,13 @@ const goToOrderPage = (p) => {
 // Logged-in: fetch my orders
 const fetchMyOrders = async () => {
   myOrdersLoading.value = true;
+  myOrdersError.value = null;
   try {
     const res = await apiClient.get('/api/client/orders', { params: { customerId: customer.value?.id } });
     myOrders.value = res.data;
   } catch (e) {
     console.error('Failed to fetch orders', e);
+    myOrdersError.value = 'Không thể tải danh sách đơn hàng. Vui lòng thử lại sau.';
   } finally {
     myOrdersLoading.value = false;
   }
@@ -873,14 +970,15 @@ const doCancel = async () => {
     showCancelModal.value = false;
     cancelReason.value = '';
     await refreshAfterAction();
+    showToast('Đã gửi yêu cầu hủy đơn hàng.');
   } catch (err) {
-    alert(err.response?.data?.message || 'Không thể hủy đơn hàng');
+    showToast(err.response?.data?.message || 'Không thể hủy đơn hàng', 'danger');
   } finally {
     cancelLoading.value = false;
   }
 };
 
-const openDeliveryModal = (ctx) => {
+const openDeliveryModal = async (ctx) => {
   actionCtx.value = ctx;
   const o = actionOrderData.value;
   deliveryForm.value = {
@@ -888,7 +986,28 @@ const openDeliveryModal = (ctx) => {
     soDienThoaiKhachHang: o?.soDienThoaiKhachHang || o?.soDienThoai || '',
     diaChiKhachHang: o?.diaChiKhachHang || o?.diaChi || '',
   };
+  // Load saved addresses for logged-in users
+  savedAddresses.value = [];
+  tempSelectedAddress.value = null;
+  if (isLoggedIn.value && customer.value?.id) {
+    try {
+      const res = await apiClient.get(`/api/client/account/addresses/${customer.value.id}`);
+      savedAddresses.value = res.data || [];
+    } catch (e) { /* ignore */ }
+  }
   showDeliveryModal.value = true;
+};
+
+const applyAddress = () => {
+  if (!tempSelectedAddress.value) return;
+  const addr = tempSelectedAddress.value;
+  deliveryForm.value.diaChiKhachHang = vnAddressService.buildAddressText({
+    detail: addr.diaChiCuThe,
+    wardName: addr.phuong,
+    districtName: addr.quan,
+    provinceName: addr.thanhPho,
+  });
+  showAddressPickModal.value = false;
 };
 const doSaveDelivery = async () => {
   deliveryLoading.value = true;
@@ -896,8 +1015,9 @@ const doSaveDelivery = async () => {
     await apiClient.put(`/api/client/hoa-don/${getOrderId()}/delivery-info`, getAuthBody(deliveryForm.value));
     showDeliveryModal.value = false;
     await refreshAfterAction();
+    showToast('Cập nhật thông tin giao hàng thành công!');
   } catch (err) {
-    alert(err.response?.data?.message || 'Không thể cập nhật thông tin giao hàng');
+    showToast(err.response?.data?.message || 'Không thể cập nhật thông tin giao hàng', 'danger');
   } finally {
     deliveryLoading.value = false;
   }
@@ -928,8 +1048,9 @@ const doSaveItems = async () => {
     }));
     showItemsModal.value = false;
     await refreshAfterAction();
+    showToast('Cập nhật sản phẩm thành công!');
   } catch (err) {
-    alert(err.response?.data?.message || 'Không thể cập nhật sản phẩm');
+    showToast(err.response?.data?.message || 'Không thể cập nhật sản phẩm', 'danger');
   } finally {
     itemsLoading.value = false;
   }

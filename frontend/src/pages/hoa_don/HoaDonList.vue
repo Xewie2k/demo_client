@@ -195,6 +195,28 @@
                     <span v-if="hoanPhiLoadingId === hd.id" class="spinner-border spinner-border-sm"></span>
                     <i v-else class="bi bi-check-circle"></i>
                   </button>
+                  <button
+                    v-if="tabTrangThai === TRANG_THAI.YEU_CAU_HUY"
+                    class="btn btn-danger btn-sm ms-1"
+                    type="button"
+                    :disabled="xacNhanHuyLoadingId === hd.id"
+                    @click="xacNhanHuyInList(hd)"
+                    title="Xác nhận hủy đơn"
+                  >
+                    <span v-if="xacNhanHuyLoadingId === hd.id" class="spinner-border spinner-border-sm"></span>
+                    <i v-else class="bi bi-check-circle"></i>
+                  </button>
+                  <button
+                    v-if="tabTrangThai === TRANG_THAI.YEU_CAU_HUY"
+                    class="btn btn-outline-secondary btn-sm ms-1"
+                    type="button"
+                    :disabled="tuChoiHuyLoadingId === hd.id"
+                    @click="tuChoiHuyInList(hd)"
+                    title="Từ chối yêu cầu hủy"
+                  >
+                    <span v-if="tuChoiHuyLoadingId === hd.id" class="spinner-border spinner-border-sm"></span>
+                    <i v-else class="bi bi-x-circle"></i>
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -246,6 +268,7 @@ const TRANG_THAI = {
   DA_GIAO_HANG: 4,
   HOAN_THANH: 5,
   HUY_DON: 6,
+  YEU_CAU_HUY: 7,
 };
 
 /* Tabs */
@@ -257,6 +280,7 @@ const tabList = [
   { label: "Đã giao hàng", value: TRANG_THAI.DA_GIAO_HANG },
   { label: "Hoàn thành", value: TRANG_THAI.HOAN_THANH },
   { label: "Đã hủy", value: TRANG_THAI.HUY_DON },
+  { label: "⚠️ Yêu cầu hủy", value: TRANG_THAI.YEU_CAU_HUY },
   { label: "🔴 Cần hoàn phí", value: "CAN_HOAN_PHI" },
 ];
 
@@ -268,6 +292,7 @@ const trangThaiMap = {
   4: { label: "Đã giao hàng", bg: "#ecfeff", color: "#0e7490" },
   5: { label: "Hoàn thành", bg: "#dcfce7", color: "#15803d" },
   6: { label: "Đã hủy", bg: "#fee2e2", color: "#dc2626" },
+  7: { label: "Yêu cầu hủy", bg: "#fff7ed", color: "#ea580c" },
 };
 
 const hienTrangThai = (code) => {
@@ -395,12 +420,55 @@ const xuatFile = () => {
   XLSX.writeFile(wb, "danh_sach_hoa_don.xlsx");
 };
 
+/* ================== YÊU CẦU HỦY ================== */
+const xacNhanHuyLoadingId = ref(null);
+const tuChoiHuyLoadingId = ref(null);
+
+const xacNhanHuyInList = async (hd) => {
+  if (!confirm(`Xác nhận hủy đơn ${hd.maHD} theo yêu cầu khách hàng?`)) return;
+  xacNhanHuyLoadingId.value = hd.id;
+  try {
+    await axios.post(`${API_HD}/${hd.id}/xac-nhan-huy-theo-yeu-cau`, { nhanVienId: getCurrentNhanVienId() });
+    await locTheoTrangThai(TRANG_THAI.YEU_CAU_HUY);
+  } catch (e) {
+    alert(e.response?.data?.message || 'Không thể xác nhận hủy đơn');
+  } finally {
+    xacNhanHuyLoadingId.value = null;
+  }
+};
+
+const tuChoiHuyInList = async (hd) => {
+  const lyDo = prompt(`Lý do từ chối hủy đơn ${hd.maHD} (tùy chọn):`) ?? null;
+  if (lyDo === null) return; // user pressed Cancel
+  tuChoiHuyLoadingId.value = hd.id;
+  try {
+    await axios.post(`${API_HD}/${hd.id}/tu-choi-huy`, {
+      nhanVienId: getCurrentNhanVienId(),
+      lyDo: lyDo || null,
+    });
+    await locTheoTrangThai(TRANG_THAI.YEU_CAU_HUY);
+  } catch (e) {
+    alert(e.response?.data?.message || 'Không thể từ chối yêu cầu hủy');
+  } finally {
+    tuChoiHuyLoadingId.value = null;
+  }
+};
+
 /* ================== HOÀN PHÍ NHANH ================== */
+const getCurrentNhanVienId = () => {
+  try {
+    const raw = localStorage.getItem("user") || sessionStorage.getItem("user")
+      || localStorage.getItem("nguoiDung") || sessionStorage.getItem("nguoiDung");
+    const u = JSON.parse(raw || 'null');
+    return u?.id || null;
+  } catch { return null; }
+};
+
 const confirmHoanPhiInList = async (hd) => {
   if (!confirm(`Xác nhận đã hoàn tiền cho đơn ${hd.maHD}?`)) return;
   hoanPhiLoadingId.value = hd.id;
   try {
-    await axios.post(`${API_HD}/${hd.id}/xac-nhan-hoan-phi`, { nhanVienId: null });
+    await axios.post(`${API_HD}/${hd.id}/xac-nhan-hoan-phi`, { nhanVienId: getCurrentNhanVienId() });
     await locTheoTrangThai("CAN_HOAN_PHI");
   } catch (e) {
     alert(e.response?.data?.message || "Không thể xác nhận hoàn phí");

@@ -83,7 +83,7 @@ public class ClientHoaDonController {
         } else {
             throw new BadRequestEx("Thiếu thông tin xác thực (khachHangId hoặc email)");
         }
-        return hoaDonService.cancelOrder(id, hd.getIdKhachHang(), "KHACH_HANG", body.getLyDo());
+        return hoaDonService.requestCancelByCustomer(id, hd.getIdKhachHang(), body.getLyDo());
     }
 
     @PutMapping("/{id}/delivery-info")

@@ -53,6 +53,17 @@ public class PaymentController {
         long vnpAmount = Long.parseLong(request.getParameter("vnp_Amount"));
         long totalPrice = vnpAmount / 100;
 
+        // Thanh toán THÀNH CÔNG: Lưu ngayThanhToan và cập nhật GiaoDichThanhToan vào DB
+        if (paymentStatus == 1) {
+            try {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(orderInfo);
+                if (m.find()) {
+                    int orderId = Integer.parseInt(m.group());
+                    hoaDonService.confirmVnpayPayment(orderId, transactionId);
+                }
+            } catch (Exception ignored) {}
+        }
+
         // Thanh toán thất bại (checksum hợp lệ): tự động hủy đơn
         if (paymentStatus == 0) {
             try {

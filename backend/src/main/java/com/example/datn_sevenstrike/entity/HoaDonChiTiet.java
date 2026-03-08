@@ -30,10 +30,6 @@ public class HoaDonChiTiet {
     @Column(name = "don_gia", nullable = false, precision = 18, scale = 2)
     private BigDecimal donGia;
 
-    // Giá cũ trước khi thay đổi (null nếu chưa từng thay đổi)
-    @Column(name = "don_gia_cu", precision = 18, scale = 2)
-    private BigDecimal donGiaCu;
-
     @Column(name = "thanh_tien", insertable = false, updatable = false, precision = 18, scale = 2)
     private BigDecimal thanhTien; // computed
 

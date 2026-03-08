@@ -1,4 +1,15 @@
 <template>
+  <!-- Toast notification -->
+  <Teleport to="body">
+    <div
+      v-if="toast.show"
+      :class="`position-fixed top-0 end-0 m-3 alert alert-${toast.type} shadow`"
+      style="z-index:9999; min-width:260px; border-radius:10px;"
+    >
+      <i :class="`bi bi-${toast.type === 'success' ? 'check-circle-fill' : 'x-circle-fill'} me-2`"></i>
+      {{ toast.msg }}
+    </div>
+  </Teleport>
   <div class="bg-white p-4 rounded-3 shadow-sm h-100">
     <div v-if="loading" class="text-center py-5">
       <div class="spinner-border" style="color: var(--ss-accent);" role="status"></div>
@@ -247,7 +258,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, reactive } from 'vue';
 import { useRoute } from 'vue-router';
 import apiClient from '@/services/apiClient';
 import OrderTimeline from '@/components/client/OrderTimeline.vue';
@@ -255,6 +266,13 @@ import OrderTimeline from '@/components/client/OrderTimeline.vue';
 const route = useRoute();
 const order = ref(null);
 const loading = ref(true);
+
+// Toast
+const toast = reactive({ show: false, type: 'success', msg: '' });
+const showToast = (msg, type = 'success') => {
+  toast.msg = msg; toast.type = type; toast.show = true;
+  setTimeout(() => { toast.show = false; }, 3000);
+};
 
 const showCancelModal = ref(false);
 const cancelReason = ref('');
@@ -295,8 +313,9 @@ const cancelOrder = async () => {
     showCancelModal.value = false;
     cancelReason.value = '';
     await fetchOrderDetail();
+    showToast('Đã gửi yêu cầu hủy đơn hàng.');
   } catch (err) {
-    alert(err.response?.data?.message || 'Không thể hủy đơn hàng');
+    showToast(err.response?.data?.message || 'Không thể hủy đơn hàng', 'danger');
   } finally {
     cancelLoading.value = false;
   }
@@ -321,8 +340,9 @@ const saveDeliveryInfo = async () => {
     });
     showDeliveryModal.value = false;
     await fetchOrderDetail();
+    showToast('Cập nhật thông tin giao hàng thành công!');
   } catch (err) {
-    alert(err.response?.data?.message || 'Không thể cập nhật thông tin giao hàng');
+    showToast(err.response?.data?.message || 'Không thể cập nhật thông tin giao hàng', 'danger');
   } finally {
     deliveryLoading.value = false;
   }
@@ -355,8 +375,9 @@ const saveItems = async () => {
     });
     showItemsModal.value = false;
     await fetchOrderDetail();
+    showToast('Cập nhật sản phẩm thành công!');
   } catch (err) {
-    alert(err.response?.data?.message || 'Không thể cập nhật sản phẩm');
+    showToast(err.response?.data?.message || 'Không thể cập nhật sản phẩm', 'danger');
   } finally {
     itemsLoading.value = false;
   }
