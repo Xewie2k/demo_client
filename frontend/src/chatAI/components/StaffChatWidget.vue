@@ -47,7 +47,7 @@
           }"
         >
           <div class="chat-msg__name">{{ msg.tenNguoiGui }}</div>
-          <div class="chat-msg__bubble">{{ msg.noiDung }}</div>
+          <div class="chat-msg__bubble" v-html="renderMessage(msg.noiDung)"></div>
         </div>
 
         <!-- Loading indicator -->
@@ -128,10 +128,7 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
-import { connectChat, layTinNhan, getPhien, disconnectChat } from '@/chatAI/services/chatService'
-import apiClient from '@/services/apiClient'
-
-const BACKEND_API = 'http://localhost:8080'
+import { connectChat, layTinNhan, getPhien, disconnectChat, khoiTaoPhienNoiBo } from '@/chatAI/services/chatService'
 
 const isOpen      = ref(false)
 const messages    = ref([])
@@ -149,7 +146,6 @@ const showAllSuggestions = ref(false)
 const suggestions = [
   'Quy trình xử lý đơn hàng lỗi?',
   'Cách hoàn tiền cho khách?',
-  'Thủ tục đổi trả hàng?',
   'Cách xuất hóa đơn?',
   'Chính sách chiết khấu?',
   'Quy định ca làm việc?',
@@ -203,10 +199,10 @@ onMounted(async () => {
     if (storedId) {
       try {
         const stored = await getPhien(Number(storedId))
-        if (stored.trangThai !== 'DA_DONG') {
+        if (stored.trangThai !== 'DA_DONG' && stored.loai === 'NOI_BO') {
           phien = stored
         } else {
-          clearStaffChatSession()
+          clearStaffChatSession()  // clear cả khi loai sai (không phải NOI_BO)
         }
       } catch {
         clearStaffChatSession()
@@ -214,12 +210,7 @@ onMounted(async () => {
     }
 
     if (!phien) {
-      const res = await apiClient.post(`${BACKEND_API}/api/chat/staff/start`, {
-        tenKhach,
-        nhanVienId,
-        loai: 'NOI_BO',
-      })
-      phien = res.data
+      phien = await khoiTaoPhienNoiBo(tenKhach, nhanVienId)
       saveStaffChatSession(phien.id)
     }
 
@@ -320,12 +311,7 @@ async function batDauMoi() {
   const nhanVienId = user?.id || null
 
   try {
-    const res = await apiClient.post(`${BACKEND_API}/api/chat/staff/start`, {
-      tenKhach,
-      nhanVienId,
-      loai: 'NOI_BO',
-    })
-    const phien = res.data
+    const phien = await khoiTaoPhienNoiBo(tenKhach, nhanVienId)
     saveStaffChatSession(phien.id)
     phienChatId.value = phien.id
     trangThai.value = phien.trangThai
@@ -376,6 +362,21 @@ async function scrollToBottom() {
   if (messagesEl.value) {
     messagesEl.value.scrollTop = messagesEl.value.scrollHeight
   }
+}
+
+// ── Render message với link clickable ─────────────────────────────────────────
+function renderMessage(text) {
+  if (!text) return ''
+  let safe = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  safe = safe.replace(
+    /\/client\/products\/(\d+)/g,
+    '<a href="/client/products/$1" target="_blank" class="chat-link">Xem sản phẩm #$1</a>'
+  )
+  safe = safe.replace(/\n/g, '<br>')
+  return safe
 }
 </script>
 
@@ -467,9 +468,10 @@ async function scrollToBottom() {
   line-height: 1.5;
   word-break: break-word;
 }
-.chat-msg--bot   .chat-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; white-space: pre-wrap; }
-.chat-msg--khach .chat-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 12px 2px 12px 12px; }
-.chat-msg--nv    .chat-msg__bubble { background: #1d4ed8; color: #fff; border-radius: 2px 12px 12px 12px; }
+.chat-msg--bot   .chat-msg__bubble { background: #f3f4f6; border: none; color: #374151; border-radius: 2px 12px 12px 12px; white-space: pre-wrap; }
+.chat-msg--khach .chat-msg__bubble { background: #1d4ed8; color: #fff; border-radius: 12px 2px 12px 12px; }
+.chat-msg--nv    .chat-msg__bubble { background: #f3f4f6; color: #374151; border-radius: 2px 12px 12px 12px; }
+.chat-link { color: #1d4ed8; font-weight: 600; text-decoration: underline; }
 
 /* Typing animation */
 .chat-msg__bubble--typing { display: flex; gap: 5px; align-items: center; padding: 12px; }

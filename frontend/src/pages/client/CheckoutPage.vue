@@ -129,8 +129,11 @@
               <span>Tiết kiệm (đợt giảm giá)</span>
               <span>-{{ formatPrice(campaignSavings) }}</span>
             </div>
-             <div class="d-flex justify-content-between mb-2 text-secondary">
-              <span>Phí vận chuyển</span>
+            <div class="d-flex justify-content-between mb-2 text-secondary">
+              <span class="d-flex align-items-center gap-2">
+                Phí vận chuyển
+                <img src="@/assets/images/logo/Logo_GHN.webp" height="16" alt="GHN" style="opacity: 0.7;">
+              </span>
               <span class="fw-bold text-dark">{{ formatPrice(shippingFee) }}</span>
             </div>
             <div v-if="discountAmount > 0" class="d-flex justify-content-between mb-2 text-success fw-bold">
@@ -205,7 +208,7 @@
                     :key="v.id"
                     class="d-flex align-items-center justify-content-between p-3 rounded-3 border cursor-pointer hover-bg-light position-relative overflow-hidden"
                     :class="{'border-danger bg-danger-subtle': tempSelectedVoucher && tempSelectedVoucher.id === v.id, 'opacity-50 grayscale': itemsPrice < v.hoaDonToiThieu}"
-                    @click="tempSelectedVoucher = v"
+                    @click="itemsPrice >= v.hoaDonToiThieu && (tempSelectedVoucher = v)"
                   >
                      <!-- Ticket Edge Effect (Optional css) -->
                     <div>
@@ -213,6 +216,9 @@
                       <div class="small text-secondary">{{ v.tenPhieuGiamGia }}</div>
                       <small class="text-danger fw-bold" style="font-size: 11px;">Giảm {{ v.giaTriGiamGia ? Number(v.giaTriGiamGia) + '%' : formatPrice(v.soTienGiamToiDa) }}</small>
                       <div class="small text-muted" style="font-size: 10px;">Đơn tối thiểu: {{ formatPrice(v.hoaDonToiThieu) }}</div>
+                      <div v-if="getBestVoucher() && getBestVoucher().id === v.id" class="small text-success fw-bold mt-1" style="font-size: 11px;">
+                        <i class="bi bi-star-fill me-1"></i>Phiếu giảm giá tốt nhất
+                      </div>
                     </div>
                     <div v-if="tempSelectedVoucher && tempSelectedVoucher.id === v.id">
                         <span class="material-icons text-danger">check_circle</span>
@@ -420,6 +426,35 @@ const fetchVouchers = async () => {
     }
 };
 
+const getBestVoucher = () => {
+    const eligible = vouchers.value.filter(v => itemsPrice.value >= v.hoaDonToiThieu);
+    
+    if (eligible.length === 0) return null;
+    
+    return eligible.reduce((best, current) => {
+        let bestDiscount = 0;
+        let currentDiscount = 0;
+        
+        // Calculate discount for best voucher
+        if (best.giaTriGiamGia && best.giaTriGiamGia > 0) {
+            bestDiscount = itemsPrice.value * (best.giaTriGiamGia / 100);
+            if (bestDiscount > best.soTienGiamToiDa) bestDiscount = best.soTienGiamToiDa;
+        } else {
+            bestDiscount = best.soTienGiamToiDa;
+        }
+        
+        // Calculate discount for current voucher
+        if (current.giaTriGiamGia && current.giaTriGiamGia > 0) {
+            currentDiscount = itemsPrice.value * (current.giaTriGiamGia / 100);
+            if (currentDiscount > current.soTienGiamToiDa) currentDiscount = current.soTienGiamToiDa;
+        } else {
+            currentDiscount = current.soTienGiamToiDa;
+        }
+        
+        return currentDiscount > bestDiscount ? current : best;
+    });
+};
+
 const applyVoucher = () => {
     if (tempSelectedVoucher.value) {
          if (itemsPrice.value < tempSelectedVoucher.value.hoaDonToiThieu) {
@@ -427,12 +462,28 @@ const applyVoucher = () => {
             return;
         }
         selectedVoucher.value = tempSelectedVoucher.value;
+    } else {
+        // If no voucher selected, apply the best one automatically
+        const best = getBestVoucher();
+        if (best) {
+            selectedVoucher.value = best;
+        }
     }
 };
 
 onMounted(async () => {
   fetchVouchers();
   await loadProvinces();
+  
+  // Auto-select best voucher when page loads
+  setTimeout(() => {
+    const best = getBestVoucher();
+    if (best) {
+      selectedVoucher.value = best;
+      tempSelectedVoucher.value = best;
+    }
+  }, 500);
+  
   if (isLoggedIn.value && customer.value) {
     form.tenKhachHang = customer.value.hoTen || '';
     form.email = customer.value.email || '';

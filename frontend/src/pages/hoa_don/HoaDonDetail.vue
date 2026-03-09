@@ -67,6 +67,7 @@
                   active: st.value === trangThaiHienTaiDungDeHienThi && trangThaiHienTaiDungDeHienThi <= 5,
                   cancelled: selectedHD.trangThai === 6 && st.value === 1,
                   'request-cancel': selectedHD.trangThai === 7 && st.value === 1,
+                  'cancelled-step': selectedHD.trangThai === 6 && st.value === 6,
                 }"
               >
                 <div class="ss-icon">
@@ -1674,8 +1675,16 @@ const trangThaiHienThi = computed(() => {
     return trangThaiList.filter((st) => st.value === 1);
   }
 
-  // For status 6/7 (cancelled/request-cancel), show all 5 normal steps
-  if (current > 5) return trangThaiList.filter((st) => st.value <= 5);
+  // For status 6 (cancelled), show only step 1 and step 6
+  if (selectedHD.value.trangThai === 6) {
+    return trangThaiList.filter((st) => st.value === 1 || st.value === 6);
+  }
+
+  // For status 7 (request-cancel), show only step 1 and step 7
+  if (selectedHD.value.trangThai === 7) {
+    return trangThaiList.filter((st) => st.value === 1 || st.value === 7);
+  }
+
   return trangThaiList.filter((st) => st.value <= current);
 });
 
@@ -1710,8 +1719,9 @@ const metaTheoTrangThai = computed(() => {
 const metaTrangThai = (value) => metaTheoTrangThai.value?.[value] || null;
 
 const getStepIcon = (st) => {
-  if (st.value === 1 && selectedHD.value.trangThai === 6) return 'bi-ban';
-  if (st.value === 1 && selectedHD.value.trangThai === 7) return 'bi-exclamation-octagon-fill';
+  if (st.value === 1 && selectedHD.value.trangThai === 6) return 'bi-hourglass';
+  if (st.value === 1 && selectedHD.value.trangThai === 7) return 'bi-hourglass';
+  if (st.value === 6 && selectedHD.value.trangThai === 6) return 'bi-x-circle-fill';
   return st.icon;
 };
 
@@ -2158,6 +2168,12 @@ onBeforeUnmount(() => {
   color: #dc3545;
 }
 .ss-step.cancelled span { color: #dc3545; }
+.ss-step.cancelled-step .ss-icon {
+  border-color: #dc3545;
+  background: #dc3545;
+  color: #fff;
+}
+.ss-step.cancelled-step span { color: #dc3545; }
 .ss-step.request-cancel .ss-icon {
   border-color: #f97316;
   background: #fff7ed;

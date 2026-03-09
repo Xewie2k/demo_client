@@ -47,7 +47,7 @@
           }"
         >
           <div class="chat-msg__name">{{ msg.tenNguoiGui }}</div>
-          <div class="chat-msg__bubble">{{ msg.noiDung }}</div>
+          <div class="chat-msg__bubble" v-html="renderMessage(msg.noiDung)"></div>
         </div>
 
         <!-- Loading indicator -->
@@ -150,7 +150,6 @@ const showSuggestions    = ref(true)
 const showAllSuggestions = ref(false)
 const suggestions = [
   'Làm thế nào để đặt hàng?',
-  'Chính sách đổi trả hàng?',
   'Phí vận chuyển là bao nhiêu?',
   'Kiểm tra trạng thái đơn hàng',
   'Có voucher giảm giá không?',
@@ -353,6 +352,21 @@ async function scrollToBottom() {
     messagesEl.value.scrollTop = messagesEl.value.scrollHeight
   }
 }
+
+// ── Render message với link clickable ─────────────────────────────────────────
+function renderMessage(text) {
+  if (!text) return ''
+  let safe = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  safe = safe.replace(
+    /\/client\/products\/(\d+)/g,
+    '<a href="/client/products/$1" target="_blank" class="chat-link">Xem sản phẩm #$1</a>'
+  )
+  safe = safe.replace(/\n/g, '<br>')
+  return safe
+}
 </script>
 
 <style scoped>
@@ -443,9 +457,10 @@ async function scrollToBottom() {
   line-height: 1.5;
   word-break: break-word;
 }
-.chat-msg--bot   .chat-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; white-space: pre-wrap; }
+.chat-msg--bot   .chat-msg__bubble { background: #f3f4f6; border: none; color: #374151; border-radius: 2px 12px 12px 12px; white-space: pre-wrap; }
 .chat-msg--khach .chat-msg__bubble { background: var(--ss-accent, #ff4d4f); color: #fff; border-radius: 12px 2px 12px 12px; }
-.chat-msg--nv    .chat-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 2px 12px 12px 12px; }
+.chat-msg--nv    .chat-msg__bubble { background: #f3f4f6; color: #374151; border-radius: 2px 12px 12px 12px; }
+.chat-link { color: var(--ss-accent, #ff4d4f); font-weight: 600; text-decoration: underline; }
 
 /* Typing animation */
 .chat-msg__bubble--typing { display: flex; gap: 5px; align-items: center; padding: 12px; }

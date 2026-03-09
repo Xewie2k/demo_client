@@ -674,25 +674,31 @@
           </div>
           <div class="modal-body">
             <div v-if="editItems.length === 0" class="text-center text-muted py-3">Không có sản phẩm</div>
-            <div v-for="(item, i) in editItems" :key="i" class="d-flex align-items-center mb-3 p-2 bg-light rounded">
-              <img :src="item.anhDaiDien || 'https://placehold.co/50x50'" class="rounded me-3" width="50" height="50" style="object-fit:cover;">
-              <div class="flex-grow-1">
-                <div class="fw-semibold small">{{ item.tenSanPham }}</div>
-                <div class="text-muted small">{{ item.phanLoai }}</div>
-                <div class="small" style="color: var(--ss-accent);">{{ formatCurrency(item.donGia) }} / đôi</div>
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-outline-secondary btn-sm px-2" @click="decreaseQty(i)" :disabled="item.soLuong <= 1">
-                  <i class="bi bi-dash"></i>
-                </button>
-                <span class="fw-bold px-2">{{ item.soLuong }}</span>
-                <button class="btn btn-outline-secondary btn-sm px-2" @click="item.soLuong++">
-                  <i class="bi bi-plus"></i>
-                </button>
-                <button class="btn btn-outline-danger btn-sm px-2 ms-2" @click="removeItem(i)"
-                  :disabled="editItems.length <= 1" :title="editItems.length <= 1 ? 'Phải còn ít nhất 1 sản phẩm' : 'Xóa'">
-                  <i class="bi bi-trash"></i>
-                </button>
+            <div v-for="(item, i) in editItems" :key="i" class="mb-3 p-2 rounded" :style="{ backgroundColor: isGiaDaThayDoi(item) ? '#fef3c7' : '#f3f4f6' }">
+              <div class="d-flex align-items-center">
+                <img :src="item.anhDaiDien || 'https://placehold.co/50x50'" class="rounded me-3" width="50" height="50" style="object-fit:cover;">
+                <div class="flex-grow-1">
+                  <div class="fw-semibold small">{{ item.tenSanPham }}</div>
+                  <div class="text-muted small">{{ item.phanLoai }}</div>
+                  <div v-if="isGiaDaThayDoi(item)" class="small text-warning fw-bold" style="color: #f97316 !important;">
+                    <i class="bi bi-exclamation-circle-fill me-1"></i>
+                    Giá đã thay đổi: {{ formatCurrency(item.giaBanLuc) }} → {{ formatCurrency(item.giaBanHienTai) }}
+                  </div>
+                  <div v-else class="small" style="color: var(--ss-accent);">{{ formatCurrency(item.donGia) }} / đôi</div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <button class="btn btn-outline-secondary btn-sm px-2" @click="decreaseQty(i)" :disabled="item.soLuong <= 1">
+                    <i class="bi bi-dash"></i>
+                  </button>
+                  <span class="fw-bold px-2">{{ item.soLuong }}</span>
+                  <button class="btn btn-outline-secondary btn-sm px-2" @click="item.soLuong++">
+                    <i class="bi bi-plus"></i>
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm px-2 ms-2" @click="removeItem(i)"
+                    :disabled="editItems.length <= 1" :title="editItems.length <= 1 ? 'Phải còn ít nhất 1 sản phẩm' : 'Xóa'">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
               </div>
             </div>
             <div v-if="editItems.length <= 1" class="alert alert-warning small mt-2">
@@ -822,9 +828,12 @@ const calcSelectedTamTinh = computed(() =>
   (selectedOrder.value?.items || []).reduce((s, i) => s + (i.donGia || 0) * (i.soLuong || 0), 0)
 );
 
-// Tổng tạm tính trong modal sửa sản phẩm (reactive theo soLuong)
+// Tổng tạm tính trong modal sửa sản phẩm (reactive theo soLuong, sử dụng giá hiện tại nếu giá thay đổi)
 const editItemsSubTotal = computed(() =>
-  editItems.value.reduce((s, i) => s + (i.donGia || 0) * (i.soLuong || 0), 0)
+  editItems.value.reduce((s, i) => {
+    const price = isGiaDaThayDoi(i) ? i.giaBanHienTai : (i.donGia || i.giaBanLuc || 0);
+    return s + (price * (i.soLuong || 0));
+  }, 0)
 );
 
 const getStatusName = (code) => {
@@ -1043,7 +1052,7 @@ const doSaveDelivery = async () => {
   }
 };
 
-const openItemsModal = (ctx) => {
+const openItemsModal = async (ctx) => {
   actionCtx.value = ctx;
   const o = actionOrderData.value;
   // selectedOrder has .items (ClientOrderItemDTO); guest/tracked has .chiTietHoaDon (HoaDonChiTietResponse)
@@ -1054,10 +1063,29 @@ const openItemsModal = (ctx) => {
     phanLoai: item.phanLoai || (item.mauSac ? `${item.mauSac} - ${item.kichCo}` : ''),
     anhDaiDien: item.anhDaiDien || item.duongDanAnhDaiDien || null,
     soLuong: item.soLuong,
+    soLuongLuc: item.soLuong, // Lưu số lượng lúc mở modal
     donGia: item.donGia || 0,
+    giaBanLuc: item.donGia || 0, // Giá lúc mở modal (giá cũ)
+    giaBanHienTai: item.donGia || 0, // Giá hiện tại (sẽ fetch từ server)
   }));
+  // Fetch giá hiện tại từ server cho mỗi sản phẩm
+  try {
+    for (let i = 0; i < editItems.value.length; i++) {
+      const item = editItems.value[i];
+      const res = await apiClient.get(`/api/chi-tiet-san-pham/${item.idChiTietSanPham}`);
+      if (res.data && res.data.giaBan) {
+        item.giaBanHienTai = res.data.giaBan;
+      }
+    }
+  } catch (err) {
+    console.warn('Không thể fetch giá hiện tại:', err);
+  }
   showItemsModal.value = true;
 };
+const isGiaDaThayDoi = (item) => {
+  return item.giaBanHienTai && Math.abs(item.giaBanHienTai - item.giaBanLuc) > 0.01;
+};
+
 const decreaseQty = (i) => { if (editItems.value[i].soLuong > 1) editItems.value[i].soLuong--; };
 const removeItem = (i) => { if (editItems.value.length > 1) editItems.value.splice(i, 1); };
 const doSaveItems = async () => {
@@ -1065,7 +1093,16 @@ const doSaveItems = async () => {
   itemsLoading.value = true;
   try {
     await apiClient.put(`/api/client/hoa-don/${getOrderId()}/items`, getAuthBody({
-      items: editItems.value.map(item => ({ idChiTietSanPham: item.idChiTietSanPham, soLuong: item.soLuong, xoaMem: false }))
+      items: editItems.value.map(item => ({
+        idChiTietSanPham: item.idChiTietSanPham,
+        soLuong: item.soLuong,
+        xoaMem: false,
+        // Gửi thông tin về giá thay đổi để server tạo bản ghi mới nếu cần
+        soLuongTangThem: Math.max(0, item.soLuong - item.soLuongLuc),
+        isGiaDaThayDoi: isGiaDaThayDoi(item),
+        giaBanLuc: item.giaBanLuc,
+        giaBanHienTai: item.giaBanHienTai
+      }))
     }));
     showItemsModal.value = false;
     await refreshAfterAction();

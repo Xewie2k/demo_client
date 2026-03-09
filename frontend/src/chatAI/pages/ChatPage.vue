@@ -35,6 +35,9 @@
           <span v-if="soPhienNoiBoCho > 0" class="badge rounded-pill bg-warning text-dark ms-1" style="font-size:10px">
             {{ soPhienNoiBoCho }}
           </span>
+          <span v-if="soTinNhanChuaDocNoiBo > 0" class="badge rounded-pill bg-danger ms-1" style="font-size:10px">
+            {{ soTinNhanChuaDocNoiBo > 99 ? '99+' : soTinNhanChuaDocNoiBo }}
+          </span>
         </button>
       </div>
 
@@ -147,16 +150,18 @@
             :key="msg.id || msg.thoiGian"
             class="admin-msg"
             :class="{
-              'admin-msg--bot':   msg.nguoiGui === 'BOT',
-              'admin-msg--khach': msg.nguoiGui === 'KHACH',
-              'admin-msg--nv':    msg.nguoiGui === 'NHAN_VIEN',
+              'admin-msg--bot':           msg.nguoiGui === 'BOT',
+              'admin-msg--khach':         msg.nguoiGui === 'KHACH',
+              'admin-msg--khach--noibo':  msg.nguoiGui === 'KHACH' && selectedSession?.loai === 'NOI_BO',
+              'admin-msg--nv':            msg.nguoiGui === 'NHAN_VIEN',
+              'admin-msg--nv--noibo':     msg.nguoiGui === 'NHAN_VIEN' && selectedSession?.loai === 'NOI_BO',
             }"
           >
             <div class="admin-msg__meta">
               <span class="fw-semibold">{{ msg.tenNguoiGui }}</span>
               <span class="ms-2 text-muted">{{ formatTime(msg.thoiGian) }}</span>
             </div>
-            <div class="admin-msg__bubble">{{ msg.noiDung }}</div>
+            <div class="admin-msg__bubble" v-html="renderMessage(msg.noiDung)"></div>
           </div>
         </div>
 
@@ -246,6 +251,10 @@ const soPhienCho = computed(() =>
 
 const soPhienNoiBoCho = computed(() =>
   sessionsNoiBo.value.filter(s => s.trangThai === 'CHO_NHAN_VIEN').length
+)
+
+const soTinNhanChuaDocNoiBo = computed(() =>
+  sessionsNoiBo.value.reduce((sum, s) => sum + (sessionUnreadMap[s.id] || 0), 0)
 )
 
 const canClose = computed(() => {
@@ -479,6 +488,21 @@ async function scrollToBottom() {
   await nextTick()
   if (messagesEl.value) messagesEl.value.scrollTop = messagesEl.value.scrollHeight
 }
+
+// ── Render message với link clickable ─────────────────────────────────────────
+function renderMessage(text) {
+  if (!text) return ''
+  let safe = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+  safe = safe.replace(
+    /\/client\/products\/(\d+)/g,
+    '<a href="/client/products/$1" target="_blank" class="chat-link">Xem sản phẩm #$1</a>'
+  )
+  safe = safe.replace(/\n/g, '<br>')
+  return safe
+}
 </script>
 
 <style scoped>
@@ -517,12 +541,12 @@ async function scrollToBottom() {
   max-width: 75%;
 }
 .admin-msg--bot   { align-self: flex-start; }
-.admin-msg--nv    { align-self: flex-start; }           /* Nhân viên → trái */
-.admin-msg--khach { align-self: flex-end; }             /* Khách hàng → phải */
+.admin-msg--nv    { align-self: flex-end; }             /* Admin/NV reply → phải */
+.admin-msg--khach { align-self: flex-start; }           /* Khách hàng → trái */
 
 .admin-msg__meta { font-size: 11px; color: #9ca3af; margin-bottom: 4px; }
-.admin-msg--nv    .admin-msg__meta { text-align: left; }
-.admin-msg--khach .admin-msg__meta { text-align: right; }
+.admin-msg--nv    .admin-msg__meta { text-align: right; }
+.admin-msg--khach .admin-msg__meta { text-align: left; }
 
 .admin-msg__bubble {
   padding: 9px 14px;
@@ -531,9 +555,19 @@ async function scrollToBottom() {
   line-height: 1.55;
   word-break: break-word;
 }
-.admin-msg--bot   .admin-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; }
-.admin-msg--nv    .admin-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 2px 12px 12px 12px; }
-.admin-msg--khach .admin-msg__bubble { background: var(--ss-accent); color: #fff; border-radius: 12px 2px 12px 12px; }
+.admin-msg--bot   .admin-msg__bubble { background: #f3f4f6; border: none; color: #374151; border-radius: 2px 12px 12px 12px; }
+/* Admin/NV reply → phải, đỏ (người nhắn phía quản trị) */
+.admin-msg--nv    .admin-msg__bubble { background: var(--ss-accent, #ff4d4f); color: #fff; border-radius: 12px 2px 12px 12px; }
+/* Khách hàng → trái, xám */
+.admin-msg--khach .admin-msg__bubble { background: #f3f4f6; color: #374151; border-radius: 2px 12px 12px 12px; }
+/* NOI_BO: admin → phải xanh (giống base), nhân viên mở phiên (KHACH) → trái xám */
+.admin-msg--nv--noibo { align-self: flex-end; }
+.admin-msg--nv--noibo .admin-msg__bubble { background: #1e3a8a; color: #fff; border-radius: 12px 2px 12px 12px; }
+.admin-msg--nv--noibo .admin-msg__meta { text-align: right; }
+.admin-msg--khach--noibo { align-self: flex-start; }
+.admin-msg--khach--noibo .admin-msg__bubble { background: #f3f4f6; color: #374151; border-radius: 2px 12px 12px 12px; }
+.admin-msg--khach--noibo .admin-msg__meta { text-align: left; }
+.chat-link { color: var(--ss-accent, #ff4d4f); font-weight: 600; text-decoration: underline; }
 
 .header-noibo {
   background: #eff6ff;

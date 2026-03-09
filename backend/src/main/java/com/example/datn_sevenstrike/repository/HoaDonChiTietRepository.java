@@ -59,6 +59,21 @@ public interface HoaDonChiTietRepository extends JpaRepository<HoaDonChiTiet, In
         """, nativeQuery = true)
     List<Integer> findBestSellingProductIds(@Param("thangNay") LocalDateTime thangNay, Pageable pageable);
 
+    // Tìm ID các đơn online (loai_don=2) đang chờ xác nhận (trang_thai=1) có chứa sản phẩm ctspId
+    @Query(value = """
+        SELECT DISTINCT hd.id
+          FROM dbo.hoa_don hd
+          JOIN dbo.hoa_don_chi_tiet hdct ON hdct.id_hoa_don = hd.id AND hdct.xoa_mem = 0
+         WHERE hdct.id_chi_tiet_san_pham = :ctspId
+           AND hd.xoa_mem = 0
+           AND hd.loai_don = 2
+           AND hd.trang_thai_hien_tai = 1
+           AND hd.id != :excludeHoaDonId
+        """, nativeQuery = true)
+    List<Integer> findPendingOnlineOrderIdsByCtspId(
+            @Param("ctspId") Integer ctspId,
+            @Param("excludeHoaDonId") Integer excludeHoaDonId);
+
     // Xóa mềm toàn bộ chi tiết theo hóa đơn
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = """

@@ -187,6 +187,17 @@
                     <span v-if="tuChoiHuyLoadingId === hd.id" class="spinner-border spinner-border-sm"></span>
                     <i v-else class="bi bi-x-circle"></i>
                   </button>
+                  <button
+                    v-if="tabTrangThai === TRANG_THAI.CAN_HOAN_PHI"
+                    class="btn btn-success btn-sm ms-1"
+                    type="button"
+                    :disabled="hoanPhiLoadingId === hd.id"
+                    @click="xacNhanHoanPhiInList(hd)"
+                    title="Xác nhận đã hoàn tiền cho khách"
+                  >
+                    <span v-if="hoanPhiLoadingId === hd.id" class="spinner-border spinner-border-sm"></span>
+                    <i v-else class="bi bi-cash-coin"></i>
+                  </button>
                 </td>
               </tr>
             </tbody>
@@ -263,6 +274,7 @@ const TRANG_THAI = {
   HOAN_THANH: 5,
   HUY_DON: 6,
   YEU_CAU_HUY: 7,
+  CAN_HOAN_PHI: "CAN_HOAN_PHI",
 };
 
 const tabList = [
@@ -274,6 +286,7 @@ const tabList = [
   { label: "Hoàn thành", value: TRANG_THAI.HOAN_THANH },
   { label: "Đã hủy", value: TRANG_THAI.HUY_DON },
   { label: "⚠️ Yêu cầu hủy", value: TRANG_THAI.YEU_CAU_HUY },
+  { label: "💰 Cần hoàn phí", value: TRANG_THAI.CAN_HOAN_PHI },
 ];
 
 const trangThaiMap = {
@@ -341,6 +354,7 @@ const loadHoaDon = async () => {
           loaiDonCode,
           loaiDonLabel: toLoaiDonLabel(loaiDonCode),
           trangThaiHienTai: Number(hd.trangThaiHienTai),
+          daHoanPhi: hd.daHoanPhi,
         };
       })
       .sort((a, b) => new Date(a.ngayTaoRaw || a.ngayTao) - new Date(b.ngayTaoRaw || b.ngayTao));
@@ -368,7 +382,9 @@ const apDungBoLoc = () => {
     const trangThai =
       tabTrangThai.value === "ALL"
         ? true
-        : Number(hd.trangThaiHienTai) === Number(tabTrangThai.value);
+        : tabTrangThai.value === TRANG_THAI.CAN_HOAN_PHI
+          ? (hd.trangThaiHienTai === TRANG_THAI.HUY_DON && hd.daHoanPhi === false)
+          : Number(hd.trangThaiHienTai) === Number(tabTrangThai.value);
 
     return ma && loai && bd && kt && trangThai;
   });
@@ -453,6 +469,25 @@ const tuChoiHuyInList = async (hd) => {
     alert(e.response?.data?.message || 'Không thể từ chối yêu cầu hủy');
   } finally {
     tuChoiHuyLoadingId.value = null;
+  }
+};
+
+/* ================== HOÀN PHÍ ================== */
+const hoanPhiLoadingId = ref(null);
+
+const xacNhanHoanPhiInList = async (hd) => {
+  if (!confirm(`Xác nhận đã hoàn tiền cho đơn ${hd.maHD}?`)) return;
+  hoanPhiLoadingId.value = hd.id;
+  try {
+    await axios.post(`${API_HD}/${hd.id}/xac-nhan-hoan-phi`, {
+      nhanVienId: getCurrentNhanVienId(),
+    });
+    await loadHoaDon();
+    apDungBoLoc();
+  } catch (e) {
+    alert(e.response?.data?.message || "Không thể xác nhận hoàn phí");
+  } finally {
+    hoanPhiLoadingId.value = null;
   }
 };
 
