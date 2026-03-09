@@ -1193,10 +1193,11 @@ public class HoaDonService {
         hd.setNgayCapNhat(LocalDateTime.now());
         HoaDon saved = repo.save(hd);
 
-        String ghiChu = "Khách hàng yêu cầu hủy đơn"
-                + (lyDo != null && !lyDo.isBlank() ? ": " + lyDo.trim() : "");
+        // ✅ Ghi rõ khách hàng yêu cầu hủy, không phải admin
+        String ghiChu = "[KHÁCH HÀNG] Yêu cầu hủy đơn"
+                + (lyDo != null && !lyDo.isBlank() ? " - Lý do: " + lyDo.trim() : "");
         if (isDonChuyenKhoan(idHoaDon) && hd.getNgayThanhToan() != null) {
-            ghiChu += " (Đơn đã thanh toán VNPay - cần hoàn tiền nếu xác nhận hủy)";
+            ghiChu += " | Đơn đã thanh toán VNPay - cần hoàn tiền nếu xác nhận hủy";
         }
         pushHistory(saved.getId(), TrangThaiHoaDon.YEU_CAU_HUY.code, ghiChu, khachHangId);
 
@@ -1233,9 +1234,10 @@ public class HoaDonService {
         hd.setNgayCapNhat(LocalDateTime.now());
         HoaDon saved = repo.save(hd);
 
-        String ghiChu = "Nhân viên xác nhận hủy đơn theo yêu cầu khách"
-                + (lyDo != null && !lyDo.isBlank() ? ": " + lyDo.trim() : "");
-        if (canHoanTien) ghiChu += " (Đơn hàng cần hoàn tiền lại cho khách)";
+        // ✅ Ghi rõ admin xác nhận hủy
+        String ghiChu = "[ADMIN] Xác nhận hủy đơn theo yêu cầu của khách hàng"
+                + (lyDo != null && !lyDo.isBlank() ? " - Ghi chú: " + lyDo.trim() : "");
+        if (canHoanTien) ghiChu += " | Cần hoàn tiền lại cho khách hàng";
         pushHistory(saved.getId(), TrangThaiHoaDon.DA_HUY.code, ghiChu, nhanVienId);
 
         return toResponse(saved);
@@ -1256,8 +1258,9 @@ public class HoaDonService {
         hd.setNgayCapNhat(LocalDateTime.now());
         HoaDon saved = repo.save(hd);
 
-        String ghiChu = "Nhân viên từ chối yêu cầu hủy đơn"
-                + (lyDo != null && !lyDo.isBlank() ? ": " + lyDo.trim() : "");
+        // ✅ Ghi rõ admin từ chối hủy
+        String ghiChu = "[ADMIN] Từ chối yêu cầu hủy đơn của khách hàng"
+                + (lyDo != null && !lyDo.isBlank() ? " - Lý do: " + lyDo.trim() : "");
         pushHistory(saved.getId(), TrangThaiHoaDon.CHUA_XAC_NHAN.code, ghiChu, nhanVienId);
 
         return toResponse(saved);
@@ -1351,10 +1354,11 @@ public class HoaDonService {
             throw new BadRequestEx("Chỉ được chỉnh sửa sản phẩm cho đơn online");
         }
         if (hd.getTrangThaiHienTai() == null || hd.getTrangThaiHienTai() != TrangThaiHoaDon.CHUA_XAC_NHAN.code) {
-            throw new BadRequestEx("Chỉ được chỉnh sửa sản phẩm khi đơn đang chờ xác nhận");
+            throw new BadRequestEx("Chỉ được chỉnh sửa sản phẩm cho đơn online");
         }
+        // ✅ Case khó: Đơn chuyển khoán KHÔNG ĐƯỢC PHÉP sửa sản phẩm DỮ TRẠNG THÁI NÀO ĐI NỮA
         if (isDonChuyenKhoan(idHoaDon)) {
-            throw new BadRequestEx("Không thể chỉnh sửa sản phẩm cho đơn thanh toán chuyển khoản");
+            throw new BadRequestEx("Không thể chỉnh sửa sản phẩm cho đơn thanh toán bằng chuyển khoản/VNPay (theo quy định an toàn thanh toán)");
         }
         if (hd.getIdKhachHang() == null || !hd.getIdKhachHang().equals(khachHangId)) {
             throw new BadRequestEx("Đơn hàng không thuộc về khách hàng này");
@@ -1459,7 +1463,11 @@ public class HoaDonService {
         hd.setDaHoanPhi(true);
         hd.setNgayCapNhat(LocalDateTime.now());
         HoaDon saved = repo.save(hd);
-        pushHistory(saved.getId(), saved.getTrangThaiHienTai(), "Đã hoàn tiền cho khách hàng", nhanVienId);
+        
+        // ✅ Ghi rõ admin xác nhận hoàn phí
+        String ghiChu = "[ADMIN] Xác nhận hoàn tiền cho khách hàng | Số tiền: " 
+                + (saved.getTongTienSauGiam() != null ? saved.getTongTienSauGiam().toPlainString() : "0");
+        pushHistory(saved.getId(), saved.getTrangThaiHienTai(), ghiChu, nhanVienId);
         return toResponse(saved);
     }
 
@@ -1474,17 +1482,21 @@ public class HoaDonService {
 
     private boolean isDonChuyenKhoan(Integer hoaDonId) {
         List<GiaoDichThanhToan> gds = giaoDichThanhToanRepository.findAllByIdHoaDon(hoaDonId);
+        System.out.println("🔍 isDonChuyenKhoan(" + hoaDonId + "): Found " + gds.size() + " GiaoDichThanhToan");
         for (GiaoDichThanhToan gd : gds) {
             if (gd.getIdPhuongThucThanhToan() != null) {
                 PhuongThucThanhToan pt = phuongThucThanhToanRepository.findById(gd.getIdPhuongThucThanhToan()).orElse(null);
                 if (pt != null && pt.getTenPhuongThucThanhToan() != null) {
                     String name = pt.getTenPhuongThucThanhToan().toLowerCase();
-                    if (name.contains("chuyển khoản") || name.contains("vnpay")) {
+                    System.out.println("  - Phương thức: " + pt.getTenPhuongThucThanhToan() + " (lower: " + name + ")");
+                    if (name.contains("chuyển khoản") || name.contains("vnpay") || name.contains("banking")) {
+                        System.out.println("  ✅ Matched as VNPAY/CHUYỂN KHOÁN!");
                         return true;
                     }
                 }
             }
         }
+        System.out.println("  ❌ Not a VNPAY/CHUYỂN KHOÁN order");
         return false;
     }
 

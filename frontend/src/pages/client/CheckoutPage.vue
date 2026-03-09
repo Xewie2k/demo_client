@@ -477,7 +477,7 @@ const submitOrder = async () => {
                 idChiTietSanPham: item.variantId,
                 soLuong: item.quantity
             })),
-            phuongThucThanhToan: paymentMethod.value // e.g. "COD" or "VNPAY"
+            loaiThanhToan: paymentMethod.value === 'VNPAY' ? 1 : 0  // 0=COD, 1=VNPay/Banking
         };
         
         // Assume backend creates order and returns Order Object (id, total, etc)

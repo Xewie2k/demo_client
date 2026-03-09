@@ -451,44 +451,91 @@ public class ClientOrderService {
             hdctRepo.save(item);
         }
 
-        // ✅ Xác định phương thức thanh toán (ID) từ loaiThanhToan (0/1) nếu FE chưa gửi ID
+        // ✅ FIX BUG: Xác định phương thức thanh toán (ID) từ loaiThanhToan (0/1) hoặc idPhuongThucThanhToan
         Integer ptttId = req.getIdPhuongThucThanhToan();
-        if (ptttId == null && req.getLoaiThanhToan() != null) {
-            String keyword = (req.getLoaiThanhToan() == 1) ? "VNPAY" : "Tiền mặt";
+        Integer loaiThanhToan = req.getLoaiThanhToan(); // 0: COD, 1: VNPay/Chuyển khoản
+        
+        // 🔍 DEBUG LOG
+        System.out.println("=== CREATE ORDER DEBUG ===");
+        System.out.println("loaiThanhToan: " + loaiThanhToan);
+        System.out.println("idPhuongThucThanhToan: " + ptttId);
+        
+        if (ptttId == null) {
             List<PhuongThucThanhToan> allPttt = phuongThucThanhToanRepo.findAllByXoaMemFalseAndTrangThaiTrueOrderByIdDesc();
+            System.out.println("Danh sách phương thức thanh toán:");
             for (PhuongThucThanhToan p : allPttt) {
-                if (p.getTenPhuongThucThanhToan().toUpperCase().contains(keyword.toUpperCase())) {
-                    ptttId = p.getId();
-                    break;
-                }
+                System.out.println("  - ID: " + p.getId() + ", Name: " + p.getTenPhuongThucThanhToan());
             }
-            // Fallback: Nếu là VNPay mà không tìm thấy "VNPAY", thử tìm "Chuyển khoản"
-            if (ptttId == null && req.getLoaiThanhToan() == 1) {
+            
+            if (loaiThanhToan == null || loaiThanhToan == 0) {
+                // Fallback: COD/Tiền mặt (mặc định)
                 for (PhuongThucThanhToan p : allPttt) {
-                    if (p.getTenPhuongThucThanhToan().toUpperCase().contains("CHUYỂN KHOẢN") || p.getTenPhuongThucThanhToan().toUpperCase().contains("VNPAY")) {
+                    String name = p.getTenPhuongThucThanhToan().toUpperCase();
+                    if (name.contains("TIỀN MẶT") || name.contains("COD")) {
+                        System.out.println("✅ Tìm thấy COD method: " + p.getTenPhuongThucThanhToan() + " (ID=" + p.getId() + ")");
                         ptttId = p.getId();
                         break;
                     }
                 }
-            }
-            
-            // ✅ FIX BUG: Nếu khách chọn VNPay (1) mà không tìm thấy ID phương thức -> Báo lỗi ngay
-            if (ptttId == null && req.getLoaiThanhToan() != null && req.getLoaiThanhToan() == 1) {
-                throw new BadRequestEx("Hệ thống chưa cấu hình phương thức thanh toán VNPAY/Chuyển khoản. Vui lòng liên hệ Admin.");
+            } else if (loaiThanhToan == 1) {
+                // VNPay/Chuyển khoản: tìm VNPAY hoặc CHUYỂN KHOÁN (case insensitive)
+                for (PhuongThucThanhToan p : allPttt) {
+                    String name = p.getTenPhuongThucThanhToan();
+                    String nameUpper = name.toUpperCase();
+                    // ⚠️ Match case-insensitive: VNPAY, VNPay, vnpay, CHUYỂN KHOÁN, chuyển khoán, etc.
+                    if (nameUpper.contains("VNPAY") || nameUpper.contains("CHUYỂN KHOÁN") || nameUpper.contains("BANKING") || nameUpper.contains("CHUYỂN")) {
+                        System.out.println("✅ Tìm thấy VNPAY method: " + name + " (ID=" + p.getId() + ")");
+                        ptttId = p.getId();
+                        break;
+                    }
+                }
+                // ⚠️ Nếu khách chọn VNPay (1) mà không tìm thấy ID phương thức -> Báo lỗi ngay
+                if (ptttId == null) {
+                    System.out.println("❌ ERROR: Không tìm thấy phương thức VNPAY/CHUYỂN KHOÁN!");
+                    System.out.println("Danh sách phương thức hiện có:");
+                    for (PhuongThucThanhToan p : allPttt) {
+                        System.out.println("  - ID=" + p.getId() + ", Name=" + p.getTenPhuongThucThanhToan());
+                    }
+                    throw new BadRequestEx("Hệ thống chưa cấu hình phương thức thanh toán VNPAY/Chuyển khoán. Vui lòng liên hệ Admin.");
+                }
             }
         }
 
         // ✅ Tạo giao dịch thanh toán ngay để đánh dấu loại đơn
+        // ⚠️ QUAN TRỌNG: Phải có GiaoDichThanhToan để isDonChuyenKhoan() hoạt động đúng
         if (ptttId != null) {
             GiaoDichThanhToan gd = new GiaoDichThanhToan();
             gd.setIdHoaDon(hd.getId());
             gd.setIdPhuongThucThanhToan(ptttId);
             gd.setSoTien(thanhTien);
             gd.setTrangThai("khoi_tao");
-            gd.setThoiGianCapNhat(LocalDateTime.now());
+            LocalDateTime now = LocalDateTime.now();
+            gd.setThoiGianCapNhat(now);
+            gd.setNguoiCapNhat(req.getIdKhachHang());
             gd.setXoaMem(false);
-            gd.setGhiChu("Khởi tạo đơn hàng");
+            gd.setGhiChu("Khởi tạo đơn hàng online");
             giaoDichThanhToanRepo.save(gd);
+            System.out.println("✅ Saved GiaoDichThanhToan: id=" + gd.getId() + ", ptttId=" + ptttId);
+        } else {
+            // ⚠️ Fallback: Nếu vẫn không tìm được phương thức, tạo COD mặc định
+            List<PhuongThucThanhToan> allPttt = phuongThucThanhToanRepo.findAllByXoaMemFalseAndTrangThaiTrueOrderByIdDesc();
+            for (PhuongThucThanhToan p : allPttt) {
+                String name = p.getTenPhuongThucThanhToan().toUpperCase();
+                if (name.contains("TIỀN MẶT") || name.contains("COD")) {
+                    GiaoDichThanhToan gd = new GiaoDichThanhToan();
+                    gd.setIdHoaDon(hd.getId());
+                    gd.setIdPhuongThucThanhToan(p.getId());
+                    gd.setSoTien(thanhTien);
+                    gd.setTrangThai("khoi_tao");
+                    LocalDateTime now = LocalDateTime.now();
+                    gd.setThoiGianCapNhat(now);
+                    gd.setNguoiCapNhat(req.getIdKhachHang());
+                    gd.setXoaMem(false);
+                    gd.setGhiChu("Khởi tạo đơn hàng online (mặc định COD)");
+                    giaoDichThanhToanRepo.save(gd);
+                    break;
+                }
+            }
         }
 
         LichSuHoaDon ls = LichSuHoaDon.builder()
@@ -499,6 +546,7 @@ public class ClientOrderService {
                 .build();
         lsHdRepo.save(ls);
 
+        // ⚠️ QUAN TRỌNG: Flush để đảm bảo GiaoDichThanhToan được lưu vào DB ngay
         entityManager.flush();
         entityManager.refresh(hd);
 
