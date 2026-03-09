@@ -255,6 +255,7 @@ public class HoaDonService {
                             .loaiSan(loaiSan)
                             .formChan(formChan)
                             .duongDanAnhDaiDien(null)
+                            .tonKho(ctsp != null ? ctsp.getSoLuong() : 0)
                             .build();
                 })
                 .toList();
@@ -1433,84 +1434,57 @@ public class HoaDonService {
         List<HoaDonChiTiet> current =
                 hoaDonChiTietRepository.findAllByIdHoaDonAndXoaMemFalseOrderByIdAsc(idHoaDon);
 
-        // Build requested qty map (0 = delete) + track price changes
-        Map<Integer, Integer> requestQtyMap = new HashMap<>();
-        Map<Integer, HoaDonChiTietRequest> requestDataMap = new HashMap<>();
+        // Phase 1: Build lookup maps — prefer exact record ID, fallback to ctspId
+        // This fixes the doubling bug when same ctspId has multiple records (price splits)
+        Map<Integer, HoaDonChiTietRequest> byRecordId = new HashMap<>();
+        Map<Integer, HoaDonChiTietRequest> byCtspId = new HashMap<>();
         for (HoaDonChiTietRequest x : items) {
-            if (x == null || x.getIdChiTietSanPham() == null) continue;
-            requestDataMap.put(x.getIdChiTietSanPham(), x);
-            if (Boolean.TRUE.equals(x.getXoaMem()) || (x.getSoLuong() != null && x.getSoLuong() <= 0)) {
-                requestQtyMap.put(x.getIdChiTietSanPham(), 0);
-            } else if (x.getSoLuong() != null && x.getSoLuong() > 0) {
-                requestQtyMap.put(x.getIdChiTietSanPham(), x.getSoLuong());
+            if (x == null) continue;
+            if (x.getIdHoaDonChiTiet() != null) {
+                byRecordId.put(x.getIdHoaDonChiTiet(), x);
+            } else if (x.getIdChiTietSanPham() != null) {
+                byCtspId.put(x.getIdChiTietSanPham(), x);
             }
         }
 
-        // Update soLuong only — keep original donGia, adjust stock
-        // ✅ Handle price changes: if price changed and qty increased, create new record
+        // Phase 2: Apply record-level changes only — no stock adjustment for CHUA_XAC_NHAN orders
+        // Stock is only deducted when the order is confirmed (DA_XAC_NHAN)
         for (HoaDonChiTiet ct : current) {
-            Integer ctspId = ct.getIdChiTietSanPham();
-            if (ctspId == null) continue;
-            Integer newQty = requestQtyMap.get(ctspId);
-            if (newQty == null) continue; // not mentioned → unchanged
+            if (ct.getIdChiTietSanPham() == null) continue;
+            HoaDonChiTietRequest req = byRecordId.containsKey(ct.getId())
+                    ? byRecordId.get(ct.getId())
+                    : byCtspId.get(ct.getIdChiTietSanPham());
+            if (req == null) continue;
 
-            int oldQty = ct.getSoLuong() == null ? 0 : ct.getSoLuong();
-            int delta = newQty - oldQty;
-
-            HoaDonChiTietRequest reqData = requestDataMap.get(ctspId);
-
-            if (newQty <= 0) {
-                if (oldQty > 0) chiTietSanPhamRepository.tangTon(ctspId, oldQty);
+            if (Boolean.TRUE.equals(req.getXoaMem()) || (req.getSoLuong() != null && req.getSoLuong() <= 0)) {
                 ct.setXoaMem(true);
-            } else {
-                // ✅ Kiểm tra giá thay đổi: nếu isGiaDaThayDoi=true và soLuongTangThem > 0
-                if (reqData != null && Boolean.TRUE.equals(reqData.getIsGiaDaThayDoi())
-                        && reqData.getSoLuongTangThem() != null && reqData.getSoLuongTangThem() > 0) {
-                    // Tạo bản ghi mới với giá mới cho số lượng tăng
-                    int soLuongTangThem = reqData.getSoLuongTangThem();
-                    BigDecimal giaMoi = reqData.getGiaBanHienTai();
-
-                    // ✅ Giảm tồn kho cho số lượng tăng thêm
-                    int updated = chiTietSanPhamRepository.giamTonNeuDu(ctspId, soLuongTangThem);
-                    if (updated == 0) {
-                        ChiTietSanPham ctsp = chiTietSanPhamRepository
-                                .findByIdAndXoaMemFalse(ctspId)
-                                .orElseThrow(() -> new BadRequestEx("CTSP không tồn tại: id=" + ctspId));
-                        throw new BadRequestEx("Không đủ tồn kho cho "
-                                + (ctsp.getMaChiTietSanPham() != null ? ctsp.getMaChiTietSanPham() : "id=" + ctspId)
-                                + " (tồn: " + (ctsp.getSoLuong() == null ? 0 : ctsp.getSoLuong()) + ")");
-                    }
-
-                    HoaDonChiTiet newRecord = new HoaDonChiTiet();
-                    newRecord.setIdHoaDon(idHoaDon);
-                    newRecord.setIdChiTietSanPham(ctspId);
-                    newRecord.setSoLuong(soLuongTangThem);
-                    newRecord.setDonGia(giaMoi);
-                    newRecord.setGhiChu("Tạo tự động khi giá thay đổi từ " + reqData.getGiaBanLuc() + " → " + giaMoi);
-                    newRecord.setXoaMem(false);
-                    hoaDonChiTietRepository.save(newRecord);
-
-                    // ✅ Giữ nguyên số lượng bản ghi cũ (không tăng thêm)
-
-                } else {
-                    // ✅ Xử lý thông thường: tăng/giảm số lượng trên cùng bản ghi
-                    if (delta > 0) {
-                        int updated = chiTietSanPhamRepository.giamTonNeuDu(ctspId, delta);
-                        if (updated == 0) {
-                            ChiTietSanPham ctsp = chiTietSanPhamRepository
-                                    .findByIdAndXoaMemFalse(ctspId)
-                                    .orElseThrow(() -> new BadRequestEx("CTSP không tồn tại: id=" + ctspId));
-                            throw new BadRequestEx("Không đủ tồn kho cho "
-                                    + (ctsp.getMaChiTietSanPham() != null ? ctsp.getMaChiTietSanPham() : "id=" + ctspId)
-                                    + " (tồn: " + (ctsp.getSoLuong() == null ? 0 : ctsp.getSoLuong()) + ")");
-                        }
-                    } else if (delta < 0) {
-                        chiTietSanPhamRepository.tangTon(ctspId, Math.abs(delta));
-                    }
-                    ct.setSoLuong(newQty);
-                }
-                // ✅ Giữ nguyên donGia gốc — KHÔNG reprice theo đợt giảm giá hiện tại
+            } else if (Boolean.TRUE.equals(req.getIsGiaDaThayDoi())
+                    && req.getSoLuongTangThem() != null && req.getSoLuongTangThem() > 0) {
+                // Price changed + qty increase: keep old record unchanged, create new record in Phase 4
                 ct.setXoaMem(false);
+            } else {
+                ct.setSoLuong(req.getSoLuong());
+                ct.setXoaMem(false);
+            }
+        }
+
+        // Phase 4: Create new records for price-changed + qty-increased items
+        for (HoaDonChiTiet ct : current) {
+            if (ct.getIdChiTietSanPham() == null) continue;
+            HoaDonChiTietRequest req = byRecordId.containsKey(ct.getId())
+                    ? byRecordId.get(ct.getId())
+                    : byCtspId.get(ct.getIdChiTietSanPham());
+            if (req == null) continue;
+            if (Boolean.TRUE.equals(req.getIsGiaDaThayDoi())
+                    && req.getSoLuongTangThem() != null && req.getSoLuongTangThem() > 0) {
+                HoaDonChiTiet newRecord = new HoaDonChiTiet();
+                newRecord.setIdHoaDon(idHoaDon);
+                newRecord.setIdChiTietSanPham(ct.getIdChiTietSanPham());
+                newRecord.setSoLuong(req.getSoLuongTangThem());
+                newRecord.setDonGia(req.getGiaBanHienTai());
+                newRecord.setGhiChu("Tạo tự động khi giá thay đổi từ " + req.getGiaBanLuc() + " → " + req.getGiaBanHienTai());
+                newRecord.setXoaMem(false);
+                hoaDonChiTietRepository.save(newRecord);
             }
         }
 

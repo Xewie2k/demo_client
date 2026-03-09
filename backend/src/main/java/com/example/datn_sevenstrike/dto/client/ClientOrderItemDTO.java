@@ -18,4 +18,6 @@ public class ClientOrderItemDTO {
     private int soLuong;
     private BigDecimal thanhTien;
     private Integer idChiTietSanPham;
+    private Integer id;  // hoa_don_chi_tiet PK — for specific record identification
+    private Integer tonKho; // tồn kho hiện tại của chi_tiet_san_pham
 }

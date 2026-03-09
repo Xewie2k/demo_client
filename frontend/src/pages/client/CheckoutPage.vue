@@ -246,7 +246,6 @@ import { useRouter } from 'vue-router';
 import { useCart } from '@/services/cart';
 import { useClientAuth } from '@/services/authClient';
 import apiClient from '@/services/apiClient';
-import vnAddressService from '@/services/vnAddressService';
 import Swal from 'sweetalert2';
 
 const { cart, clearCart } = useCart();
@@ -286,9 +285,24 @@ const addressCodes = reactive({
 
 const loadProvinces = async () => {
     try {
-        provinces.value = await vnAddressService.getProvinces();
+        const res = await apiClient.get('/api/client/ghn/tinh-thanh');
+        provinces.value = (res.data || []).map(p => ({ code: p.provinceId, name: p.provinceName }));
     } catch (e) {
-        console.error("Lỗi tải tỉnh thành", e);
+        console.error("Lỗi tải tỉnh thành GHN", e);
+    }
+};
+
+const updateShippingFee = async () => {
+    if (!addressCodes.district || !addressCodes.ward) return;
+    try {
+        const res = await apiClient.post('/api/client/ghn/tinh-phi-van-chuyen', {
+            toDistrictId: addressCodes.district,
+            toWardCode: String(addressCodes.ward),
+            tongGiaTriHang: Math.round(itemsPrice.value)
+        });
+        shippingFee.value = res.data.total || res.data.phiVanChuyen || 0;
+    } catch (e) {
+        shippingFee.value = 0; // fallback nếu GHN lỗi
     }
 };
 
@@ -297,33 +311,46 @@ const onCityChange = async () => {
     addressCodes.ward = "";
     districts.value = [];
     wards.value = [];
-    
+    shippingFee.value = 0;
+
     const p = provinces.value.find(x => x.code == addressCodes.city);
     address.city = p ? p.name : "";
     address.district = "";
     address.ward = "";
 
     if (addressCodes.city) {
-        districts.value = await vnAddressService.getDistricts(addressCodes.city);
+        try {
+            const res = await apiClient.get(`/api/client/ghn/quan-huyen/${addressCodes.city}`);
+            districts.value = (res.data || []).map(d => ({ code: d.districtId, name: d.districtName }));
+        } catch (e) {
+            console.error("Lỗi tải quận huyện GHN", e);
+        }
     }
 };
 
 const onDistrictChange = async () => {
     addressCodes.ward = "";
     wards.value = [];
+    shippingFee.value = 0;
 
     const d = districts.value.find(x => x.code == addressCodes.district);
     address.district = d ? d.name : "";
     address.ward = "";
 
     if (addressCodes.district) {
-        wards.value = await vnAddressService.getWards(addressCodes.district);
+        try {
+            const res = await apiClient.get(`/api/client/ghn/phuong-xa/${addressCodes.district}`);
+            wards.value = (res.data || []).map(w => ({ code: w.wardCode, name: w.wardName }));
+        } catch (e) {
+            console.error("Lỗi tải phường xã GHN", e);
+        }
     }
 };
 
-const onWardChange = () => {
+const onWardChange = async () => {
     const w = wards.value.find(x => x.code == addressCodes.ward);
     address.ward = w ? w.name : "";
+    await updateShippingFee();
 };
 // --- Saved Address Selection ---
 const fillAddressFromSaved = async (addr) => {
@@ -335,20 +362,27 @@ const fillAddressFromSaved = async (addr) => {
     if (matchedProvince) {
         addressCodes.city = matchedProvince.code;
         address.city = matchedProvince.name;
-        districts.value = await vnAddressService.getDistricts(matchedProvince.code);
+        try {
+            const res = await apiClient.get(`/api/client/ghn/quan-huyen/${matchedProvince.code}`);
+            districts.value = (res.data || []).map(d => ({ code: d.districtId, name: d.districtName }));
+        } catch (e) { districts.value = []; }
 
         // Match district by name
         const matchedDistrict = districts.value.find(d => d.name === addr.quan);
         if (matchedDistrict) {
             addressCodes.district = matchedDistrict.code;
             address.district = matchedDistrict.name;
-            wards.value = await vnAddressService.getWards(matchedDistrict.code);
+            try {
+                const res = await apiClient.get(`/api/client/ghn/phuong-xa/${matchedDistrict.code}`);
+                wards.value = (res.data || []).map(w => ({ code: w.wardCode, name: w.wardName }));
+            } catch (e) { wards.value = []; }
 
             // Match ward by name
             const matchedWard = wards.value.find(w => w.name === addr.phuong);
             if (matchedWard) {
                 addressCodes.ward = matchedWard.code;
                 address.ward = matchedWard.name;
+                await updateShippingFee();
             }
         }
     }
@@ -389,7 +423,7 @@ const campaignSavings = computed(() =>
   }, 0)
 );
 
-const shippingFee = ref(40000); // Fixed or calculated
+const shippingFee = ref(0); // 0 khi chưa chọn địa chỉ; tính từ GHN API khi chọn xong phường/xã
 
 const discountAmount = computed(() => {
   if (!selectedVoucher.value) return 0;
@@ -528,7 +562,9 @@ const submitOrder = async () => {
                 idChiTietSanPham: item.variantId,
                 soLuong: item.quantity
             })),
-            loaiThanhToan: paymentMethod.value === 'VNPAY' ? 1 : 0  // 0=COD, 1=VNPay/Banking
+            loaiThanhToan: paymentMethod.value === 'VNPAY' ? 1 : 0,  // 0=COD, 1=VNPay/Banking
+            ghnToDistrictId: addressCodes.district || null,
+            ghnToWardCode: addressCodes.ward ? String(addressCodes.ward) : null
         };
         
         // Assume backend creates order and returns Order Object (id, total, etc)

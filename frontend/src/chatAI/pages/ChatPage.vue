@@ -254,7 +254,7 @@ const soPhienNoiBoCho = computed(() =>
 )
 
 const soTinNhanChuaDocNoiBo = computed(() =>
-  sessionsNoiBo.value.reduce((sum, s) => sum + (sessionUnreadMap[s.id] || 0), 0)
+  sessionsNoiBo.value.reduce((sum, s) => sum + (sessionUnreadMap?.[s.id] || 0), 0)
 )
 
 const canClose = computed(() => {

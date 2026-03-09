@@ -691,7 +691,9 @@
                     <i class="bi bi-dash"></i>
                   </button>
                   <span class="fw-bold px-2">{{ item.soLuong }}</span>
-                  <button class="btn btn-outline-secondary btn-sm px-2" @click="item.soLuong++">
+                  <button class="btn btn-outline-secondary btn-sm px-2" @click="increaseQty(i)"
+                    :disabled="item.tonKho > 0 && totalQtyForProduct(item.idChiTietSanPham) >= item.tonKho"
+                    :title="item.tonKho > 0 && totalQtyForProduct(item.idChiTietSanPham) >= item.tonKho ? `Đã đạt giới hạn tồn kho (${item.tonKho})` : ''">
                     <i class="bi bi-plus"></i>
                   </button>
                   <button class="btn btn-outline-danger btn-sm px-2 ms-2" @click="removeItem(i)"
@@ -779,6 +781,7 @@ const showAddressPickModal = ref(false);
 const showItemsModal = ref(false);
 const itemsLoading = ref(false);
 const editItems = ref([]);
+const deletedItems = ref([]); // tracks hoaDonChiTietId values for rows removed from the modal
 // actionCtx: 'selected' | 'tracked' | 'guest'
 const actionCtx = ref('');
 // reference to the order object currently being acted on (for modal display info)
@@ -1058,7 +1061,8 @@ const openItemsModal = async (ctx) => {
   // selectedOrder has .items (ClientOrderItemDTO); guest/tracked has .chiTietHoaDon (HoaDonChiTietResponse)
   const src = o?.items || o?.chiTietHoaDon || [];
   editItems.value = src.map(item => ({
-    idChiTietSanPham: item.idChiTietSanPham || item.id,
+    hoaDonChiTietId: item.id,             // hoa_don_chi_tiet.id — để xác định đúng bản ghi
+    idChiTietSanPham: item.idChiTietSanPham,
     tenSanPham: item.tenSanPham,
     phanLoai: item.phanLoai || (item.mauSac ? `${item.mauSac} - ${item.kichCo}` : ''),
     anhDaiDien: item.anhDaiDien || item.duongDanAnhDaiDien || null,
@@ -1066,20 +1070,10 @@ const openItemsModal = async (ctx) => {
     soLuongLuc: item.soLuong, // Lưu số lượng lúc mở modal
     donGia: item.donGia || 0,
     giaBanLuc: item.donGia || 0, // Giá lúc mở modal (giá cũ)
-    giaBanHienTai: item.donGia || 0, // Giá hiện tại (sẽ fetch từ server)
+    giaBanHienTai: item.donGiaCu || item.donGia || 0, // Giá hiện tại (từ response, đã tính khuyến mãi)
+    tonKho: item.tonKho ?? 0, // tồn kho hiện tại để chặn nút +
   }));
-  // Fetch giá hiện tại từ server cho mỗi sản phẩm
-  try {
-    for (let i = 0; i < editItems.value.length; i++) {
-      const item = editItems.value[i];
-      const res = await apiClient.get(`/api/chi-tiet-san-pham/${item.idChiTietSanPham}`);
-      if (res.data && res.data.giaBan) {
-        item.giaBanHienTai = res.data.giaBan;
-      }
-    }
-  } catch (err) {
-    console.warn('Không thể fetch giá hiện tại:', err);
-  }
+  deletedItems.value = [];
   showItemsModal.value = true;
 };
 const isGiaDaThayDoi = (item) => {
@@ -1087,22 +1081,54 @@ const isGiaDaThayDoi = (item) => {
 };
 
 const decreaseQty = (i) => { if (editItems.value[i].soLuong > 1) editItems.value[i].soLuong--; };
-const removeItem = (i) => { if (editItems.value.length > 1) editItems.value.splice(i, 1); };
+const totalQtyForProduct = (idCtsp) =>
+  editItems.value.filter(it => it.idChiTietSanPham === idCtsp).reduce((s, it) => s + it.soLuong, 0);
+
+const increaseQty = (i) => {
+  const target = editItems.value[i];
+  if (!target) return;
+  // Check tồn kho: tổng số lượng tất cả các dòng cùng sản phẩm không được vượt tonKho
+  if (target.tonKho > 0 && totalQtyForProduct(target.idChiTietSanPham) >= target.tonKho) return;
+  if (isGiaDaThayDoi(target)) {
+    // Old-price row: redirect to existing new-price row to avoid creating a duplicate record
+    const newPriceIdx = editItems.value.findIndex(
+      (it, idx) => idx !== i && it.idChiTietSanPham === target.idChiTietSanPham && !isGiaDaThayDoi(it)
+    );
+    if (newPriceIdx !== -1) {
+      editItems.value[newPriceIdx].soLuong++;
+    } else {
+      // No new-price row yet: increment own qty, backend will create a new record at current price
+      target.soLuong++;
+    }
+  } else {
+    target.soLuong++;
+  }
+};
+const removeItem = (i) => {
+  if (editItems.value.length <= 1) return; // prevent empty order
+  const target = editItems.value[i];
+  if (!target) return;
+  if (target.hoaDonChiTietId) deletedItems.value.push(target.hoaDonChiTietId);
+  editItems.value.splice(i, 1);
+};
 const doSaveItems = async () => {
   if (editItems.value.length === 0) return;
   itemsLoading.value = true;
   try {
     await apiClient.put(`/api/client/hoa-don/${getOrderId()}/items`, getAuthBody({
-      items: editItems.value.map(item => ({
-        idChiTietSanPham: item.idChiTietSanPham,
-        soLuong: item.soLuong,
-        xoaMem: false,
-        // Gửi thông tin về giá thay đổi để server tạo bản ghi mới nếu cần
-        soLuongTangThem: Math.max(0, item.soLuong - item.soLuongLuc),
-        isGiaDaThayDoi: isGiaDaThayDoi(item),
-        giaBanLuc: item.giaBanLuc,
-        giaBanHienTai: item.giaBanHienTai
-      }))
+      items: [
+        ...editItems.value.map(item => ({
+          idHoaDonChiTiet: item.hoaDonChiTietId,
+          idChiTietSanPham: item.idChiTietSanPham,
+          soLuong: item.soLuong,
+          xoaMem: false,
+          soLuongTangThem: Math.max(0, item.soLuong - item.soLuongLuc),
+          isGiaDaThayDoi: isGiaDaThayDoi(item),
+          giaBanLuc: item.giaBanLuc,
+          giaBanHienTai: item.giaBanHienTai
+        })),
+        ...deletedItems.value.map(id => ({ idHoaDonChiTiet: id, xoaMem: true }))
+      ]
     }));
     showItemsModal.value = false;
     await refreshAfterAction();

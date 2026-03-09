@@ -26,4 +26,5 @@ public class HoaDonChiTietRequest {
     private Boolean isGiaDaThayDoi;    // Flag kiểm tra giá có thay đổi không
     private BigDecimal giaBanLuc;      // Giá lúc mở modal (giá cũ)
     private BigDecimal giaBanHienTai;  // Giá hiện tại từ server
+    private Integer idHoaDonChiTiet;   // hoa_don_chi_tiet.id — để xác định đúng bản ghi khi cùng ctspId có nhiều dòng
 }

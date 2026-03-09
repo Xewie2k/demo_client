@@ -5,6 +5,9 @@ import com.example.datn_sevenstrike.dto.client.*;
 import com.example.datn_sevenstrike.entity.*;
 import com.example.datn_sevenstrike.exception.BadRequestEx;
 import com.example.datn_sevenstrike.exception.NotFoundEx;
+import com.example.datn_sevenstrike.ghn.dto.request.GhnTinhPhiRequest;
+import com.example.datn_sevenstrike.ghn.dto.response.GhnTinhPhiResponse;
+import com.example.datn_sevenstrike.ghn.service.GhnService;
 import com.example.datn_sevenstrike.repository.*;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +40,7 @@ public class ClientOrderService {
     private final PhuongThucThanhToanRepository phuongThucThanhToanRepo;
     private final EmailService emailService;
     private final EntityManager entityManager;
+    private final GhnService ghnService;
 
     @Value("${app.backend.url:http://localhost:8080}")
     private String backendUrl;
@@ -306,6 +310,7 @@ public class ClientOrderService {
         }
 
         return ClientOrderItemDTO.builder()
+                .id(item.getId())
                 .tenSanPham(name)
                 .anhDaiDien(thumb)
                 .phanLoai(variant)
@@ -314,6 +319,7 @@ public class ClientOrderService {
                 .soLuong(item.getSoLuong())
                 .thanhTien(item.getDonGia().multiply(BigDecimal.valueOf(item.getSoLuong())))
                 .idChiTietSanPham(item.getIdChiTietSanPham())
+                .tonKho(ctsp != null ? ctsp.getSoLuong() : 0)
                 .build();
     }
 
@@ -423,7 +429,22 @@ public class ClientOrderService {
             phieuRepo.save(voucher);
         }
 
-        BigDecimal phiVanChuyen = new BigDecimal("40000");
+        BigDecimal phiVanChuyen;
+        if (req.getGhnToDistrictId() != null && req.getGhnToWardCode() != null
+                && !req.getGhnToWardCode().isBlank()) {
+            try {
+                GhnTinhPhiRequest ghnReq = new GhnTinhPhiRequest();
+                ghnReq.setToDistrictId(req.getGhnToDistrictId());
+                ghnReq.setToWardCode(req.getGhnToWardCode());
+                ghnReq.setTongGiaTriHang(tongTien.longValue());
+                GhnTinhPhiResponse ghnRes = ghnService.tinhPhiVanChuyen(ghnReq);
+                phiVanChuyen = BigDecimal.valueOf(ghnRes.getTotal());
+            } catch (Exception e) {
+                phiVanChuyen = new BigDecimal("40000"); // fallback nếu GHN lỗi
+            }
+        } else {
+            phiVanChuyen = new BigDecimal("40000");
+        }
         BigDecimal thanhTien = tongTien.subtract(tienGiam);
 
         HoaDon hd = HoaDon.builder()

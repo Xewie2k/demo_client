@@ -40,4 +40,5 @@ public class HoaDonChiTietResponse {
     private String formChan;
 
     private String duongDanAnhDaiDien;
+    private Integer tonKho; // tồn kho hiện tại của chi_tiet_san_pham
 }
