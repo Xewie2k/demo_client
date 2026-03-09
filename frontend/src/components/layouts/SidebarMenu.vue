@@ -227,6 +227,10 @@
       <RouterLink class="ss-nav-link" to="/admin/chat" title="Quản lý Chat">
         <span class="material-icons ss-ic">chat</span>
         <span class="ss-nav-label">Quản lý Chat</span>
+        <span v-if="unreadChatCount > 0" class="badge rounded-pill bg-danger ms-auto"
+              style="font-size:10px; min-width:18px;">
+          {{ unreadChatCount > 99 ? '99+' : unreadChatCount }}
+        </span>
       </RouterLink>
     </nav>
   </aside>
@@ -235,6 +239,9 @@
 <script setup>
 import { computed, reactive, watch } from "vue";
 import { RouterLink, useRoute } from "vue-router";
+import { useChatBadge } from "@/chatAI/services/useChatBadge.js";
+
+const { unreadChatCount } = useChatBadge();
 
 const route = useRoute();
 

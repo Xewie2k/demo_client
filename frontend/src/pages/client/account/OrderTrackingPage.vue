@@ -24,6 +24,12 @@
       <!-- Timeline -->
       <div class="mb-5 px-3">
         <h6 class="fw-bold mb-4 border-start border-4 ps-2" style="border-color: var(--ss-accent) !important;">Trạng thái đơn hàng</h6>
+        <div v-if="order.trangThaiHienTai === 6" class="alert alert-danger border-0 mb-3">
+          <i class="bi bi-x-circle-fill me-2"></i><strong>Đơn hàng đã bị hủy.</strong>
+        </div>
+        <div v-if="order.trangThaiHienTai === 7" class="alert alert-warning border-0 mb-3">
+          <i class="bi bi-exclamation-circle-fill me-2"></i><strong>Yêu cầu hủy đơn đang chờ xác nhận từ cửa hàng.</strong>
+        </div>
         <OrderTimeline :status-code="order.trangThaiHienTai" :timeline="order.timeline" />
       </div>
 

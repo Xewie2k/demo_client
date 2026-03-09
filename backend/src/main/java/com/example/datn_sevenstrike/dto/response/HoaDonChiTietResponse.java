@@ -21,6 +21,7 @@ public class HoaDonChiTietResponse {
 
     private Integer soLuong;
     private BigDecimal donGia;
+    private BigDecimal donGiaCu; // giá hiện tại (real-time) để FE so sánh
 
     private BigDecimal thanhTien;
 

@@ -1,5 +1,15 @@
 <!-- File: src/pages/hoa_don/HoaDonDetail.vue -->
 <template>
+  <!-- Toast notification -->
+  <div
+    v-if="toast.show"
+    :class="`position-fixed top-0 end-0 m-3 alert alert-${toast.type} shadow`"
+    style="z-index:9999; min-width:260px; border-radius:10px;"
+  >
+    <i :class="`bi bi-${toast.type === 'success' ? 'check-circle-fill' : 'x-circle-fill'} me-2`"></i>
+    {{ toast.msg }}
+  </div>
+
   <div class="order-page p-4 ss-page ss-font">
     <!-- HEADER -->
     <div class="order-header mb-4">
@@ -53,12 +63,14 @@
                 :key="st.value"
                 class="ss-step"
                 :class="{
-                  done: st.value < trangThaiHienTaiDungDeHienThi,
-                  active: st.value === trangThaiHienTaiDungDeHienThi,
+                  done: st.value < trangThaiHienTaiDungDeHienThi && trangThaiHienTaiDungDeHienThi <= 5,
+                  active: st.value === trangThaiHienTaiDungDeHienThi && trangThaiHienTaiDungDeHienThi <= 5,
+                  cancelled: selectedHD.trangThai === 6 && st.value === 1,
+                  'request-cancel': selectedHD.trangThai === 7 && st.value === 1,
                 }"
               >
                 <div class="ss-icon">
-                  <i :class="`bi ${st.icon}`"></i>
+                  <i :class="`bi ${getStepIcon(st)}`"></i>
                 </div>
 
                 <span>{{ st.label }}</span>
@@ -76,6 +88,12 @@
                   </div>
                 </div>
               </div>
+            </div>
+            <div v-if="selectedHD.trangThai === 6" class="alert alert-danger text-center py-2 mt-2 mb-0" style="font-size:0.9rem;">
+              <i class="bi bi-x-circle-fill me-1"></i> Đơn hàng đã bị hủy
+            </div>
+            <div v-if="selectedHD.trangThai === 7" class="alert alert-warning text-center py-2 mt-2 mb-0" style="font-size:0.9rem;">
+              <i class="bi bi-exclamation-triangle-fill me-1"></i> Khách hàng yêu cầu hủy — đang chờ xác nhận
             </div>
           </div>
         </div>
@@ -260,6 +278,39 @@
             </div>
           </div>
 
+          <!-- YÊU CẦU HỦY: Admin cần xác nhận hoặc từ chối -->
+          <div v-if="selectedHD.trangThai === 7" class="card ss-card mt-3 border-danger">
+            <div class="card-body">
+              <h6 class="fw-bold mb-2 text-danger">
+                <i class="bi bi-exclamation-triangle me-1"></i> Khách hàng yêu cầu hủy đơn
+              </h6>
+              <p class="text-muted small mb-3">Xem lịch sử thao tác để biết lý do yêu cầu hủy.</p>
+              <div class="d-flex gap-2">
+                <button class="btn btn-danger flex-fill" :disabled="huyLoading" @click="xacNhanHuyTheoYeuCau">
+                  <span v-if="huyLoading" class="spinner-border spinner-border-sm me-1"></span>
+                  <i v-else class="bi bi-check-circle me-1"></i> Xác nhận hủy
+                </button>
+                <button class="btn btn-outline-secondary flex-fill" @click="showTuChoiHuyModal = true">
+                  <i class="bi bi-x-circle me-1"></i> Từ chối hủy
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- HOÀN PHÍ: Admin xác nhận đã hoàn tiền cho khách -->
+          <div v-if="selectedHD.daHoanPhi === false" class="card ss-card mt-3 border-warning">
+            <div class="card-body">
+              <h6 class="fw-bold mb-2 text-warning">
+                <i class="bi bi-cash-coin me-1"></i> Đơn hàng cần hoàn phí
+              </h6>
+              <p class="text-muted small mb-3">Xác nhận đã hoàn tiền cho khách hàng.</p>
+              <button class="btn btn-warning w-100" :disabled="hoanPhiLoading" @click="xacNhanHoanPhi">
+                <span v-if="hoanPhiLoading" class="spinner-border spinner-border-sm me-1"></span>
+                <i v-else class="bi bi-check-circle me-1"></i> Xác nhận đã hoàn phí
+              </button>
+            </div>
+          </div>
+
           <hr />
           <button class="btn btn-primary w-100 mb-2" type="button" @click="inHoaDon">
             <i class="bi bi-printer me-1"></i> In hóa đơn
@@ -310,6 +361,16 @@
                 Thông tin khách hàng
               </button>
             </li>
+            <li class="nav-item">
+              <button
+                class="nav-link"
+                type="button"
+                :class="{ active: tab === 'giaohang' }"
+                @click="tab = 'giaohang'"
+              >
+                Thông tin giao hàng
+              </button>
+            </li>
           </ul>
 
           <div v-if="tab === 'donhang'">
@@ -354,13 +415,54 @@
               </div>
             </div>
           </div>
+
+          <!-- TAB THÔNG TIN GIAO HÀNG -->
+          <div v-if="tab === 'giaohang'">
+            <div class="row g-3">
+              <div class="col-12">
+                <label class="form-label">Địa chỉ cụ thể</label>
+                <input class="form-control" v-model="form.diaChiCuThe" placeholder="Số nhà, ngõ, đường..." />
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Tỉnh/Thành phố</label>
+                <select class="form-select" v-model="addressCodes.city" @change="onCityChange">
+                  <option value="">Chọn Tỉnh/Thành</option>
+                  <option v-for="p in provinces" :key="p.code" :value="p.code">{{ p.name }}</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Quận/Huyện</label>
+                <select class="form-select" v-model="addressCodes.district" @change="onDistrictChange" :disabled="!addressCodes.city">
+                  <option value="">Chọn Quận/Huyện</option>
+                  <option v-for="d in districts" :key="d.code" :value="d.code">{{ d.name }}</option>
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="form-label">Xã/Phường</label>
+                <select class="form-select" v-model="addressCodes.ward" @change="onWardChange" :disabled="!addressCodes.district">
+                  <option value="">Chọn Xã/Phường</option>
+                  <option v-for="w in wards" :key="w.code" :value="w.code">{{ w.name }}</option>
+                </select>
+              </div>
+              <div v-if="addressNames.city || addressNames.district || addressNames.ward || form.diaChiCuThe" class="col-12">
+                <div class="text-muted small mt-1">
+                  <i class="bi bi-geo-alt me-1"></i>
+                  Địa chỉ mới: <b>{{ [form.diaChiCuThe, addressNames.ward, addressNames.district, addressNames.city].filter(Boolean).join(', ') || '—' }}</b>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div class="modal-footer">
           <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Hủy</button>
 
           <!-- ✅ CHẶN NHÂN VIÊN CHƯA MỞ CA -->
-          <button class="btn btn-success" type="button" @click="checkQuyenThaoTac(updateHoaDon)">
+          <button
+            class="btn btn-success"
+            type="button"
+            @click="checkQuyenThaoTac(tab === 'giaohang' || tab === 'khachhang' ? updateThongTinGiaoHang : updateHoaDon)"
+          >
             Lưu
           </button>
         </div>
@@ -446,6 +548,32 @@
     </div>
   </div>
 
+  <!-- MODAL TỪ CHỐI HỦY (Admin) -->
+  <div v-if="showTuChoiHuyModal" class="modal d-block" style="background: rgba(0,0,0,0.5);" @click.self="showTuChoiHuyModal = false">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Từ chối yêu cầu hủy đơn</h5>
+          <button type="button" class="btn-close" @click="showTuChoiHuyModal = false"></button>
+        </div>
+        <div class="modal-body">
+          <p class="text-muted">Từ chối yêu cầu hủy đơn <strong>{{ selectedHD.maHD }}</strong>? Đơn sẽ về lại trạng thái Chờ xác nhận.</p>
+          <div class="mb-3">
+            <label class="form-label small fw-semibold">Lý do từ chối (tùy chọn)</label>
+            <textarea v-model="tuChoiLyDo" class="form-control form-control-sm" rows="2" placeholder="Nhập lý do..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary btn-sm" @click="showTuChoiHuyModal = false">Đóng</button>
+          <button class="btn btn-primary btn-sm" :disabled="tuChoiLoading" @click="tuChoiHuy">
+            <span v-if="tuChoiLoading" class="spinner-border spinner-border-sm me-1"></span>
+            Xác nhận từ chối
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL LỊCH SỬ -->
   <div class="modal fade" id="modalLichSu" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -487,11 +615,12 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, watch, computed, onMounted, onBeforeUnmount, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 import { Modal } from "bootstrap";
 import Swal from "sweetalert2";
+import vnAddressService from "@/services/vnAddressService";
 
 const props = defineProps({
   id: { type: [String, Number], required: false },
@@ -568,6 +697,27 @@ const checkQuyenThaoTac = async (callback) => {
 
 const tab = ref("donhang");
 
+// Address refs for delivery tab
+const provinces = ref([]);
+const districts = ref([]);
+const wards = ref([]);
+const addressCodes = reactive({ city: '', district: '', ward: '' });
+const addressNames = reactive({ city: '', district: '', ward: '' });
+
+// Toast notification
+const toast = reactive({ show: false, type: 'success', msg: '' });
+const showToast = (msg, type = 'success') => {
+  toast.msg = msg; toast.type = type; toast.show = true;
+  setTimeout(() => { toast.show = false; }, 3000);
+};
+
+// Cancel request refs
+const showTuChoiHuyModal = ref(false);
+const tuChoiLyDo = ref('');
+const tuChoiLoading = ref(false);
+const huyLoading = ref(false);
+const hoanPhiLoading = ref(false);
+
 const form = ref({
   maHD: "",
   ngayTao: "",
@@ -575,6 +725,7 @@ const form = ref({
   tenKhachHang: "",
   sdt: "",
   email: "",
+  diaChiCuThe: "",
 });
 
 let modal = null;
@@ -592,6 +743,8 @@ const trangThaiList = [
   { value: 3, label: "Đang vận chuyển", icon: "bi-truck" },
   { value: 4, label: "Đã giao hàng", icon: "bi-check-circle" },
   { value: 5, label: "Hoàn thành", icon: "bi-flag" },
+  { value: 6, label: "Đã hủy", icon: "bi-x-circle" },
+  { value: 7, label: "Yêu cầu hủy", icon: "bi-exclamation-triangle" },
 ];
 
 const selectedHD = ref({
@@ -1329,7 +1482,7 @@ const boSungLichSuMacDinhTuHoaDon = (arr, dataHoaDon) => {
  * ✅ MODAL
  * ========================= */
 
-const moModalSua = () => {
+const moModalSua = async () => {
   tab.value = "donhang";
   form.value = {
     maHD: selectedHD.value.maHD,
@@ -1338,7 +1491,18 @@ const moModalSua = () => {
     tenKhachHang: selectedHD.value.tenKhachHang,
     sdt: selectedHD.value.sdt,
     email: selectedHD.value.email,
+    diaChiCuThe: selectedHD.value.diaChi?.split(',')[0]?.trim() || '',
   };
+
+  // Reset address codes
+  addressCodes.city = ''; addressCodes.district = ''; addressCodes.ward = '';
+  addressNames.city = ''; addressNames.district = ''; addressNames.ward = '';
+  districts.value = []; wards.value = [];
+
+  // Load provinces nếu chưa có
+  if (!provinces.value.length) {
+    provinces.value = await vnAddressService.getProvinces();
+  }
 
   const el = document.getElementById("modalEdit");
   modal = Modal.getOrCreateInstance(el);
@@ -1373,6 +1537,35 @@ const updateHoaDon = async () => {
   } catch (error) {
     console.error("Update error:", error);
     alert("Lỗi khi cập nhật: " + (error.response?.data?.message || error.message));
+  }
+};
+
+const updateThongTinGiaoHang = async () => {
+  try {
+    const id = hoaDonIdHienTai.value;
+    if (!id) return;
+
+    // Build địa chỉ từ cascading dropdowns
+    const diaChi = vnAddressService.buildAddressText({
+      detail: form.value.diaChiCuThe,
+      wardName: addressNames.ward,
+      districtName: addressNames.district,
+      provinceName: addressNames.city,
+    }) || selectedHD.value.diaChi;
+
+    await axios.put(`${API_HD}/${id}/thong-tin-giao-hang`, {
+      tenKhachHang: form.value.tenKhachHang,
+      soDienThoaiKhachHang: form.value.sdt,
+      emailKhachHang: form.value.email,
+      diaChiKhachHang: diaChi,
+    });
+
+    await loadChiTiet(id);
+    modal?.hide();
+    showToast('Lưu thay đổi thành công!');
+  } catch (error) {
+    console.error("Update error:", error);
+    showToast(error.response?.data?.message || 'Lỗi khi cập nhật', 'danger');
   }
 };
 
@@ -1481,6 +1674,8 @@ const trangThaiHienThi = computed(() => {
     return trangThaiList.filter((st) => st.value === 1);
   }
 
+  // For status 6/7 (cancelled/request-cancel), show all 5 normal steps
+  if (current > 5) return trangThaiList.filter((st) => st.value <= 5);
   return trangThaiList.filter((st) => st.value <= current);
 });
 
@@ -1513,6 +1708,92 @@ const metaTheoTrangThai = computed(() => {
 });
 
 const metaTrangThai = (value) => metaTheoTrangThai.value?.[value] || null;
+
+const getStepIcon = (st) => {
+  if (st.value === 1 && selectedHD.value.trangThai === 6) return 'bi-ban';
+  if (st.value === 1 && selectedHD.value.trangThai === 7) return 'bi-exclamation-octagon-fill';
+  return st.icon;
+};
+
+const getCurrentNhanVienId = () => {
+  try {
+    const raw = localStorage.getItem("user") || sessionStorage.getItem("user")
+      || localStorage.getItem("nguoiDung") || sessionStorage.getItem("nguoiDung");
+    const u = JSON.parse(raw || 'null');
+    return u?.id || null;
+  } catch { return null; }
+};
+
+const xacNhanHuyTheoYeuCau = async () => {
+  if (!confirm('Xác nhận hủy đơn hàng theo yêu cầu của khách?')) return;
+  huyLoading.value = true;
+  try {
+    const id = hoaDonIdHienTai.value;
+    await axios.post(`${API_HD}/${id}/xac-nhan-huy-theo-yeu-cau`, { nhanVienId: getCurrentNhanVienId() });
+    await loadChiTiet(id);
+    showToast('Đã xác nhận hủy đơn hàng!');
+  } catch (err) {
+    showToast(err.response?.data?.message || 'Không thể xác nhận hủy đơn', 'danger');
+  } finally {
+    huyLoading.value = false;
+  }
+};
+
+const xacNhanHoanPhi = async () => {
+  if (!confirm('Xác nhận đã hoàn tiền cho khách hàng?')) return;
+  hoanPhiLoading.value = true;
+  try {
+    const id = hoaDonIdHienTai.value;
+    await axios.post(`${API_HD}/${id}/xac-nhan-hoan-phi`, { nhanVienId: getCurrentNhanVienId() });
+    await loadChiTiet(id);
+    showToast('Đã xác nhận hoàn phí!');
+  } catch (err) {
+    showToast(err.response?.data?.message || 'Không thể xác nhận hoàn phí', 'danger');
+  } finally {
+    hoanPhiLoading.value = false;
+  }
+};
+
+const tuChoiHuy = async () => {
+  tuChoiLoading.value = true;
+  try {
+    const id = hoaDonIdHienTai.value;
+    await axios.post(`${API_HD}/${id}/tu-choi-huy`, {
+      nhanVienId: getCurrentNhanVienId(),
+      lyDo: tuChoiLyDo.value || null,
+    });
+    showTuChoiHuyModal.value = false;
+    tuChoiLyDo.value = '';
+    await loadChiTiet(id);
+    showToast('Đã từ chối yêu cầu hủy đơn!');
+  } catch (err) {
+    showToast(err.response?.data?.message || 'Không thể từ chối yêu cầu hủy', 'danger');
+  } finally {
+    tuChoiLoading.value = false;
+  }
+};
+
+const onCityChange = async () => {
+  addressCodes.district = ''; addressCodes.ward = '';
+  districts.value = []; wards.value = [];
+  const p = provinces.value.find(x => x.code == addressCodes.city);
+  addressNames.city = p?.name || '';
+  addressNames.district = ''; addressNames.ward = '';
+  if (addressCodes.city) districts.value = await vnAddressService.getDistricts(addressCodes.city);
+};
+
+const onDistrictChange = async () => {
+  addressCodes.ward = ''; wards.value = [];
+  const d = districts.value.find(x => x.code == addressCodes.district);
+  addressNames.district = d?.name || '';
+  addressNames.ward = '';
+  if (addressCodes.district) wards.value = await vnAddressService.getWards(addressCodes.district);
+};
+
+const onWardChange = () => {
+  const w = wards.value.find(x => x.code == addressCodes.ward);
+  addressNames.ward = w?.name || '';
+};
 
 const thongTinTaoBoiText = computed(() => {
   const arr = [...(lichSuThaoTac.value || [])].sort((a, b) => {
@@ -1591,6 +1872,7 @@ const loadChiTiet = async (id) => {
 
     nguoiTaoId: data.nguoiTao ?? data.nguoi_tao ?? null,
     nguoiCapNhatId: data.nguoiCapNhat ?? data.nguoi_cap_nhat ?? null,
+    daHoanPhi: data.daHoanPhi,
   };
 
   const [lsThaoTacBE, lsThanhToanBE] = await Promise.all([
@@ -1870,6 +2152,18 @@ onBeforeUnmount(() => {
   color: #dc3545;
   font-weight: 400 !important;
 }
+.ss-step.cancelled .ss-icon {
+  border-color: #dc3545;
+  background: #fee2e2;
+  color: #dc3545;
+}
+.ss-step.cancelled span { color: #dc3545; }
+.ss-step.request-cancel .ss-icon {
+  border-color: #f97316;
+  background: #fff7ed;
+  color: #f97316;
+}
+.ss-step.request-cancel span { color: #f97316; }
 
 .ss-step-meta {
   margin: 6px auto 0;

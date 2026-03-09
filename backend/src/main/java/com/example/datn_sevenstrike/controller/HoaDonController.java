@@ -378,6 +378,46 @@ public class HoaDonController {
         return service.changeStatus(id, body.getTrangThai(), body.getGhiChu(), nguoiCapNhat);
     }
 
+    @PostMapping("/{id}/xac-nhan-huy-theo-yeu-cau")
+    public HoaDonResponse xacNhanHuyTheoYeuCau(@PathVariable Integer id,
+                                                @RequestBody(required = false) HuyDonBody body) {
+        Integer nhanVienId = body == null ? null : body.getNhanVienId();
+        String lyDo = body == null ? null : body.getLyDo();
+        return service.adminConfirmCancel(id, nhanVienId, lyDo);
+    }
+
+    @PostMapping("/{id}/tu-choi-huy")
+    public HoaDonResponse tuChoiHuy(@PathVariable Integer id,
+                                     @RequestBody(required = false) HuyDonBody body) {
+        Integer nhanVienId = body == null ? null : body.getNhanVienId();
+        String lyDo = body == null ? null : body.getLyDo();
+        return service.adminRejectCancel(id, nhanVienId, lyDo);
+    }
+
+    @PutMapping("/{id}/thong-tin-giao-hang")
+    public HoaDonResponse updateThongTinGiaoHang(@PathVariable Integer id,
+                                                   @RequestBody ThongTinGiaoHangBody body) {
+        return service.adminUpdateThongTinGiaoHang(
+                id,
+                body.getTenKhachHang(),
+                body.getSoDienThoaiKhachHang(),
+                body.getEmailKhachHang(),
+                body.getDiaChiKhachHang()
+        );
+    }
+
+    @PostMapping("/{id}/xac-nhan-hoan-phi")
+    public HoaDonResponse xacNhanHoanPhi(@PathVariable Integer id,
+                                          @RequestBody(required = false) HoanPhiBody body) {
+        Integer nhanVienId = body == null ? null : body.getNhanVienId();
+        return service.confirmHoanPhi(id, nhanVienId);
+    }
+
+    @GetMapping("/can-hoan-phi")
+    public List<HoaDonResponse> getDonCanHoanPhi() {
+        return service.getDonCanHoanPhi();
+    }
+
     @DeleteMapping("/{id}/reset")
     public void reset(@PathVariable Integer id) {
         service.resetHoaDonChoTaiQuay(id);
@@ -398,5 +438,24 @@ public class HoaDonController {
     @Data
     public static class NoteBody {
         private String ghiChu;
+    }
+
+    @Data
+    public static class HuyDonBody {
+        private Integer nhanVienId;
+        private String lyDo;
+    }
+
+    @Data
+    public static class ThongTinGiaoHangBody {
+        private String tenKhachHang;
+        private String soDienThoaiKhachHang;
+        private String emailKhachHang;
+        private String diaChiKhachHang;
+    }
+
+    @Data
+    public static class HoanPhiBody {
+        private Integer nhanVienId;
     }
 }

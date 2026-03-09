@@ -70,11 +70,19 @@
         >
           <div class="d-flex justify-content-between align-items-start">
             <span class="fw-semibold" style="font-size:13px">{{ session.tenKhach }}</span>
-            <span class="session-badge" :class="`badge-${session.trangThai}`">
-              {{ labelTrangThai(session.trangThai) }}
-            </span>
+            <div class="d-flex align-items-center gap-1">
+              <span v-if="sessionUnreadMap[session.id] > 0"
+                    class="badge rounded-pill bg-danger"
+                    style="font-size:10px; min-width:18px; padding:2px 5px;">
+                {{ sessionUnreadMap[session.id] > 99 ? '99+' : sessionUnreadMap[session.id] }}
+              </span>
+              <span class="session-badge" :class="`badge-${session.trangThai}`">
+                {{ labelTrangThai(session.trangThai) }}
+              </span>
+            </div>
           </div>
-          <div class="text-muted mt-1" style="font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+          <div class="text-muted mt-1" style="font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"
+               :class="{ 'fw-semibold text-dark': sessionUnreadMap[session.id] > 0 }">
             {{ session.tinNhanCuoi || '(chưa có tin nhắn)' }}
           </div>
           <div class="text-muted mt-1" style="font-size:11px;">
@@ -188,6 +196,9 @@ import {
   connectChat, sendStompMessage,
   layDanhSachPhien, layTinNhan, nhanPhien, dongPhien
 } from '@/chatAI/services/chatService'
+import { useChatBadge, setCurrentSession } from '@/chatAI/services/useChatBadge.js'
+
+const { sessionUnreadMap } = useChatBadge()
 
 // ── Dữ liệu ─────────────────────────────────────────────────────────────────
 const sessions            = ref([])
@@ -352,6 +363,7 @@ async function chonPhien(session) {
 
   selectedId.value      = session.id
   currentMessages.value = []
+  setCurrentSession(session.id)   // clear badge cho phiên này
 
   try {
     currentMessages.value = await layTinNhan(session.id)

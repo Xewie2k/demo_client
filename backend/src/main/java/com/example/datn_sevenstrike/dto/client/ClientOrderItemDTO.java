@@ -14,6 +14,8 @@ public class ClientOrderItemDTO {
     private String anhDaiDien;
     private String phanLoai; // e.g. "Kich thuoc: Nho, Mau: Xanh"
     private BigDecimal donGia;
+    private BigDecimal donGiaCu; // giá hiện tại (real-time) để FE so sánh
     private int soLuong;
     private BigDecimal thanhTien;
+    private Integer idChiTietSanPham;
 }

@@ -17,11 +17,12 @@
           :style="circleStyle(step.code)"
           style="width:40px; height:40px; font-size:1.1rem; transition:all 0.3s;"
         >
-          <i v-if="step.code < statusCode" class="bi bi-check-lg"></i>
+          <i v-if="step.code < effectiveStatus" class="bi bi-check-lg"></i>
+          <i v-else-if="statusCode >= 6 && step.code === 1" :class="statusCode === 7 ? 'bi bi-exclamation-octagon-fill' : 'bi bi-x-circle-fill'"></i>
           <i v-else :class="step.icon"></i>
         </div>
         <!-- Label -->
-        <div class="mt-2 fw-bold" :style="step.code <= statusCode ? { color: 'var(--ss-accent, #e53935)' } : { color: '#bbb' }" style="font-size:0.72rem; line-height:1.3;">
+        <div class="mt-2 fw-bold" :style="step.code <= effectiveStatus ? { color: 'var(--ss-accent, #e53935)' } : { color: '#bbb' }" style="font-size:0.72rem; line-height:1.3;">
           {{ step.label }}
         </div>
         <!-- Timestamp (nếu có) -->
@@ -55,14 +56,17 @@ export default {
   },
   computed: {
     allSteps() { return ALL_STEPS; },
+    effectiveStatus() {
+      return this.statusCode >= 6 ? 1 : (this.statusCode || 1);
+    },
     progressPercentage() {
-      const st = this.statusCode || 1;
+      const st = this.effectiveStatus;
       return Math.max(0, (st - 1) / (ALL_STEPS.length - 1) * 100);
     },
   },
   methods: {
     circleStyle(code) {
-      if (code <= this.statusCode) {
+      if (code <= this.effectiveStatus) {
         return { backgroundColor: 'var(--ss-accent, #e53935)', borderColor: 'var(--ss-accent, #e53935)', color: '#fff' };
       }
       return { backgroundColor: '#fff', borderColor: '#dee2e6', color: '#bbb' };

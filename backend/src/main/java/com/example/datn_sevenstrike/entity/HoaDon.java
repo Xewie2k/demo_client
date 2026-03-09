@@ -95,4 +95,8 @@ public class HoaDon {
 
     @Column(name = "nguoi_cap_nhat")
     private Integer nguoiCapNhat;
+
+    // null=không cần hoàn, false=chờ hoàn phí, true=đã hoàn phí
+    @Column(name = "da_hoan_phi")
+    private Boolean daHoanPhi;
 }

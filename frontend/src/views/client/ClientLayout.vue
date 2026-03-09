@@ -211,9 +211,6 @@
           <div class="col-lg-2 col-md-6">
              <h6 class="fw-bold text-uppercase mb-4">Kết nối</h6>
              <ul class="list-unstyled text-white-50 small">
-                <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Chính sách bảo mật</a></li>
-                <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Chính sách vận chuyển</a></li>
-                <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Chính sách đổi trả</a></li>
                 <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Quy định sử dụng</a></li>
              </ul>
           </div>

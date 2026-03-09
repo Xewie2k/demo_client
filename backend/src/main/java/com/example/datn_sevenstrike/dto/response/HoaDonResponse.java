@@ -58,6 +58,9 @@ public class HoaDonResponse {
 
     private List<HoaDonChiTietResponse> chiTietHoaDon;
 
+    private Boolean daHoanPhi;
+    private Integer loaiThanhToan; // 0: Tiền mặt/COD, 1: Chuyển khoản/VNPAY
+
     public HoaDonResponse(
             Integer id,
             Integer idKhachHang,
@@ -83,7 +86,8 @@ public class HoaDonResponse {
             Boolean xoaMem,
             Integer nguoiTao,
             LocalDateTime ngayCapNhat,
-            Integer nguoiCapNhat
+            Integer nguoiCapNhat,
+            Boolean daHoanPhi
     ) {
         this.id = id;
         this.idKhachHang = idKhachHang;
@@ -110,6 +114,7 @@ public class HoaDonResponse {
         this.nguoiTao = nguoiTao;
         this.ngayCapNhat = ngayCapNhat;
         this.nguoiCapNhat = nguoiCapNhat;
+        this.daHoanPhi = daHoanPhi;
     }
 
     public HoaDonResponse(
