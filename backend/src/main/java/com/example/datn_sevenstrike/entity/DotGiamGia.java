@@ -28,6 +28,9 @@ public class DotGiamGia {
     @Column(name = "gia_tri_giam_gia", nullable = false, precision = 18, scale = 2)
     private BigDecimal giaTriGiamGia;
 
+    @Column(name = "so_tien_giam_toi_da", nullable = false)
+    private BigDecimal soTienGiamToiDa;
+
     @Column(name = "ngay_bat_dau", nullable = false)
     private LocalDate ngayBatDau;
 

@@ -19,6 +19,7 @@ public class DotGiamGiaResponse {
 
     private Boolean loaiGiamGia;
     private BigDecimal giaTriGiamGia;
+    private BigDecimal soTienGiamToiDa;
 
     private LocalDate ngayBatDau;
     private LocalDate ngayKetThuc;

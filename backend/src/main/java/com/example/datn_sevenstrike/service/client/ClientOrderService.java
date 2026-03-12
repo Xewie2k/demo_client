@@ -357,31 +357,31 @@ public class ClientOrderService {
         }
 
         for (OrderItemRequest itemReq : req.getItems()) {
-            ChiTietSanPham ctsp = ctspRepo.findById(itemReq.getIdChiTietSanPham()).orElseThrow();
-            BigDecimal price = ctsp.getGiaBan() != null ? ctsp.getGiaBan() : ctsp.getGiaNiemYet();
-            Optional<ChiTietDotGiamGiaRepository.BestDotGiamGiaView> bestDiscountOrder =
+                ChiTietSanPham ctsp = ctspRepo.findById(itemReq.getIdChiTietSanPham()).orElseThrow();
+                BigDecimal price = ctsp.getGiaBan() != null ? ctsp.getGiaBan() : ctsp.getGiaNiemYet();
+                Optional<ChiTietDotGiamGiaRepository.BestDotGiamGiaView> bestDiscountOrder =
                     chiTietDotGiamGiaRepo.findBestActiveDotByCtspId(ctsp.getId(), today);
 
-            if (bestDiscountOrder.isPresent()) {
+                if (bestDiscountOrder.isPresent()) {
                 BigDecimal pct = bestDiscountOrder.get().getGiaTriGiamApDung();
-                price = price.multiply(
-                        BigDecimal.ONE.subtract(
-                                pct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
-                        )
-                )
-                        .setScale(0, RoundingMode.HALF_UP);
-            }
+                BigDecimal maxDiscount = bestDiscountOrder.get().getSoTienGiamToiDa();
+                BigDecimal discountAmount = price.multiply(pct).divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP);
+                if (maxDiscount != null && maxDiscount.compareTo(BigDecimal.ZERO) > 0 && discountAmount.compareTo(maxDiscount) > 0) {
+                    discountAmount = maxDiscount;
+                }
+                price = price.subtract(discountAmount).setScale(0, RoundingMode.HALF_UP);
+                }
 
-            BigDecimal subTotal = price.multiply(BigDecimal.valueOf(itemReq.getSoLuong()));
-            tongTien = tongTien.add(subTotal);
+                BigDecimal subTotal = price.multiply(BigDecimal.valueOf(itemReq.getSoLuong()));
+                tongTien = tongTien.add(subTotal);
 
-            HoaDonChiTiet hdct = HoaDonChiTiet.builder()
+                HoaDonChiTiet hdct = HoaDonChiTiet.builder()
                     .idChiTietSanPham(ctsp.getId())
                     .soLuong(itemReq.getSoLuong())
                     .donGia(price)
                     .xoaMem(false)
                     .build();
-            hdcts.add(hdct);
+                hdcts.add(hdct);
         }
 
         BigDecimal tienGiam = BigDecimal.ZERO;
@@ -614,13 +614,21 @@ public class ClientOrderService {
 
             if (bestDiscount.isPresent()) {
                 BigDecimal pct = bestDiscount.get().getGiaTriGiamApDung();
+                BigDecimal maxTien = bestDiscount.get().getSoTienGiamToiDa();
                 giaGoc = giaBan;
-                giaSauGiam = giaBan.multiply(
-                        BigDecimal.ONE.subtract(
-                                pct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
-                        )
-                )
-                        .setScale(0, RoundingMode.HALF_UP);
+
+                // 1. Tính số tiền giảm theo phần trăm
+                BigDecimal tienGiam = giaBan.multiply(pct).divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
+
+                // 2. Áp dụng giới hạn tối đa
+                if (maxTien != null && maxTien.compareTo(BigDecimal.ZERO) > 0) {
+                    if (tienGiam.compareTo(maxTien) > 0) {
+                        tienGiam = maxTien;
+                    }
+                }
+
+                // 3. Tính giá sau giảm
+                giaSauGiam = giaBan.subtract(tienGiam).setScale(0, RoundingMode.HALF_UP);
                 phanTramGiam = pct.intValue();
             }
 
@@ -737,13 +745,21 @@ public class ClientOrderService {
 
             if (bestDiscount2.isPresent()) {
                 BigDecimal pct = bestDiscount2.get().getGiaTriGiamApDung();
+                BigDecimal maxTien = bestDiscount2.get().getSoTienGiamToiDa();
                 giaGoc = giaBan;
-                giaSauGiam = giaBan.multiply(
-                        BigDecimal.ONE.subtract(
-                                pct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
-                        )
-                )
-                        .setScale(0, RoundingMode.HALF_UP);
+
+                // 1. Tính số tiền giảm theo phần trăm
+                BigDecimal tienGiam = giaBan.multiply(pct).divide(new BigDecimal("100"), 4, RoundingMode.HALF_UP);
+
+                // 2. Áp dụng giới hạn tối đa
+                if (maxTien != null && maxTien.compareTo(BigDecimal.ZERO) > 0) {
+                    if (tienGiam.compareTo(maxTien) > 0) {
+                        tienGiam = maxTien;
+                    }
+                }
+
+                // 3. Tính giá sau giảm
+                giaSauGiam = giaBan.subtract(tienGiam).setScale(0, RoundingMode.HALF_UP);
                 phanTramGiam = pct.intValue();
             }
 
