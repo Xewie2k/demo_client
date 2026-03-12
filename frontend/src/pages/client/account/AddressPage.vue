@@ -272,10 +272,17 @@ const saveAddress = async () => {
 };
 
 const setDefault = async (id) => {
+  const addr = addresses.value.find(a => a.id === id);
+  if (!addr) return;
   try {
     await apiClient.put(`/api/client/account/addresses/${id}`, {
       macDinh: true,
-      idKhachHang: customer.value.id
+      idKhachHang: customer.value.id,
+      tenDiaChi: addr.tenDiaChi,
+      thanhPho: addr.thanhPho,
+      quan: addr.quan,
+      phuong: addr.phuong,
+      diaChiCuThe: addr.diaChiCuThe,
     });
     loading.value = true;
     await fetchAddresses();

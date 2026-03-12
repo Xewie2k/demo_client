@@ -47,11 +47,12 @@ public class DiaChiKhachHangService {
         trimSafe(e);
         validateByDb(e);
 
-        DiaChiKhachHang saved = repo.save(e);
-
-        if (Boolean.TRUE.equals(saved.getMacDinh())) {
-            repo.unsetDefaultOthers(saved.getIdKhachHang(), saved.getId());
+        // ✅ If setting as default, unset other defaults BEFORE saving to avoid unique constraint violation
+        if (Boolean.TRUE.equals(e.getMacDinh())) {
+            repo.unsetDefaultOthers(e.getIdKhachHang(), null);
         }
+
+        DiaChiKhachHang saved = repo.save(e);
 
         return toResponse(saved);
     }
@@ -70,18 +71,22 @@ public class DiaChiKhachHangService {
         if (req.getPhuong() != null) db.setPhuong(req.getPhuong());
         if (req.getDiaChiCuThe() != null) db.setDiaChiCuThe(req.getDiaChiCuThe());
 
-        if (req.getMacDinh() != null) db.setMacDinh(req.getMacDinh());
         if (req.getXoaMem() != null) db.setXoaMem(req.getXoaMem());
+
+        // ✅ Fix lỗi 409 Conflict: Unset các mặc định cũ TRƯỚC khi set true cho entity này.
+        // Nếu set db.setMacDinh(true) trước, Hibernate sẽ tự flush update đó gây trùng unique key.
+        if (Boolean.TRUE.equals(req.getMacDinh())) {
+            repo.unsetDefaultOthers(db.getIdKhachHang(), db.getId());
+            db.setMacDinh(true);
+        } else if (req.getMacDinh() != null) {
+            db.setMacDinh(req.getMacDinh());
+        }
 
         applyDefaultsCommon(db);
         trimSafe(db);
         validateByDb(db);
 
         DiaChiKhachHang saved = repo.save(db);
-
-        if (Boolean.TRUE.equals(saved.getMacDinh())) {
-            repo.unsetDefaultOthers(saved.getIdKhachHang(), saved.getId());
-        }
 
         return toResponse(saved);
     }
@@ -95,12 +100,15 @@ public class DiaChiKhachHangService {
     }
 
     private void applyDefaultsOnCreate(DiaChiKhachHang e) {
-        applyDefaultsCommon(e);
+        if (e.getXoaMem() == null) e.setXoaMem(false);
 
-        if (e.getMacDinh() == null) {
+        // If user explicitly set macDinh=true, respect it
+        // If not explicitly requested as default, auto-default only if this is the first address
+        if (!Boolean.TRUE.equals(e.getMacDinh())) {
             boolean hasDefault = repo.findFirstByIdKhachHangAndMacDinhTrueAndXoaMemFalse(e.getIdKhachHang()).isPresent();
             e.setMacDinh(!hasDefault);
         }
+        // If e.getMacDinh() is true, keep it as true (don't override user's choice)
     }
 
     private void applyDefaultsCommon(DiaChiKhachHang e) {
