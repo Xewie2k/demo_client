@@ -1,15 +1,18 @@
 package com.example.datn_sevenstrike.service.client;
 
+import com.example.datn_sevenstrike.constants.TrangThaiHoaDon;
 import com.example.datn_sevenstrike.dto.client.*;
 import com.example.datn_sevenstrike.entity.*;
-import com.example.datn_sevenstrike.constants.TrangThaiHoaDon;
 import com.example.datn_sevenstrike.exception.BadRequestEx;
 import com.example.datn_sevenstrike.exception.NotFoundEx;
+import com.example.datn_sevenstrike.ghn.dto.request.GhnTinhPhiRequest;
+import com.example.datn_sevenstrike.ghn.dto.response.GhnTinhPhiResponse;
+import com.example.datn_sevenstrike.ghn.service.GhnService;
 import com.example.datn_sevenstrike.repository.*;
-// EmailService is now in the same package
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,7 +21,6 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-import org.springframework.data.domain.PageRequest;
 import java.util.stream.Collectors;
 
 @Service
@@ -38,23 +40,22 @@ public class ClientOrderService {
     private final PhuongThucThanhToanRepository phuongThucThanhToanRepo;
     private final EmailService emailService;
     private final EntityManager entityManager;
+    private final GhnService ghnService;
 
     @Value("${app.backend.url:http://localhost:8080}")
     private String backendUrl;
 
-    // List all products for client
     @Transactional(readOnly = true)
     public List<ProductClientDTO> getProducts() {
         List<SanPham> list = sanPhamRepo.findAllByXoaMemFalseAndTrangThaiKinhDoanhTrueOrderByIdDesc();
         return list.stream().map(this::mapToProductClientDTO).collect(Collectors.toList());
     }
 
-    // Sản phẩm bán chạy nhất (top 8 theo số lượng bán trong 12 tháng gần nhất)
     @Transactional(readOnly = true)
     public List<ProductClientDTO> getBestSellingProducts() {
         LocalDateTime startOfMonth = LocalDateTime.now().minusMonths(12);
         List<Integer> topIds = hdctRepo.findBestSellingProductIds(startOfMonth, PageRequest.of(0, 8));
-        // Giữ nguyên thứ tự bán chạy
+
         List<ProductClientDTO> result = new ArrayList<>();
         Set<Integer> seen = new LinkedHashSet<>();
         for (Integer spId : topIds) {
@@ -65,7 +66,6 @@ public class ClientOrderService {
         return result;
     }
 
-    // Hàng mới về trong 12 tháng gần nhất (tối đa 8 sản phẩm)
     @Transactional(readOnly = true)
     public List<ProductClientDTO> getNewArrivalProducts() {
         LocalDateTime threshold = LocalDateTime.now().minusMonths(12);
@@ -73,16 +73,14 @@ public class ClientOrderService {
         return list.stream().map(this::mapToProductClientDTO).collect(Collectors.toList());
     }
 
-    // Detail product
     @Transactional(readOnly = true)
     public ProductDetailClientDTO getProductDetail(Integer id) {
         SanPham sp = sanPhamRepo.findByIdAndXoaMemFalse(id)
                 .orElseThrow(() -> new NotFoundEx("Không tìm thấy sản phẩm id=" + id));
-        
+
         return mapToProductDetailClientDTO(sp);
     }
 
-    // Vouchers
     @Transactional(readOnly = true)
     public List<VoucherClientDTO> getVouchers() {
         LocalDate today = LocalDate.now();
@@ -102,13 +100,11 @@ public class ClientOrderService {
                 .collect(Collectors.toList());
     }
 
-    // My Coupons (personal + public)
     @Transactional(readOnly = true)
     public List<MyVoucherDTO> getMyCoupons(Integer customerId) {
         LocalDate today = LocalDate.now();
         Map<Integer, MyVoucherDTO> result = new LinkedHashMap<>();
 
-        // 1. Phiếu cá nhân
         List<PhieuGiamGiaCaNhan> personalList = phieuCaNhanRepo.findAllByIdKhachHangFetch(customerId);
         for (PhieuGiamGiaCaNhan cn : personalList) {
             PhieuGiamGia p = cn.getPhieuGiamGia();
@@ -135,7 +131,6 @@ public class ClientOrderService {
                     .build());
         }
 
-        // 2. Phiếu công khai
         List<PhieuGiamGia> publicList = phieuRepo.findAllByXoaMemFalseOrderByIdDesc();
         for (PhieuGiamGia p : publicList) {
             if (result.containsKey(p.getId())) continue;
@@ -171,7 +166,6 @@ public class ClientOrderService {
         return "available";
     }
 
-    // My Orders
     @Transactional(readOnly = true)
     public List<ClientOrderHistoryDTO> getOrdersByCustomerId(Integer customerId) {
         if (customerId == null) return new ArrayList<>();
@@ -184,17 +178,12 @@ public class ClientOrderService {
         HoaDon hd = hoaDonRepo.findById(id)
                 .orElseThrow(() -> new NotFoundEx("Không tìm thấy hóa đơn id=" + id));
 
-        // Items
         List<HoaDonChiTiet> details = hdctRepo.findAllByIdHoaDonAndXoaMemFalseOrderByIdAsc(hd.getId());
         List<ClientOrderItemDTO> items = details.stream().map(this::mapToClientOrderItemDTO).collect(Collectors.toList());
 
-        // Timeline
         List<LichSuHoaDon> history = lsHdRepo.findAllByIdHoaDonAndXoaMemFalseOrderByThoiGianAsc(hd.getId());
 
         List<ClientTimelineDTO> timeline = new ArrayList<>();
-        // We want to show all possible statuses or just the history?
-        // Usually tracking shows the flow: Placed -> Confirmed -> Shipping -> Delivered.
-        // For simplicity, let's just return what happened.
         for (LichSuHoaDon h : history) {
             TrangThaiHoaDon statusEnum = TrangThaiHoaDon.fromCode(h.getTrangThai());
             timeline.add(ClientTimelineDTO.builder()
@@ -215,6 +204,16 @@ public class ClientOrderService {
             ptttText = hd.getNgayThanhToan() != null ? "Thanh toán trước (VNPay)" : "Chờ thanh toán (VNPay)";
         }
 
+        // ✅ FIX: Compute tamTinh from actual items (entity tongTien may be stale after edits)
+        BigDecimal tamTinhReal = details.stream()
+                .map(d -> {
+                    BigDecimal dg = d.getDonGia() != null ? d.getDonGia() : BigDecimal.ZERO;
+                    int sl = d.getSoLuong() != null ? d.getSoLuong() : 0;
+                    return dg.multiply(BigDecimal.valueOf(sl));
+                })
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal giamGiaReal = tamTinhReal.subtract(hd.getTongTienSauGiam()).max(BigDecimal.ZERO);
+
         return ClientOrderDetailDTO.builder()
                 .id(hd.getId())
                 .maHoaDon(hd.getMaHoaDon())
@@ -224,16 +223,10 @@ public class ClientOrderService {
                 .tenNguoiNhan(hd.getTenKhachHang())
                 .soDienThoai(hd.getSoDienThoaiKhachHang())
                 .diaChi(hd.getDiaChiKhachHang())
-                .tamTinh(details.stream()
-                        .map(ct -> ct.getDonGia().multiply(BigDecimal.valueOf(ct.getSoLuong())))
-                        .reduce(BigDecimal.ZERO, BigDecimal::add))
+                .tamTinh(tamTinhReal)
                 .phiVanChuyen(hd.getPhiVanChuyen())
-                .giamGia(hd.getTongTien().subtract(hd.getTongTienSauGiam()))
-                .tongTien(details.stream()
-                        .map(ct -> ct.getDonGia().multiply(BigDecimal.valueOf(ct.getSoLuong())))
-                        .reduce(BigDecimal.ZERO, BigDecimal::add)
-                        .subtract(hd.getTongTien().subtract(hd.getTongTienSauGiam()))
-                        .add(hd.getPhiVanChuyen() != null ? hd.getPhiVanChuyen() : BigDecimal.ZERO))
+                .giamGia(giamGiaReal)
+                .tongTien(hd.getTongTienSauGiam().add(hd.getPhiVanChuyen() != null ? hd.getPhiVanChuyen() : BigDecimal.ZERO))
                 .items(items)
                 .timeline(timeline)
                 .daThanhToan(hd.getNgayThanhToan() != null)
@@ -247,22 +240,23 @@ public class ClientOrderService {
         List<HoaDonChiTiet> details = hdctRepo.findAllByIdHoaDonAndXoaMemFalseOrderByIdAsc(hd.getId());
         String thumb = null;
         String firstProductName = "";
-        
+
         if (!details.isEmpty()) {
-             HoaDonChiTiet first = details.get(0);
-             ChiTietSanPham ctsp = ctspRepo.findById(first.getIdChiTietSanPham()).orElse(null);
-             if (ctsp != null && ctsp.getSanPham() != null) {
-                 firstProductName = ctsp.getSanPham().getTenSanPham();
-                 // find thumb
-                 List<AnhChiTietSanPham> imgs = anhRepo.findAllByIdChiTietSanPhamAndXoaMemFalseOrderByIdDesc(ctsp.getId());
-                 if (!imgs.isEmpty()) {
-                     thumb = imgs.stream().filter(img -> Boolean.TRUE.equals(img.getLaAnhDaiDien()))
-                             .findFirst().map(img -> getFullUrl(img.getDuongDanAnh()))
-                             .orElse(getFullUrl(imgs.get(0).getDuongDanAnh()));
-                 }
-             }
+            HoaDonChiTiet first = details.get(0);
+            ChiTietSanPham ctsp = ctspRepo.findById(first.getIdChiTietSanPham()).orElse(null);
+            if (ctsp != null && ctsp.getSanPham() != null) {
+                firstProductName = ctsp.getSanPham().getTenSanPham();
+                List<AnhChiTietSanPham> imgs = anhRepo.findAllByIdChiTietSanPhamAndXoaMemFalseOrderByIdDesc(ctsp.getId());
+                if (!imgs.isEmpty()) {
+                    thumb = imgs.stream()
+                            .filter(img -> Boolean.TRUE.equals(img.getLaAnhDaiDien()))
+                            .findFirst()
+                            .map(img -> getFullUrl(img.getDuongDanAnh()))
+                            .orElse(getFullUrl(imgs.get(0).getDuongDanAnh()));
+                }
+            }
         }
-        
+
         TrangThaiHoaDon status = TrangThaiHoaDon.fromCode(hd.getTrangThaiHienTai());
 
         return ClientOrderHistoryDTO.builder()
@@ -270,11 +264,7 @@ public class ClientOrderService {
                 .maHoaDon(hd.getMaHoaDon())
                 .ngayTao(hd.getNgayTao())
                 .trangThai(status != null ? status.label : "")
-                .tongTien(details.stream()
-                        .map(ct -> ct.getDonGia().multiply(BigDecimal.valueOf(ct.getSoLuong())))
-                        .reduce(BigDecimal.ZERO, BigDecimal::add)
-                        .subtract(hd.getTongTien().subtract(hd.getTongTienSauGiam()))
-                        .add(hd.getPhiVanChuyen() != null ? hd.getPhiVanChuyen() : BigDecimal.ZERO))
+                .tongTien(hd.getTongTienSauGiam().add(hd.getPhiVanChuyen() != null ? hd.getPhiVanChuyen() : BigDecimal.ZERO))
                 .soLuongSanPham(details.size())
                 .sanPhamDaiDien(firstProductName)
                 .anhDaiDien(thumb)
@@ -287,31 +277,40 @@ public class ClientOrderService {
         String thumb = null;
         String variant = "";
         BigDecimal currentPrice = BigDecimal.ZERO;
-        
+
         if (ctsp != null) {
-            if (ctsp.getSanPham() != null) name = ctsp.getSanPham().getTenSanPham();
-            variant = (ctsp.getMauSac() != null ? ctsp.getMauSac().getTenMauSac() : "") + " - " + 
-                      (ctsp.getKichThuoc() != null ? ctsp.getKichThuoc().getTenKichThuoc() : "");
-            
+            if (ctsp.getSanPham() != null) {
+                name = ctsp.getSanPham().getTenSanPham();
+            }
+
+            variant = (ctsp.getMauSac() != null ? ctsp.getMauSac().getTenMauSac() : "") + " - " +
+                    (ctsp.getKichThuoc() != null ? ctsp.getKichThuoc().getTenKichThuoc() : "");
+
             List<AnhChiTietSanPham> imgs = anhRepo.findAllByIdChiTietSanPhamAndXoaMemFalseOrderByIdDesc(ctsp.getId());
-             if (!imgs.isEmpty()) {
-                 thumb = imgs.stream().filter(img -> Boolean.TRUE.equals(img.getLaAnhDaiDien()))
-                         .findFirst().map(img -> getFullUrl(img.getDuongDanAnh()))
-                         .orElse(getFullUrl(imgs.get(0).getDuongDanAnh()));
-             }
+            if (!imgs.isEmpty()) {
+                thumb = imgs.stream()
+                        .filter(img -> Boolean.TRUE.equals(img.getLaAnhDaiDien()))
+                        .findFirst()
+                        .map(img -> getFullUrl(img.getDuongDanAnh()))
+                        .orElse(getFullUrl(imgs.get(0).getDuongDanAnh()));
+            }
 
             // Tính giá hiện tại để hiển thị so sánh (donGiaCu trong DTO)
             BigDecimal giaBan = ctsp.getGiaBan() != null ? ctsp.getGiaBan() : ctsp.getGiaNiemYet();
-            currentPrice = giaBan;
+            currentPrice = giaBan != null ? giaBan : BigDecimal.ZERO;
             LocalDate today = LocalDate.now();
-            Optional<ChiTietDotGiamGiaRepository.BestDotGiamGiaView> bestDiscount = chiTietDotGiamGiaRepo.findBestActiveDotByCtspId(ctsp.getId(), today);
+            Optional<ChiTietDotGiamGiaRepository.BestDotGiamGiaView> bestDiscount =
+                    chiTietDotGiamGiaRepo.findBestActiveDotByCtspId(ctsp.getId(), today);
             if (bestDiscount.isPresent()) {
                 BigDecimal pct = bestDiscount.get().getGiaTriGiamApDung();
-                currentPrice = giaBan.multiply(BigDecimal.ONE.subtract(pct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP))).setScale(0, RoundingMode.HALF_UP);
+                currentPrice = currentPrice.multiply(
+                        BigDecimal.ONE.subtract(pct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP))
+                ).setScale(0, RoundingMode.HALF_UP);
             }
         }
 
         return ClientOrderItemDTO.builder()
+                .id(item.getId())
                 .tenSanPham(name)
                 .anhDaiDien(thumb)
                 .phanLoai(variant)
@@ -320,13 +319,12 @@ public class ClientOrderService {
                 .soLuong(item.getSoLuong())
                 .thanhTien(item.getDonGia().multiply(BigDecimal.valueOf(item.getSoLuong())))
                 .idChiTietSanPham(item.getIdChiTietSanPham())
+                .tonKho(ctsp != null ? ctsp.getSoLuong() : 0)
                 .build();
     }
 
-    // Order
     @Transactional
     public OrderResponse createOrder(OrderRequest req) {
-        // 1. Validate
         if (req.getItems() == null || req.getItems().isEmpty()) {
             throw new BadRequestEx("Giỏ hàng trống");
         }
@@ -335,21 +333,45 @@ public class ClientOrderService {
         List<HoaDonChiTiet> hdcts = new ArrayList<>();
         LocalDate today = LocalDate.now();
 
-        // Check Items & Stock
+        // ✅ FIX BUG: Gộp tổng số lượng theo ID sản phẩm trước khi check tồn kho
+        Map<Integer, Integer> totalQtyMap = new HashMap<>();
         for (OrderItemRequest itemReq : req.getItems()) {
-            ChiTietSanPham ctsp = ctspRepo.findByIdAndXoaMemFalse(itemReq.getIdChiTietSanPham())
-                    .orElseThrow(() -> new BadRequestEx("Sản phẩm không tồn tại id=" + itemReq.getIdChiTietSanPham()));
+            if (itemReq.getIdChiTietSanPham() == null) continue;
+            if (itemReq.getSoLuong() == null || itemReq.getSoLuong() <= 0) continue;
+            totalQtyMap.merge(itemReq.getIdChiTietSanPham(), itemReq.getSoLuong(), Integer::sum);
+        }
 
-            if (ctsp.getSoLuong() < itemReq.getSoLuong()) {
-                 throw new BadRequestEx("Sản phẩm không đủ hàng");
+        // Check tồn kho dựa trên tổng số lượng
+        for (Map.Entry<Integer, Integer> entry : totalQtyMap.entrySet()) {
+            Integer ctspId = entry.getKey();
+            Integer totalQty = entry.getValue();
+
+            ChiTietSanPham ctsp = ctspRepo.findByIdAndXoaMemFalse(ctspId)
+                    .orElseThrow(() -> new BadRequestEx("Sản phẩm không tồn tại id=" + ctspId));
+
+            if (ctsp.getSoLuong() < totalQty) {
+                // ✅ FIX LỖI BIÊN DỊCH: Gọi getSanPham() trước khi getTenSanPham()
+                String tenSp = (ctsp.getSanPham() != null) ? ctsp.getSanPham().getTenSanPham() : "Sản phẩm";
+                throw new BadRequestEx("Sản phẩm " + tenSp + " không đủ hàng (Yêu cầu: " + totalQty + ", Tồn: " + ctsp.getSoLuong() + ")");
             }
+        }
 
+        for (OrderItemRequest itemReq : req.getItems()) {
+            ChiTietSanPham ctsp = ctspRepo.findById(itemReq.getIdChiTietSanPham()).orElseThrow();
             BigDecimal price = ctsp.getGiaBan() != null ? ctsp.getGiaBan() : ctsp.getGiaNiemYet();
-            Optional<ChiTietDotGiamGiaRepository.BestDotGiamGiaView> bestDiscountOrder = chiTietDotGiamGiaRepo.findBestActiveDotByCtspId(ctsp.getId(), today);
+            Optional<ChiTietDotGiamGiaRepository.BestDotGiamGiaView> bestDiscountOrder =
+                    chiTietDotGiamGiaRepo.findBestActiveDotByCtspId(ctsp.getId(), today);
+
             if (bestDiscountOrder.isPresent()) {
                 BigDecimal pct = bestDiscountOrder.get().getGiaTriGiamApDung();
-                price = price.multiply(BigDecimal.ONE.subtract(pct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP))).setScale(0, RoundingMode.HALF_UP);
+                price = price.multiply(
+                        BigDecimal.ONE.subtract(
+                                pct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
+                        )
+                )
+                        .setScale(0, RoundingMode.HALF_UP);
             }
+
             BigDecimal subTotal = price.multiply(BigDecimal.valueOf(itemReq.getSoLuong()));
             tongTien = tongTien.add(subTotal);
 
@@ -362,53 +384,69 @@ public class ClientOrderService {
             hdcts.add(hdct);
         }
 
-        // Voucher
         BigDecimal tienGiam = BigDecimal.ZERO;
         PhieuGiamGia voucher = null;
+
         if (req.getIdPhieuGiamGia() != null) {
             voucher = phieuRepo.findByIdAndXoaMemFalse(req.getIdPhieuGiamGia())
                     .orElseThrow(() -> new BadRequestEx("Voucher không tồn tại"));
 
-            // Nếu là khách vãng lai (chưa đăng nhập), không cho dùng phiếu cá nhân
             boolean laPhieuCaNhan = !phieuCaNhanRepo
                     .findAllByIdPhieuGiamGiaAndXoaMemFalseOrderByIdDesc(req.getIdPhieuGiamGia())
                     .isEmpty();
+
             if (laPhieuCaNhan && req.getIdKhachHang() == null) {
                 throw new BadRequestEx("Phiếu giảm giá này chỉ dành cho khách hàng đã đăng nhập");
             }
 
-             if (!Boolean.TRUE.equals(voucher.getTrangThai()) || 
-                 voucher.getSoLuongSuDung() <= 0 || 
-                 voucher.getNgayBatDau().isAfter(today) || 
-                 voucher.getNgayKetThuc().isBefore(today)) {
-                 throw new BadRequestEx("Voucher không khả dụng");
-             }
-             
-             if (voucher.getHoaDonToiThieu() != null && tongTien.compareTo(voucher.getHoaDonToiThieu()) < 0) {
-                  throw new BadRequestEx("Đơn hàng chưa đạt giá trị tối thiểu của voucher");
-             }
+            if (!Boolean.TRUE.equals(voucher.getTrangThai())
+                    || voucher.getSoLuongSuDung() <= 0
+                    || voucher.getNgayBatDau().isAfter(today)
+                    || voucher.getNgayKetThuc().isBefore(today)) {
+                throw new BadRequestEx("Voucher không khả dụng");
+            }
 
-             if (Boolean.TRUE.equals(voucher.getLoaiPhieuGiamGia()) && voucher.getGiaTriGiamGia() != null) {
-                 // Percent
-                 tienGiam = tongTien.multiply(voucher.getGiaTriGiamGia()).divide(BigDecimal.valueOf(100));
-                 if (voucher.getSoTienGiamToiDa() != null && tienGiam.compareTo(voucher.getSoTienGiamToiDa()) > 0) {
-                     tienGiam = voucher.getSoTienGiamToiDa();
-                 }
-             } else {
-                 // Amount
-                 tienGiam = voucher.getSoTienGiamToiDa();
-             }
-             
-             if (tienGiam.compareTo(tongTien) > 0) tienGiam = tongTien;
+            if (voucher.getHoaDonToiThieu() != null && tongTien.compareTo(voucher.getHoaDonToiThieu()) < 0) {
+                throw new BadRequestEx("Đơn hàng chưa đạt giá trị tối thiểu của voucher");
+            }
 
-             voucher.setSoLuongSuDung(voucher.getSoLuongSuDung() - 1);
-             phieuRepo.save(voucher);
+            if (Boolean.FALSE.equals(voucher.getLoaiPhieuGiamGia()) && voucher.getGiaTriGiamGia() != null) {
+                tienGiam = tongTien.multiply(voucher.getGiaTriGiamGia())
+                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+                if (voucher.getSoTienGiamToiDa() != null && tienGiam.compareTo(voucher.getSoTienGiamToiDa()) > 0) {
+                    tienGiam = voucher.getSoTienGiamToiDa();
+                }
+            } else {
+                tienGiam = voucher.getGiaTriGiamGia() != null ? voucher.getGiaTriGiamGia() : BigDecimal.ZERO;
+            }
+
+            if (tienGiam.compareTo(tongTien) > 0) {
+                tienGiam = tongTien;
+            }
+
+            voucher.setSoLuongSuDung(voucher.getSoLuongSuDung() - 1);
+            phieuRepo.save(voucher);
         }
 
-        BigDecimal phiVanChuyen = new BigDecimal(40000);
+        BigDecimal phiVanChuyen;
+        if (req.getGhnToDistrictId() != null && req.getGhnToWardCode() != null
+                && !req.getGhnToWardCode().isBlank()) {
+            try {
+                GhnTinhPhiRequest ghnReq = new GhnTinhPhiRequest();
+                ghnReq.setToDistrictId(req.getGhnToDistrictId());
+                ghnReq.setToWardCode(req.getGhnToWardCode());
+                ghnReq.setTongGiaTriHang(tongTien.longValue());
+                GhnTinhPhiResponse ghnRes = ghnService.tinhPhiVanChuyen(ghnReq);
+                phiVanChuyen = BigDecimal.valueOf(ghnRes.getTotal());
+            } catch (Exception e) {
+                phiVanChuyen = new BigDecimal("40000"); // fallback nếu GHN lỗi
+            }
+        } else {
+            phiVanChuyen = new BigDecimal("40000");
+        }
         BigDecimal thanhTien = tongTien.subtract(tienGiam);
 
-        // Create HoaDon
         HoaDon hd = HoaDon.builder()
                 .idKhachHang(req.getIdKhachHang())
                 .tenKhachHang(req.getTenKhachHang())
@@ -426,54 +464,101 @@ public class ClientOrderService {
                 .ngayCapNhat(LocalDateTime.now())
                 .xoaMem(false)
                 .build();
-        
+
         hd = hoaDonRepo.save(hd);
 
-        // Save HDCT
         for (HoaDonChiTiet item : hdcts) {
             item.setIdHoaDon(hd.getId());
             hdctRepo.save(item);
         }
 
-        // ✅ [FIX] Xác định phương thức thanh toán (ID) từ loaiThanhToan (0/1) nếu FE chưa gửi ID
+        // ✅ FIX BUG: Xác định phương thức thanh toán (ID) từ loaiThanhToan (0/1) hoặc idPhuongThucThanhToan
         Integer ptttId = req.getIdPhuongThucThanhToan();
-        if (ptttId == null && req.getLoaiThanhToan() != null) {
-            // Tìm PTTT trong DB dựa trên tên (VNPAY hoặc Tiền mặt)
-            String keyword = (req.getLoaiThanhToan() == 1) ? "VNPAY" : "Tiền mặt";
+        Integer loaiThanhToan = req.getLoaiThanhToan(); // 0: COD, 1: VNPay/Chuyển khoản
+
+        // 🔍 DEBUG LOG
+        System.out.println("=== CREATE ORDER DEBUG ===");
+        System.out.println("loaiThanhToan: " + loaiThanhToan);
+        System.out.println("idPhuongThucThanhToan: " + ptttId);
+
+        if (ptttId == null) {
             List<PhuongThucThanhToan> allPttt = phuongThucThanhToanRepo.findAllByXoaMemFalseAndTrangThaiTrueOrderByIdDesc();
-            
+            System.out.println("Danh sách phương thức thanh toán:");
             for (PhuongThucThanhToan p : allPttt) {
-                if (p.getTenPhuongThucThanhToan().toUpperCase().contains(keyword.toUpperCase())) {
-                    ptttId = p.getId();
-                    break;
-                }
+                System.out.println("  - ID: " + p.getId() + ", Name: " + p.getTenPhuongThucThanhToan());
             }
-            // Fallback: Nếu là VNPay mà không tìm thấy chữ VNPAY, thử tìm "Chuyển khoản"
-            if (ptttId == null && req.getLoaiThanhToan() == 1) {
+
+            if (loaiThanhToan == null || loaiThanhToan == 0) {
+                // Fallback: COD/Tiền mặt (mặc định)
                 for (PhuongThucThanhToan p : allPttt) {
-                    if (p.getTenPhuongThucThanhToan().toUpperCase().contains("CHUYỂN KHOẢN")) {
+                    String name = p.getTenPhuongThucThanhToan().toUpperCase();
+                    if (name.contains("TIỀN MẶT") || name.contains("COD")) {
+                        System.out.println("✅ Tìm thấy COD method: " + p.getTenPhuongThucThanhToan() + " (ID=" + p.getId() + ")");
                         ptttId = p.getId();
                         break;
                     }
+                }
+            } else if (loaiThanhToan == 1) {
+                // VNPay/Chuyển khoản: tìm VNPAY hoặc CHUYỂN KHOÁN (case insensitive)
+                for (PhuongThucThanhToan p : allPttt) {
+                    String name = p.getTenPhuongThucThanhToan();
+                    String nameUpper = name.toUpperCase();
+                    // ⚠️ Match case-insensitive: VNPAY, VNPay, vnpay, CHUYỂN KHOÁN, chuyển khoán, etc.
+                    if (nameUpper.contains("VNPAY") || nameUpper.contains("CHUYỂN KHOÁN") || nameUpper.contains("BANKING") || nameUpper.contains("CHUYỂN")) {
+                        System.out.println("✅ Tìm thấy VNPAY method: " + name + " (ID=" + p.getId() + ")");
+                        ptttId = p.getId();
+                        break;
+                    }
+                }
+                // ⚠️ Nếu khách chọn VNPay (1) mà không tìm thấy ID phương thức -> Báo lỗi ngay
+                if (ptttId == null) {
+                    System.out.println("❌ ERROR: Không tìm thấy phương thức VNPAY/CHUYỂN KHOÁN!");
+                    System.out.println("Danh sách phương thức hiện có:");
+                    for (PhuongThucThanhToan p : allPttt) {
+                        System.out.println("  - ID=" + p.getId() + ", Name=" + p.getTenPhuongThucThanhToan());
+                    }
+                    throw new BadRequestEx("Hệ thống chưa cấu hình phương thức thanh toán VNPAY/Chuyển khoán. Vui lòng liên hệ Admin.");
                 }
             }
         }
 
         // ✅ Tạo giao dịch thanh toán ngay để đánh dấu loại đơn
+        // ⚠️ QUAN TRỌNG: Phải có GiaoDichThanhToan để isDonChuyenKhoan() hoạt động đúng
         if (ptttId != null) {
             GiaoDichThanhToan gd = new GiaoDichThanhToan();
             gd.setIdHoaDon(hd.getId());
             gd.setIdPhuongThucThanhToan(ptttId);
             gd.setSoTien(thanhTien);
-            gd.setTrangThai("khoi_tao"); // Pending
-            gd.setThoiGianTao(LocalDateTime.now());
+            gd.setTrangThai("khoi_tao");
+            LocalDateTime now = LocalDateTime.now();
+            gd.setThoiGianCapNhat(now);
+            gd.setNguoiCapNhat(req.getIdKhachHang());
             gd.setXoaMem(false);
-            gd.setGhiChu("Khởi tạo đơn hàng");
-            // Lưu ý: Nếu là VNPAY, sau này sẽ update lại mã giao dịch/URL
+            gd.setGhiChu("Khởi tạo đơn hàng online");
             giaoDichThanhToanRepo.save(gd);
+            System.out.println("✅ Saved GiaoDichThanhToan: id=" + gd.getId() + ", ptttId=" + ptttId);
+        } else {
+            // ⚠️ Fallback: Nếu vẫn không tìm được phương thức, tạo COD mặc định
+            List<PhuongThucThanhToan> allPttt = phuongThucThanhToanRepo.findAllByXoaMemFalseAndTrangThaiTrueOrderByIdDesc();
+            for (PhuongThucThanhToan p : allPttt) {
+                String name = p.getTenPhuongThucThanhToan().toUpperCase();
+                if (name.contains("TIỀN MẶT") || name.contains("COD")) {
+                    GiaoDichThanhToan gd = new GiaoDichThanhToan();
+                    gd.setIdHoaDon(hd.getId());
+                    gd.setIdPhuongThucThanhToan(p.getId());
+                    gd.setSoTien(thanhTien);
+                    gd.setTrangThai("khoi_tao");
+                    LocalDateTime now = LocalDateTime.now();
+                    gd.setThoiGianCapNhat(now);
+                    gd.setNguoiCapNhat(req.getIdKhachHang());
+                    gd.setXoaMem(false);
+                    gd.setGhiChu("Khởi tạo đơn hàng online (mặc định COD)");
+                    giaoDichThanhToanRepo.save(gd);
+                    break;
+                }
+            }
         }
 
-        // History
         LichSuHoaDon ls = LichSuHoaDon.builder()
                 .idHoaDon(hd.getId())
                 .trangThai(1)
@@ -482,11 +567,10 @@ public class ClientOrderService {
                 .build();
         lsHdRepo.save(ls);
 
-        // Flush + refresh để lấy maHoaDon (auto-generated bởi DB computed column)
+        // ⚠️ QUAN TRỌNG: Flush để đảm bảo GiaoDichThanhToan được lưu vào DB ngay
         entityManager.flush();
         entityManager.refresh(hd);
 
-        // Gửi email xác nhận đơn hàng cho khách
         if (hd.getEmailKhachHang() != null && !hd.getEmailKhachHang().isBlank()) {
             emailService.sendOrderConfirmation(hd);
         }
@@ -498,7 +582,6 @@ public class ClientOrderService {
                 .build();
     }
 
-
     private ProductClientDTO mapToProductClientDTO(SanPham sp) {
         List<ChiTietSanPham> variants = ctspRepo.findAllByIdSanPhamAndXoaMemFalseOrderByIdDesc(sp.getId());
         LocalDate today = LocalDate.now();
@@ -507,23 +590,40 @@ public class ClientOrderService {
         for (ChiTietSanPham v : variants) {
             List<AnhChiTietSanPham> imgs = anhRepo.findAllByIdChiTietSanPhamAndXoaMemFalseOrderByIdDesc(v.getId());
             for (AnhChiTietSanPham img : imgs) {
-                if (Boolean.TRUE.equals(img.getLaAnhDaiDien())) { thumb = getFullUrl(img.getDuongDanAnh()); break; }
+                if (Boolean.TRUE.equals(img.getLaAnhDaiDien())) {
+                    thumb = getFullUrl(img.getDuongDanAnh());
+                    break;
+                }
             }
-            if (thumb == null && !imgs.isEmpty()) thumb = getFullUrl(imgs.get(0).getDuongDanAnh());
-            if (thumb != null) break;
+            if (thumb == null && !imgs.isEmpty()) {
+                thumb = getFullUrl(imgs.get(0).getDuongDanAnh());
+            }
+            if (thumb != null) {
+                break;
+            }
         }
 
         List<VariantClientDTO> variantDTOs = variants.stream().map(v -> {
             BigDecimal giaBan = v.getGiaBan() != null ? v.getGiaBan() : v.getGiaNiemYet();
-            BigDecimal giaGoc = null, giaSauGiam = null;
+            BigDecimal giaGoc = null;
+            BigDecimal giaSauGiam = null;
             Integer phanTramGiam = null;
-            Optional<ChiTietDotGiamGiaRepository.BestDotGiamGiaView> bestDiscount = chiTietDotGiamGiaRepo.findBestActiveDotByCtspId(v.getId(), today);
+
+            Optional<ChiTietDotGiamGiaRepository.BestDotGiamGiaView> bestDiscount =
+                    chiTietDotGiamGiaRepo.findBestActiveDotByCtspId(v.getId(), today);
+
             if (bestDiscount.isPresent()) {
                 BigDecimal pct = bestDiscount.get().getGiaTriGiamApDung();
                 giaGoc = giaBan;
-                giaSauGiam = giaBan.multiply(BigDecimal.ONE.subtract(pct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP))).setScale(0, RoundingMode.HALF_UP);
+                giaSauGiam = giaBan.multiply(
+                        BigDecimal.ONE.subtract(
+                                pct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
+                        )
+                )
+                        .setScale(0, RoundingMode.HALF_UP);
                 phanTramGiam = pct.intValue();
             }
+
             return VariantClientDTO.builder()
                     .id(v.getId())
                     .tenMauSac(v.getMauSac() != null ? v.getMauSac().getTenMauSac() : "")
@@ -540,29 +640,37 @@ public class ClientOrderService {
                     .build();
         }).collect(Collectors.toList());
 
-        // Giá hiệu lực (sau giảm nếu có)
         BigDecimal min = variantDTOs.stream()
                 .map(v -> v.getGiaSauGiam() != null ? v.getGiaSauGiam() : v.getGiaBan())
-                .filter(Objects::nonNull).min(Comparator.naturalOrder()).orElse(BigDecimal.ZERO);
+                .filter(Objects::nonNull)
+                .min(Comparator.naturalOrder())
+                .orElse(BigDecimal.ZERO);
+
         BigDecimal max = variantDTOs.stream()
                 .map(VariantClientDTO::getGiaBan)
-                .filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(BigDecimal.ZERO);
+                .filter(Objects::nonNull)
+                .max(Comparator.naturalOrder())
+                .orElse(BigDecimal.ZERO);
 
-        // Variant giảm giá có giá thấp nhất → đại diện badge sản phẩm
         VariantClientDTO cheapestDisc = variantDTOs.stream()
                 .filter(v -> v.getGiaSauGiam() != null)
-                .min(Comparator.comparing(VariantClientDTO::getGiaSauGiam)).orElse(null);
+                .min(Comparator.comparing(VariantClientDTO::getGiaSauGiam))
+                .orElse(null);
 
-        // Hàng có sẵn & kích thước có hàng
         boolean hangCoSan = variantDTOs.stream()
                 .anyMatch(v -> v.getSoLuong() != null && v.getSoLuong() > 0);
+
         List<String> kichThuocCoSan = variantDTOs.stream()
                 .filter(v -> v.getSoLuong() != null && v.getSoLuong() > 0)
                 .map(VariantClientDTO::getTenKichThuoc)
                 .filter(s -> s != null && !s.isBlank())
                 .distinct()
                 .sorted(Comparator.comparingDouble(s -> {
-                    try { return Double.parseDouble(s); } catch (Exception e) { return 0.0; }
+                    try {
+                        return Double.parseDouble(s);
+                    } catch (Exception e) {
+                        return 0.0;
+                    }
                 }))
                 .collect(Collectors.toList());
 
@@ -601,22 +709,41 @@ public class ClientOrderService {
         for (ChiTietSanPham v : variants) {
             List<AnhChiTietSanPham> imgs = anhRepo.findAllByIdChiTietSanPhamAndXoaMemFalseOrderByIdDesc(v.getId());
             String variantThumb = null;
+
             for (AnhChiTietSanPham img : imgs) {
                 imgSet.add(getFullUrl(img.getDuongDanAnh()));
-                if (Boolean.TRUE.equals(img.getLaAnhDaiDien()) && thumb == null) thumb = getFullUrl(img.getDuongDanAnh());
-                if (Boolean.TRUE.equals(img.getLaAnhDaiDien())) variantThumb = getFullUrl(img.getDuongDanAnh());
+                if (Boolean.TRUE.equals(img.getLaAnhDaiDien()) && thumb == null) {
+                    thumb = getFullUrl(img.getDuongDanAnh());
+                }
+                if (Boolean.TRUE.equals(img.getLaAnhDaiDien())) {
+                    variantThumb = getFullUrl(img.getDuongDanAnh());
+                }
             }
-            if (thumb == null && !imgs.isEmpty()) thumb = getFullUrl(imgs.get(0).getDuongDanAnh());
-            if (variantThumb == null && !imgs.isEmpty()) variantThumb = getFullUrl(imgs.get(0).getDuongDanAnh());
+
+            if (thumb == null && !imgs.isEmpty()) {
+                thumb = getFullUrl(imgs.get(0).getDuongDanAnh());
+            }
+            if (variantThumb == null && !imgs.isEmpty()) {
+                variantThumb = getFullUrl(imgs.get(0).getDuongDanAnh());
+            }
 
             BigDecimal giaBan = v.getGiaBan() != null ? v.getGiaBan() : v.getGiaNiemYet();
-            BigDecimal giaGoc = null, giaSauGiam = null;
+            BigDecimal giaGoc = null;
+            BigDecimal giaSauGiam = null;
             Integer phanTramGiam = null;
-            Optional<ChiTietDotGiamGiaRepository.BestDotGiamGiaView> bestDiscount2 = chiTietDotGiamGiaRepo.findBestActiveDotByCtspId(v.getId(), today);
+
+            Optional<ChiTietDotGiamGiaRepository.BestDotGiamGiaView> bestDiscount2 =
+                    chiTietDotGiamGiaRepo.findBestActiveDotByCtspId(v.getId(), today);
+
             if (bestDiscount2.isPresent()) {
                 BigDecimal pct = bestDiscount2.get().getGiaTriGiamApDung();
                 giaGoc = giaBan;
-                giaSauGiam = giaBan.multiply(BigDecimal.ONE.subtract(pct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP))).setScale(0, RoundingMode.HALF_UP);
+                giaSauGiam = giaBan.multiply(
+                        BigDecimal.ONE.subtract(
+                                pct.divide(BigDecimal.valueOf(100), 4, RoundingMode.HALF_UP)
+                        )
+                )
+                        .setScale(0, RoundingMode.HALF_UP);
                 phanTramGiam = pct.intValue();
             }
 
@@ -636,18 +763,26 @@ public class ClientOrderService {
                     .build());
         }
 
-        if (thumb == null && !imgSet.isEmpty()) thumb = imgSet.iterator().next();
+        if (thumb == null && !imgSet.isEmpty()) {
+            thumb = imgSet.iterator().next();
+        }
 
         BigDecimal min = variantDTOs.stream()
                 .map(v -> v.getGiaSauGiam() != null ? v.getGiaSauGiam() : v.getGiaBan())
-                .filter(Objects::nonNull).min(Comparator.naturalOrder()).orElse(BigDecimal.ZERO);
+                .filter(Objects::nonNull)
+                .min(Comparator.naturalOrder())
+                .orElse(BigDecimal.ZERO);
+
         BigDecimal max = variantDTOs.stream()
                 .map(VariantClientDTO::getGiaBan)
-                .filter(Objects::nonNull).max(Comparator.naturalOrder()).orElse(BigDecimal.ZERO);
+                .filter(Objects::nonNull)
+                .max(Comparator.naturalOrder())
+                .orElse(BigDecimal.ZERO);
 
         VariantClientDTO cheapestDisc = variantDTOs.stream()
                 .filter(v -> v.getGiaSauGiam() != null)
-                .min(Comparator.comparing(VariantClientDTO::getGiaSauGiam)).orElse(null);
+                .min(Comparator.comparing(VariantClientDTO::getGiaSauGiam))
+                .orElse(null);
 
         return ProductDetailClientDTO.builder()
                 .id(sp.getId())
@@ -676,17 +811,16 @@ public class ClientOrderService {
         if (path == null || path.isBlank()) return null;
         if (path.startsWith("http")) return path;
 
-        // 1. Chuẩn hóa dấu gạch chéo (Windows path -> Web path)
         String normalized = path.replace("\\", "/");
 
-        // 2. Nếu lưu đường dẫn tuyệt đối ổ cứng (C:/.../uploads/...), cắt lấy phần từ /uploads trở đi
         int idx = normalized.indexOf("/uploads/");
         if (idx >= 0) {
             normalized = normalized.substring(idx);
         }
 
-        // 3. Đảm bảo bắt đầu bằng /
-        if (!normalized.startsWith("/")) normalized = "/" + normalized;
+        if (!normalized.startsWith("/")) {
+            normalized = "/" + normalized;
+        }
 
         return backendUrl + normalized;
     }
@@ -698,7 +832,7 @@ public class ClientOrderService {
                 PhuongThucThanhToan pt = phuongThucThanhToanRepo.findById(gd.getIdPhuongThucThanhToan()).orElse(null);
                 if (pt != null && pt.getTenPhuongThucThanhToan() != null) {
                     String name = pt.getTenPhuongThucThanhToan().toLowerCase();
-                    if (name.contains("chuyển khoản") || name.contains("vnpay")) {
+                    if (name.contains("chuyển khoản") || name.contains("vnpay") || name.contains("banking")) {
                         return true;
                     }
                 }

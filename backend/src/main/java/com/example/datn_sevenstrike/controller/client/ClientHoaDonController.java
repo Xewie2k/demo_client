@@ -68,77 +68,78 @@ public class ClientHoaDonController {
 
     @PostMapping("/{id}/cancel")
     public HoaDonResponse cancelOrder(@PathVariable Integer id, @RequestBody CancelBody body) {
-        if (body == null) throw new BadRequestEx("Thiếu body");
         HoaDon hd = repo.findByIdAndXoaMemFalse(id)
                 .orElseThrow(() -> new NotFoundEx("Không tìm thấy đơn hàng"));
+
         if (hd.getIdKhachHang() == null) {
-            throw new BadRequestEx("Đơn hàng của khách vãng lai không thể hủy qua hệ thống. Vui lòng liên hệ cửa hàng.");
+            throw new BadRequestEx("Đơn khách vãng lai không thể hủy qua tài khoản. Vui lòng liên hệ cửa hàng.");
         }
-        if (body.getKhachHangId() != null) {
-            if (!body.getKhachHangId().equals(hd.getIdKhachHang()))
-                throw new BadRequestEx("Đơn hàng không thuộc về khách hàng này");
-        } else if (body.getEmail() != null && !body.getEmail().isBlank()) {
-            if (hd.getEmailKhachHang() == null || !hd.getEmailKhachHang().equalsIgnoreCase(body.getEmail().trim()))
-                throw new BadRequestEx("Email không khớp với đơn hàng");
-        } else {
-            throw new BadRequestEx("Thiếu thông tin xác thực (khachHangId hoặc email)");
+
+        boolean authOk = false;
+        if (body.getKhachHangId() != null && body.getKhachHangId().equals(hd.getIdKhachHang())) {
+            authOk = true;
+        } else if (body.getEmail() != null && hd.getEmailKhachHang() != null
+                && hd.getEmailKhachHang().equalsIgnoreCase(body.getEmail().trim())) {
+            authOk = true;
         }
+        if (!authOk) throw new BadRequestEx("Thông tin xác thực không chính xác");
+
         return hoaDonService.requestCancelByCustomer(id, hd.getIdKhachHang(), body.getLyDo());
     }
 
     @PutMapping("/{id}/delivery-info")
     public HoaDonResponse updateDeliveryInfo(@PathVariable Integer id, @RequestBody DeliveryInfoBody body) {
-        if (body == null) throw new BadRequestEx("Thiếu body");
         HoaDon hd = repo.findByIdAndXoaMemFalse(id)
                 .orElseThrow(() -> new NotFoundEx("Không tìm thấy đơn hàng"));
-        if (body.getKhachHangId() != null) {
-            if (!body.getKhachHangId().equals(hd.getIdKhachHang()))
-                throw new BadRequestEx("Đơn hàng không thuộc về khách hàng này");
-        } else if (body.getEmail() != null && !body.getEmail().isBlank()) {
-            if (hd.getEmailKhachHang() == null || !hd.getEmailKhachHang().equalsIgnoreCase(body.getEmail().trim()))
-                throw new BadRequestEx("Email không khớp với đơn hàng");
-        } else {
-            throw new BadRequestEx("Thiếu thông tin xác thực");
+
+        boolean authOk = false;
+        if (body.getKhachHangId() != null && body.getKhachHangId().equals(hd.getIdKhachHang())) {
+            authOk = true;
+        } else if (body.getEmail() != null && hd.getEmailKhachHang() != null
+                && hd.getEmailKhachHang().equalsIgnoreCase(body.getEmail().trim())) {
+            authOk = true;
         }
+        if (!authOk) throw new BadRequestEx("Thông tin xác thực không chính xác");
+
         return hoaDonService.updateDeliveryInfo(id, hd.getIdKhachHang(),
-                body.getTenKhachHang(), body.getSoDienThoaiKhachHang(), body.getDiaChiKhachHang());
+                body.getTenKH(), body.getSdt(), body.getDiaChi());
     }
 
     @PutMapping("/{id}/items")
     public HoaDonResponse updateItems(@PathVariable Integer id, @RequestBody ClientItemsBody body) {
-        if (body == null) throw new BadRequestEx("Thiếu body");
         HoaDon hd = repo.findByIdAndXoaMemFalse(id)
                 .orElseThrow(() -> new NotFoundEx("Không tìm thấy đơn hàng"));
-        if (body.getKhachHangId() != null) {
-            if (!body.getKhachHangId().equals(hd.getIdKhachHang()))
-                throw new BadRequestEx("Đơn hàng không thuộc về khách hàng này");
-        } else if (body.getEmail() != null && !body.getEmail().isBlank()) {
-            if (hd.getEmailKhachHang() == null || !hd.getEmailKhachHang().equalsIgnoreCase(body.getEmail().trim()))
-                throw new BadRequestEx("Email không khớp với đơn hàng");
-        } else {
-            throw new BadRequestEx("Thiếu thông tin xác thực");
+
+        boolean authOk = false;
+        if (body.getKhachHangId() != null && body.getKhachHangId().equals(hd.getIdKhachHang())) {
+            authOk = true;
+        } else if (body.getEmail() != null && hd.getEmailKhachHang() != null
+                && hd.getEmailKhachHang().equalsIgnoreCase(body.getEmail().trim())) {
+            authOk = true;
         }
+        if (!authOk) throw new BadRequestEx("Thông tin xác thực không chính xác");
+
         return hoaDonService.clientUpdateItems(id, hd.getIdKhachHang(), body.getItems());
     }
 
     @Data
-    public static class CancelBody {
+    static class CancelBody {
         private Integer khachHangId;
         private String email;
         private String lyDo;
     }
 
     @Data
-    public static class DeliveryInfoBody {
+    static class DeliveryInfoBody {
         private Integer khachHangId;
         private String email;
-        private String tenKhachHang;
-        private String soDienThoaiKhachHang;
-        private String diaChiKhachHang;
+        private String tenKH;
+        private String sdt;
+        private String diaChi;
     }
 
     @Data
-    public static class ClientItemsBody {
+    static class ClientItemsBody {
         private Integer khachHangId;
         private String email;
         private List<HoaDonChiTietRequest> items;

@@ -9,10 +9,10 @@
       <div class="col-md-4 mb-4">
         <div class="card-box text-center p-4 h-100 d-flex flex-column align-items-center justify-content-center">
           <div class="avatar-wrapper mb-3 position-relative">
-            <img
-              v-if="displayAvatar"
-              :src="displayAvatar"
-              alt="Avatar"
+            <img 
+              v-if="displayAvatar" 
+              :src="displayAvatar" 
+              alt="Avatar" 
               class="profile-avatar"
             />
             <div v-else class="avatar-placeholder">
@@ -22,15 +22,15 @@
             <label for="avatar-upload" class="avatar-upload-btn" title="Đổi ảnh đại diện">
               <i class="fa-solid fa-camera"></i>
             </label>
-            <input
-              type="file"
-              id="avatar-upload"
-              class="d-none"
-              accept="image/*"
-              @change="onFileChange"
+            <input 
+              type="file" 
+              id="avatar-upload" 
+              class="d-none" 
+              accept="image/*" 
+              @change="onFileChange" 
             />
           </div>
-
+          
           <h4 class="fw-bold mb-1">{{ form.tenNhanVien || 'Chưa có tên' }}</h4>
           <span class="badge bg-danger rounded-pill px-3">{{ roleName }}</span>
           <p class="text-muted small mt-3">Nhấn vào biểu tượng máy ảnh để tải ảnh mới lên.</p>
@@ -40,7 +40,7 @@
       <div class="col-md-8">
         <div class="card-box p-4">
           <h5 class="fw-bold mb-4 border-bottom pb-2">Chi tiết thông tin</h5>
-
+          
           <form @submit.prevent="handleSubmit">
             <div class="row g-3">
               <div class="col-md-6">
@@ -78,13 +78,13 @@
               <div class="col-md-4">
                 <label class="form-label small fw-bold">Tỉnh / Thành phố</label>
                 <div class="combobox-wrapper">
-                  <input
-                    type="text"
-                    class="form-control"
-                    v-model="form.thanhPho"
-                    @focus="showCity = true"
+                  <input 
+                    type="text" 
+                    class="form-control" 
+                    v-model="form.thanhPho" 
+                    @focus="showCity = true" 
                     @blur="handleBlurCity"
-                    placeholder="Nhập hoặc chọn..."
+                    placeholder="Nhập hoặc chọn..." 
                   />
                   <ul v-if="showCity" class="combobox-dropdown shadow">
                     <li v-for="p in filteredProvinces" :key="p.code" @click="selectCity(p.name)">
@@ -98,13 +98,13 @@
               <div class="col-md-4">
                 <label class="form-label small fw-bold">Quận / Huyện</label>
                 <div class="combobox-wrapper">
-                  <input
-                    type="text"
-                    class="form-control"
-                    v-model="form.quan"
-                    @focus="showDistrict = true"
+                  <input 
+                    type="text" 
+                    class="form-control" 
+                    v-model="form.quan" 
+                    @focus="showDistrict = true" 
                     @blur="handleBlurDistrict"
-                    placeholder="Nhập hoặc chọn..."
+                    placeholder="Nhập hoặc chọn..." 
                   />
                   <ul v-if="showDistrict" class="combobox-dropdown shadow">
                     <li v-for="d in filteredDistricts" :key="d.code" @click="selectDistrict(d.name)">
@@ -118,13 +118,13 @@
               <div class="col-md-4">
                 <label class="form-label small fw-bold">Phường / Xã</label>
                 <div class="combobox-wrapper">
-                  <input
-                    type="text"
-                    class="form-control"
-                    v-model="form.phuong"
-                    @focus="showWard = true"
+                  <input 
+                    type="text" 
+                    class="form-control" 
+                    v-model="form.phuong" 
+                    @focus="showWard = true" 
                     @blur="handleBlurWard"
-                    placeholder="Nhập hoặc chọn..."
+                    placeholder="Nhập hoặc chọn..." 
                   />
                   <ul v-if="showWard" class="combobox-dropdown shadow">
                     <li v-for="w in filteredWards" :key="w.code" @click="selectWard(w.name)">
@@ -192,7 +192,7 @@ const form = reactive({
   xoaMem: false
 });
 
-let oldPasswordHash = '';
+let oldPasswordHash = ''; 
 
 // ======================== LOGIC ẢNH ĐẠI DIỆN ========================
 const getAvatarLabel = (name) => {
@@ -280,23 +280,23 @@ const loadProfile = async () => {
     if (!raw) return;
     const u = JSON.parse(raw);
     userId.value = u.id || u.idNhanVien;
-
+    
     const r = String(u?.role || u?.quyen || u?.vaiTro || "").toUpperCase();
     roleName.value = r.includes("ADMIN") ? "Quản Trị Viên" : "Nhân Viên";
 
     if (!userId.value) return;
 
     const res = await detailNhanVien(userId.value);
-    Object.assign(form, res);
-
-    oldPasswordHash = res.matKhau || '';
+    Object.assign(form, res); 
+    
+    oldPasswordHash = res.matKhau || ''; 
     // Gán 6 dấu sao để hiển thị (báo cho người dùng biết mật khẩu không bị trống)
-    form.matKhau = '******';
+    form.matKhau = '******'; 
 
     await fetchAddressData();
     const p = provinces.value.find(x => x.name === form.thanhPho);
     if(p) districts.value = p.districts;
-
+    
     const d = districts.value.find(x => x.name === form.quan);
     if(d) wards.value = d.wards;
 
@@ -311,7 +311,7 @@ const handleSubmit = async () => {
     Swal.fire({ icon: 'warning', title: 'Thiếu thông tin', text: 'Họ và tên không được để trống!' });
     return;
   }
-
+  
   if (!form.matKhau || form.matKhau.trim() === '') {
     Swal.fire({ icon: 'warning', title: 'Thiếu thông tin', text: 'Mật khẩu không được để trống!' });
     return;
@@ -320,11 +320,11 @@ const handleSubmit = async () => {
   loading.value = true;
   try {
     const payload = { ...form };
-
+    
     // ✅ 2. XỬ LÝ MẬT KHẨU
     // Nếu gửi lên chuỗi '******' => Tức là họ không sửa => Gán lại pass cũ
     if (payload.matKhau === '******') {
-      payload.matKhau = oldPasswordHash;
+      payload.matKhau = oldPasswordHash; 
     }
 
     let submitData;
@@ -337,7 +337,7 @@ const handleSubmit = async () => {
     }
 
     const resUpdate = await updateNhanVien(userId.value, submitData);
-
+    
     // Cập nhật Avatar và Tên ở LocalStorage để Menu tự đổi
     const raw = localStorage.getItem("user") || sessionStorage.getItem("user");
     if (raw) {
@@ -354,9 +354,9 @@ const handleSubmit = async () => {
       timer: 1500,
       showConfirmButton: false
     });
-
+    
     window.location.reload();
-
+    
   } catch (error) {
     Swal.fire({ icon: 'error', title: 'Thất bại', text: error.message || 'Có lỗi xảy ra!' });
   } finally {

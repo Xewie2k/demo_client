@@ -1,3 +1,4 @@
+// File: src/main/java/com/example/datn_sevenstrike/dto/response/HoaDonResponse.java
 package com.example.datn_sevenstrike.dto.response;
 
 import lombok.*;
@@ -24,6 +25,10 @@ public class HoaDonResponse {
 
     private String maHoaDon;
 
+    /**
+     * ✅ DB mới: tinyint
+     * 0: Tại quầy | 1: Giao hàng | 2: Online
+     */
     private Integer loaiDon;
 
     private BigDecimal phiVanChuyen;
@@ -51,14 +56,18 @@ public class HoaDonResponse {
     private LocalDateTime ngayCapNhat;
     private Integer nguoiCapNhat;
 
-    // 0=tiền mặt/COD, 1=chuyển khoản
-    private Integer loaiThanhToan;
-    // null=không cần hoàn, false=chờ hoàn phí, true=đã hoàn phí
-    private Boolean daHoanPhi;
-
     private List<HoaDonChiTietResponse> chiTietHoaDon;
 
-    // 🔥 CONSTRUCTOR CHUẨN KHỚP 100% VỚI JPQL CỦA ANH (Đã thêm daHoanPhi)
+    private Boolean daHoanPhi;
+    /**
+     * 0: Tiền mặt / COD
+     * 1: Chuyển khoản / VNPAY
+     */
+    private Integer loaiThanhToan;
+
+    /**
+     * Constructor cũ của main branch - giữ nguyên để tránh vỡ projection/service cũ
+     */
     public HoaDonResponse(
             Integer id,
             Integer idKhachHang,
@@ -84,8 +93,7 @@ public class HoaDonResponse {
             Boolean xoaMem,
             Integer nguoiTao,
             LocalDateTime ngayCapNhat,
-            Integer nguoiCapNhat,
-            Boolean daHoanPhi // ✅ Thêm tham số này để khớp JPQL
+            Integer nguoiCapNhat
     ) {
         this.id = id;
         this.idKhachHang = idKhachHang;
@@ -112,10 +120,132 @@ public class HoaDonResponse {
         this.nguoiTao = nguoiTao;
         this.ngayCapNhat = ngayCapNhat;
         this.nguoiCapNhat = nguoiCapNhat;
+    }
+
+    /**
+     * Constructor theo nhánh của Duy - giữ để tương thích nếu đã có query/service dùng
+     */
+    public HoaDonResponse(
+            Integer id,
+            Integer idKhachHang,
+            Integer idNhanVien,
+            String tenNhanVien,
+            Integer idPhieuGiamGia,
+            Integer idPhieuGiamGiaCaNhan,
+            String maHoaDon,
+            Integer loaiDon,
+            BigDecimal phiVanChuyen,
+            BigDecimal tongTien,
+            BigDecimal tongTienSauGiam,
+            BigDecimal tongTienGiam,
+            String tenKhachHang,
+            String diaChiKhachHang,
+            String soDienThoaiKhachHang,
+            String emailKhachHang,
+            Integer trangThaiHienTai,
+            String trangThaiLabel,
+            LocalDateTime ngayTao,
+            LocalDateTime ngayThanhToan,
+            String ghiChu,
+            Boolean xoaMem,
+            Integer nguoiTao,
+            LocalDateTime ngayCapNhat,
+            Integer nguoiCapNhat,
+            Boolean daHoanPhi
+    ) {
+        this(
+                id,
+                idKhachHang,
+                idNhanVien,
+                tenNhanVien,
+                idPhieuGiamGia,
+                idPhieuGiamGiaCaNhan,
+                maHoaDon,
+                loaiDon,
+                phiVanChuyen,
+                tongTien,
+                tongTienSauGiam,
+                tongTienGiam,
+                tenKhachHang,
+                diaChiKhachHang,
+                soDienThoaiKhachHang,
+                emailKhachHang,
+                trangThaiHienTai,
+                trangThaiLabel,
+                ngayTao,
+                ngayThanhToan,
+                ghiChu,
+                xoaMem,
+                nguoiTao,
+                ngayCapNhat,
+                nguoiCapNhat
+        );
         this.daHoanPhi = daHoanPhi;
     }
 
-    // Constructor rút gọn (nếu anh đang dùng ở chỗ khác)
+    /**
+     * Constructor mở rộng đầy đủ cho các flow mới
+     */
+    public HoaDonResponse(
+            Integer id,
+            Integer idKhachHang,
+            Integer idNhanVien,
+            String tenNhanVien,
+            Integer idPhieuGiamGia,
+            Integer idPhieuGiamGiaCaNhan,
+            String maHoaDon,
+            Integer loaiDon,
+            BigDecimal phiVanChuyen,
+            BigDecimal tongTien,
+            BigDecimal tongTienSauGiam,
+            BigDecimal tongTienGiam,
+            String tenKhachHang,
+            String diaChiKhachHang,
+            String soDienThoaiKhachHang,
+            String emailKhachHang,
+            Integer trangThaiHienTai,
+            String trangThaiLabel,
+            LocalDateTime ngayTao,
+            LocalDateTime ngayThanhToan,
+            String ghiChu,
+            Boolean xoaMem,
+            Integer nguoiTao,
+            LocalDateTime ngayCapNhat,
+            Integer nguoiCapNhat,
+            Boolean daHoanPhi,
+            Integer loaiThanhToan
+    ) {
+        this(
+                id,
+                idKhachHang,
+                idNhanVien,
+                tenNhanVien,
+                idPhieuGiamGia,
+                idPhieuGiamGiaCaNhan,
+                maHoaDon,
+                loaiDon,
+                phiVanChuyen,
+                tongTien,
+                tongTienSauGiam,
+                tongTienGiam,
+                tenKhachHang,
+                diaChiKhachHang,
+                soDienThoaiKhachHang,
+                emailKhachHang,
+                trangThaiHienTai,
+                trangThaiLabel,
+                ngayTao,
+                ngayThanhToan,
+                ghiChu,
+                xoaMem,
+                nguoiTao,
+                ngayCapNhat,
+                nguoiCapNhat
+        );
+        this.daHoanPhi = daHoanPhi;
+        this.loaiThanhToan = loaiThanhToan;
+    }
+
     public HoaDonResponse(
             Integer id,
             Integer idKhachHang,

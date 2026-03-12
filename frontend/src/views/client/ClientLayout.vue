@@ -212,8 +212,6 @@
              <h6 class="fw-bold text-uppercase mb-4">Kết nối</h6>
              <ul class="list-unstyled text-white-50 small">
                 <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Quy định sử dụng</a></li>
-                <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Bảo mật thông tin</a></li>
-                <li class="mb-2"><a href="#" class="text-white-50 text-decoration-none hover-white">Vận chuyển & giao hàng</a></li>
              </ul>
           </div>
 

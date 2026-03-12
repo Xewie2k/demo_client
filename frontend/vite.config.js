@@ -6,15 +6,17 @@ import vueDevTools from "vite-plugin-vue-devtools";
 
 export default defineConfig({
   plugins: [vue(), vueDevTools()],
-  // Fix: sockjs-client dùng Node.js "global" không có trong browser
-  define: {
-    global: 'globalThis',
-  },
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),
       vue: "vue/dist/vue.esm-bundler.js",
     },
+  },
+  define: {
+    global: "globalThis",
+  },
+  optimizeDeps: {
+    include: ["sockjs-client/dist/sockjs"],
   },
   server: {
     host: true,

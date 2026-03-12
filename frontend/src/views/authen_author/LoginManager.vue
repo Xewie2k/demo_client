@@ -2,7 +2,9 @@
 <template>
   <div class="container-fluid login-page p-0">
     <div class="row g-0 h-100">
-      <div class="col-md-6 d-none d-md-flex left-section justify-content-center align-items-center position-relative">
+      <div
+        class="col-md-6 d-none d-md-flex left-section justify-content-center align-items-center position-relative"
+      >
         <div class="left-decor">
           <span class="deco deco-circle deco-circle-lg"></span>
           <span class="deco deco-circle deco-circle-sm"></span>
@@ -26,7 +28,11 @@
       <div class="col-12 col-md-6 right-section d-flex justify-content-center align-items-center">
         <div class="login-card w-100 p-4">
           <div class="text-center mb-5">
-            <img src="@/assets/images/logo/Logo_SevenStrike.png" alt="Small Logo" class="small-logo" />
+            <img
+              src="@/assets/images/logo/Logo_SevenStrike.png"
+              alt="Small Logo"
+              class="small-logo"
+            />
           </div>
 
           <form @submit.prevent="handleLogin">
@@ -73,7 +79,9 @@
             <div class="mb-4">
               <div class="form-check">
                 <input class="form-check-input" type="checkbox" v-model="rememberMe" id="rememberMe" />
-                <label class="form-check-label small text-secondary" for="rememberMe">Ghi nhớ tôi</label>
+                <label class="form-check-label small text-secondary" for="rememberMe">
+                  Ghi nhớ tôi
+                </label>
               </div>
             </div>
 
@@ -91,6 +99,8 @@
 import axios from "axios";
 import Swal from "sweetalert2";
 
+const ADMIN_ROLES = ["ADMIN", "NHAN_VIEN"];
+
 export default {
   data() {
     return {
@@ -101,6 +111,7 @@ export default {
       loading: false,
     };
   },
+
   methods: {
     togglePassword() {
       this.showPassword = !this.showPassword;
@@ -108,17 +119,47 @@ export default {
 
     normalizeRole(role) {
       const r = String(role || "").trim().toUpperCase();
+
       if (r === "STAFF") return "NHAN_VIEN";
       if (r === "NHANVIEN" || r === "NHÂN_VIÊN" || r === "NHÂN VIÊN") return "NHAN_VIEN";
+
       return r;
     },
 
-    clearAuth() {
-      const keys = ["user", "accessToken", "token", "jwt", "ss_token", "nguoiDung", "ss_nguoi_ban"];
-      keys.forEach((k) => {
-        localStorage.removeItem(k);
-        sessionStorage.removeItem(k);
+    getRoleFromUser(user) {
+      return this.normalizeRole(
+        user?.role ||
+          user?.vaiTro ||
+          user?.tenVaiTro ||
+          user?.tenQuyenHan ||
+          user?.quyenHan?.tenQuyenHan ||
+          user?.quyenHan ||
+          user?.chucVu
+      );
+    },
+
+    isAdminRole(role) {
+      return ADMIN_ROLES.includes(this.normalizeRole(role));
+    },
+
+    clearAdminAuth() {
+      const keys = [
+        "accessToken",
+        "token",
+        "jwt",
+        "ss_token",
+        "user",
+        "nguoiDung",
+        "ss_nguoi_ban",
+        "ss_has_active_shift",
+      ];
+
+      keys.forEach((key) => {
+        localStorage.removeItem(key);
+        sessionStorage.removeItem(key);
       });
+
+      delete axios.defaults.headers.common.Authorization;
     },
 
     pickErrorMessage(error) {
@@ -128,8 +169,9 @@ export default {
       if (typeof data === "string" && data.trim()) return data;
 
       if (data && typeof data === "object") {
-        const m = data.message || data.error || data.title;
-        if (typeof m === "string" && m.trim()) return m;
+        const message = data.message || data.error || data.title;
+        if (typeof message === "string" && message.trim()) return message;
+
         try {
           return JSON.stringify(data);
         } catch (e) {
@@ -139,34 +181,91 @@ export default {
 
       if (status === 401) return "Tài khoản hoặc mật khẩu không chính xác.";
       if (status === 403) return "Tài khoản này hiện đang bị khóa!";
+
       return error?.message || "Máy chủ đang gặp lỗi, vui lòng thử lại.";
+    },
+
+    extractAuthData(data) {
+      if (!data || typeof data !== "object") {
+        return {
+          message: "",
+          token: null,
+          user: null,
+        };
+      }
+
+      const nestedData = data.data && typeof data.data === "object" ? data.data : null;
+
+      const user =
+        data.user ||
+        data.nguoiDung ||
+        nestedData?.user ||
+        nestedData?.nguoiDung ||
+        nestedData?.account ||
+        data.account ||
+        data;
+
+      const token =
+        data.accessToken ||
+        data.token ||
+        data.jwt ||
+        data.ss_token ||
+        nestedData?.accessToken ||
+        nestedData?.token ||
+        nestedData?.jwt ||
+        nestedData?.ss_token ||
+        null;
+
+      const message = data.message || nestedData?.message || "";
+
+      return {
+        message,
+        token,
+        user,
+      };
     },
 
     normalizeNguoiBan(user) {
       const u = user || {};
       const id = u.idNhanVien || u.nhanVienId || u.id || u.userId || u.nhanVien?.id || null;
       const hoTen = u.hoTen || u.tenNhanVien || u.ten || u.fullName || u.name || u.username || "";
-      return { id, hoTen, role: this.normalizeRole(u.role || u.quyen || u.vaiTro || u.tenVaiTro) || null };
+      const role = this.getRoleFromUser(u) || null;
+
+      return { id, hoTen, role };
     },
 
-    saveUser(user) {
+    saveAdminAuth(user, token) {
       const store = this.rememberMe ? localStorage : sessionStorage;
-      store.setItem("user", JSON.stringify(user));
-      store.setItem("ss_nguoi_ban", JSON.stringify(this.normalizeNguoiBan(user)));
+      const normalizedUser = { ...user, role: this.getRoleFromUser(user) };
+
+      store.setItem("user", JSON.stringify(normalizedUser));
+      store.setItem("ss_nguoi_ban", JSON.stringify(this.normalizeNguoiBan(normalizedUser)));
+
+      if (token) {
+        store.setItem("accessToken", token);
+        store.setItem("token", token);
+        store.setItem("jwt", token);
+        store.setItem("ss_token", token);
+        axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+      } else {
+        delete axios.defaults.headers.common.Authorization;
+      }
     },
 
-    resolveRedirect(userRole) {
-      const role = this.normalizeRole(userRole);
-
+    resolveRedirect(role) {
+      const normalizedRole = this.normalizeRole(role);
       const qRedirect = this.$route?.query?.redirect;
-      if (qRedirect && typeof qRedirect === "string" && qRedirect.startsWith("/admin")) {
+
+      if (
+        qRedirect &&
+        typeof qRedirect === "string" &&
+        qRedirect.startsWith("/admin") &&
+        this.isAdminRole(normalizedRole)
+      ) {
         return qRedirect;
       }
 
-      // ✅ mặc định: luôn về trang chủ để không bị “từ chối” do redirect nhầm /admin/san-pham
-      if (role === "ADMIN" || role === "NHAN_VIEN") return "/admin/trang-chu";
-
-      return "/dang-nhap";
+      return "/admin/trang-chu";
     },
 
     async handleLogin() {
@@ -184,17 +283,17 @@ export default {
       this.loading = true;
 
       try {
-        const payload = { username: this.username.trim(), password: this.password };
+        const payload = {
+          username: this.username.trim(),
+          password: this.password,
+        };
+
         const response = await axios.post("http://localhost:8080/api/auth/login", payload);
+        const { message, token, user } = this.extractAuthData(response?.data);
+        const role = this.getRoleFromUser(user);
 
-        const user = response?.data || {};
-        const role = this.normalizeRole(
-          user?.role || user?.vaiTro || user?.tenVaiTro || user?.tenQuyenHan || user?.quyenHan?.tenQuyenHan
-        );
-
-        // ✅ nếu backend không trả role rõ ràng -> coi như lỗi
-        if (!role) {
-          this.clearAuth();
+        if (!user || !role) {
+          this.clearAdminAuth();
           await Swal.fire({
             icon: "error",
             title: "Thất bại",
@@ -204,35 +303,34 @@ export default {
           return;
         }
 
-        this.clearAuth();
-        this.saveUser({ ...user, role }); // ✅ ép role về chuẩn
+        if (!this.isAdminRole(role)) {
+          this.clearAdminAuth();
+          await Swal.fire({
+            icon: "error",
+            title: "Từ chối",
+            text: "Không có quyền truy cập trang quản trị.",
+            confirmButtonColor: "#ff4d4f",
+          });
+          return;
+        }
+
+        this.clearAdminAuth();
+        this.saveAdminAuth({ ...user, role }, token);
 
         await Swal.fire({
           icon: "success",
           title: "Đăng nhập thành công",
-          text: user.message || `Xin chào ${user.hoTen || this.username}`,
+          text: message || `Xin chào ${user.hoTen || user.ten || this.username}`,
           timer: 900,
           showConfirmButton: false,
         });
 
-        if (role === "ADMIN" || role === "NHAN_VIEN") {
-          const redirect = this.resolveRedirect(role);
-          this.$router.replace(redirect);
-        } else {
-          await Swal.fire({
-            icon: "error",
-            title: "Từ chối",
-            text: "Không có quyền truy cập",
-            confirmButtonColor: "#ff4d4f",
-          });
-          this.clearAuth();
-        }
+        this.$router.replace(this.resolveRedirect(role));
       } catch (error) {
-        const errorMsg = this.pickErrorMessage(error);
         await Swal.fire({
           icon: "error",
           title: "Thất bại",
-          text: errorMsg,
+          text: this.pickErrorMessage(error),
           confirmButtonColor: "#ff4d4f",
         });
       } finally {
@@ -242,23 +340,36 @@ export default {
   },
 
   mounted() {
-    // ✅ đã có user + role hợp lệ thì về trang chủ
     try {
       const raw = localStorage.getItem("user") || sessionStorage.getItem("user");
       if (!raw) return;
 
-      const u = JSON.parse(raw);
-      const role = this.normalizeRole(
-        u?.role || u?.vaiTro || u?.tenVaiTro || u?.tenQuyenHan || u?.quyenHan?.tenQuyenHan
-      );
+      const user = JSON.parse(raw);
+      const role = this.getRoleFromUser(user);
 
-      if (role === "ADMIN" || role === "NHAN_VIEN") {
-        this.$router.replace("/admin/trang-chu");
-      } else {
-        this.clearAuth();
+      const token =
+        localStorage.getItem("accessToken") ||
+        sessionStorage.getItem("accessToken") ||
+        localStorage.getItem("token") ||
+        sessionStorage.getItem("token") ||
+        localStorage.getItem("jwt") ||
+        sessionStorage.getItem("jwt") ||
+        localStorage.getItem("ss_token") ||
+        sessionStorage.getItem("ss_token") ||
+        null;
+
+      if (token) {
+        axios.defaults.headers.common.Authorization = `Bearer ${token}`;
       }
+
+      if (this.isAdminRole(role)) {
+        this.$router.replace(this.resolveRedirect(role));
+        return;
+      }
+
+      this.clearAdminAuth();
     } catch (e) {
-      this.clearAuth();
+      this.clearAdminAuth();
     }
   },
 };

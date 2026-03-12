@@ -3,16 +3,19 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "main": "src/electron/main.cjs",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
   },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron": "electron .",
+    "dev:desktop": "concurrently -k \"npm run dev\" \"wait-on http://localhost:5173 && npm run electron\"",
+    "build:desktop": "npm run build && electron-builder -w"
   },
   "dependencies": {
-    "@emailjs/browser": "^4.4.1",
     "@primeuix/themes": "^2.0.3",
     "@stomp/stompjs": "^7.3.0",
     "@vueform/multiselect": "^2.6.11",
@@ -20,6 +23,8 @@
     "bootstrap": "^5.3.8",
     "bootstrap-icons": "^1.13.1",
     "chart.js": "^4.5.1",
+    "exceljs": "^4.4.0",
+    "file-saver": "^2.0.5",
     "html5-qrcode": "^2.3.8",
     "jsqr": "^1.4.0",
     "jszip": "^3.10.1",
@@ -30,6 +35,7 @@
     "qrcode": "^1.5.4",
     "sockjs-client": "^1.6.1",
     "sweetalert2": "^11.26.18",
+    "vnpay": "^2.4.4",
     "vue": "^3.5.26",
     "vue-chartjs": "^5.3.3",
     "vue-router": "^4.6.4",
@@ -38,7 +44,26 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.3",
+    "concurrently": "^9.2.1",
+    "electron": "^40.6.1",
+    "electron-builder": "^26.8.1",
     "vite": "^7.3.0",
-    "vite-plugin-vue-devtools": "^8.0.5"
+    "vite-plugin-vue-devtools": "^8.0.5",
+    "wait-on": "^9.0.4"
+  },
+  "build": {
+    "appId": "com.demo.desktop",
+    "productName": "Demo",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "src/electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    }
   }
 }

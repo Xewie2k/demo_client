@@ -14,10 +14,10 @@ public class ClientOrderItemDTO {
     private String anhDaiDien;
     private String phanLoai; // e.g. "Kich thuoc: Nho, Mau: Xanh"
     private BigDecimal donGia;
-    // Giá cũ trước khi thay đổi (null nếu chưa thay đổi)
-    private BigDecimal donGiaCu;
+    private BigDecimal donGiaCu; // giá hiện tại (real-time) để FE so sánh
     private int soLuong;
     private BigDecimal thanhTien;
-    // ID biến thể để frontend sửa số lượng
     private Integer idChiTietSanPham;
+    private Integer id;  // hoa_don_chi_tiet PK — for specific record identification
+    private Integer tonKho; // tồn kho hiện tại của chi_tiet_san_pham
 }

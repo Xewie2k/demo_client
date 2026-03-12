@@ -1,7 +1,6 @@
 package com.example.datn_sevenstrike.controller.client;
 
 import com.example.datn_sevenstrike.config.VNPayConfig;
-import com.example.datn_sevenstrike.service.HoaDonService;
 import com.example.datn_sevenstrike.service.client.VNPayService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,7 +20,6 @@ public class PaymentController {
 
     private final VNPayService vnPayService;
     private final VNPayConfig vnPayConfig;
-    private final HoaDonService hoaDonService;
 
     @org.springframework.beans.factory.annotation.Value("${app.frontend.url:http://localhost:5173}")
     private String frontendUrl;
@@ -52,28 +50,6 @@ public class PaymentController {
         // vnp_Amount luôn nhân 100, chia lại để lấy giá trị thực (VND)
         long vnpAmount = Long.parseLong(request.getParameter("vnp_Amount"));
         long totalPrice = vnpAmount / 100;
-
-        // Thanh toán THÀNH CÔNG: Lưu ngayThanhToan và cập nhật GiaoDichThanhToan vào DB
-        if (paymentStatus == 1) {
-            try {
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(orderInfo);
-                if (m.find()) {
-                    int orderId = Integer.parseInt(m.group());
-                    hoaDonService.confirmVnpayPayment(orderId, transactionId);
-                }
-            } catch (Exception ignored) {}
-        }
-
-        // Thanh toán thất bại (checksum hợp lệ): tự động hủy đơn
-        if (paymentStatus == 0) {
-            try {
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\d+").matcher(orderInfo);
-                if (m.find()) {
-                    int orderId = Integer.parseInt(m.group());
-                    hoaDonService.cancelOrder(orderId, null, "HE_THONG", "Hủy tự động: thanh toán VNPay thất bại");
-                }
-            } catch (Exception ignored) {}
-        }
 
         // Redirect to Frontend success page
         String redirectUrl = frontendUrl + "/client/success?status=" + (paymentStatus == 1 ? "success" : "failed") +

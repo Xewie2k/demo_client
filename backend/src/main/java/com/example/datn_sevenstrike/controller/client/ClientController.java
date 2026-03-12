@@ -40,11 +40,6 @@ public class ClientController {
         return ResponseEntity.ok(service.getVouchers());
     }
 
-    @GetMapping("/my-coupons")
-    public ResponseEntity<List<MyVoucherDTO>> getMyCoupons(@RequestParam Integer customerId) {
-        return ResponseEntity.ok(service.getMyCoupons(customerId));
-    }
-
     @PostMapping("/orders")
     public ResponseEntity<OrderResponse> createOrder(@RequestBody OrderRequest req) {
         return ResponseEntity.ok(service.createOrder(req));

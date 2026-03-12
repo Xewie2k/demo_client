@@ -158,7 +158,7 @@
                 placeholder="Chọn hoặc nhập chất liệu..."
                 taggable
                 :clearable="true"
-                :create-option="(label) => createTagOption(label, 'vtenChatLieu')"
+                :create-option="(label) => createTagOption(label, 'tenChatLieu')"
                 @option:created="(opt) => onCreateRef('chatLieu', opt)"
               >
                 <template #option="opt">
@@ -257,8 +257,6 @@
               </button>
             </div>
 
-            <!-- ✅ bỏ phần chip hiển thị thừa, chỉ còn 1 nơi hiển thị trong v-select -->
-
             <v-select
               v-model="selectedMauSac"
               :options="mauSacOptions"
@@ -284,7 +282,6 @@
                 </div>
               </template>
 
-              <!-- ✅ luôn có chấm màu cạnh tên (trong tag đã chọn) -->
               <template #selected-option="opt">
                 <span class="d-inline-flex align-items-center" style="gap:8px">
                   <span
@@ -322,10 +319,10 @@
                   </button>
                 </div>
               </div>
-              
             </div>
             <div v-if="errors.kichThuoc" class="ss-err">{{ errors.kichThuoc }}</div>
           </div>
+
           <!-- Loại sân -->
           <div class="mb-3">
             <label class="form-label mb-1">
@@ -570,7 +567,6 @@
         </div>
 
         <div class="ss-modal-body">
-          <!-- ✅ 1 ô input (combobox) giống ảnh: chọn + tìm -->
           <div class="ss-size-select">
             <v-select
               v-model="sizeModal.tempSelected"
@@ -591,7 +587,6 @@
             </v-select>
           </div>
 
-          <!-- ✅ vẫn giữ chọn nhanh -->
           <div class="ss-size-grid mt-3">
             <button
               v-for="s in sizeModalFilteredOptions"
@@ -636,7 +631,6 @@
             <input v-model="addColor.ten" class="form-control" placeholder="Ví dụ: Đỏ, Trắng, Xanh lá..." />
           </div>
 
-          <!-- ✅ không phải nhập tay HEX nữa: chỉ chọn bằng color picker -->
           <div class="mb-2">
             <label class="form-label">Chọn màu</label>
             <div class="d-flex align-items-center gap-2">
@@ -893,7 +887,10 @@ const selectedKichThuoc = ref([]);
 const selectedLoaiSan = ref([]);
 const selectedFormChan = ref([]);
 
-// ====== errors =====
+// ===== màu sắc UI override =====
+const colorHexOverrides = reactive({});
+
+// ====== errors ======
 const errors = reactive({
   sanPham: "",
   thuongHieu: "",
@@ -998,12 +995,67 @@ function asHexColor(raw) {
   return "";
 }
 
+function pickIdFrom(obj, keys = []) {
+  for (const k of keys) {
+    const v = obj?.[k];
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
+function colorDisplayKey(m) {
+  if (!m) return "";
+  const idNum = pickIdFrom(m, ["id", "idMauSac", "mauSacId", "id_mau_sac"]);
+  if (idNum) return `id:${idNum}`;
+  const name = lc(m?.tenMauSac ?? m?.ten ?? "");
+  return name ? `name:${name}` : "";
+}
+
+function setColorHexOverride(colorObj, hex) {
+  const normalized = asHexColor(hex);
+  if (!normalized || !colorObj) return;
+
+  const key = colorDisplayKey(colorObj);
+  if (key) colorHexOverrides[key] = normalized;
+  colorObj.__uiHex = normalized;
+}
+
+function getColorHexOverride(colorObj) {
+  if (!colorObj) return "";
+  const key = colorDisplayKey(colorObj);
+  const byKey = key ? asHexColor(colorHexOverrides[key]) : "";
+  return byKey || asHexColor(colorObj?.__uiHex) || "";
+}
+
 function extractColorHex(m) {
   const candidates = [
-    m?.maMau, m?.ma_mau, m?.maHex, m?.ma_hex, m?.hex, m?.hexCode, m?.hex_code,
-    m?.giaTri, m?.gia_tri, m?.color, m?.colorHex, m?.color_hex,
-    m?.mauHex, m?.mau_hex, m?.maMauHex, m?.ma_mau_hex, m?.giaTriHex, m?.gia_tri_hex,
+    getColorHexOverride(m),
+    m?.__uiHex,
+    m?.hexHienThi,
+    m?.hex_hien_thi,
+    m?.displayHex,
+    m?.display_hex,
+    m?.maMau,
+    m?.ma_mau,
+    m?.maHex,
+    m?.ma_hex,
+    m?.hex,
+    m?.hexCode,
+    m?.hex_code,
+    m?.giaTri,
+    m?.gia_tri,
+    m?.color,
+    m?.colorHex,
+    m?.color_hex,
+    m?.mauHex,
+    m?.mau_hex,
+    m?.maMauHex,
+    m?.ma_mau_hex,
+    m?.giaTriHex,
+    m?.gia_tri_hex,
   ];
+
   for (const c of candidates) {
     const hex = asHexColor(c);
     if (hex) return hex;
@@ -1011,7 +1063,43 @@ function extractColorHex(m) {
   return "";
 }
 
+function findColorOptionAfterCreate({ createdId = null, ten = "", pickedHex = "" } = {}) {
+  const list = mauSacOptions.value || [];
+  const idNum = Number(createdId);
+  const nameNorm = lc(ten);
+  const hexNorm = asHexColor(pickedHex).toLowerCase();
+
+  if (Number.isFinite(idNum) && idNum > 0) {
+    const byId = list.find((x) => Number(x?.id) === idNum);
+    if (byId) return byId;
+  }
+
+  if (nameNorm && hexNorm) {
+    const byNameAndHex = list.find((x) => {
+      const sameName = lc(x?.tenMauSac ?? x?.ten) === nameNorm;
+      const sameHex = extractColorHex(x).toLowerCase() === hexNorm;
+      return sameName && sameHex;
+    });
+    if (byNameAndHex) return byNameAndHex;
+  }
+
+  if (nameNorm) {
+    const exactNameList = list.filter((x) => lc(x?.tenMauSac ?? x?.ten) === nameNorm);
+    if (exactNameList.length === 1) return exactNameList[0];
+
+    if (exactNameList.length > 1) {
+      const withHighestId = [...exactNameList].sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))[0];
+      if (withHighestId) return withHighestId;
+    }
+  }
+
+  return null;
+}
+
 function pickColorHex(m) {
+  const override = getColorHexOverride(m);
+  if (override) return override;
+
   const stored = extractColorHex(m);
   if (stored) return stored;
 
@@ -1041,15 +1129,6 @@ function isLight(hex) {
   } catch {
     return false;
   }
-}
-
-function pickIdFrom(obj, keys = []) {
-  for (const k of keys) {
-    const v = obj?.[k];
-    const n = Number(v);
-    if (Number.isFinite(n) && n > 0) return n;
-  }
-  return null;
 }
 
 function setSelectedById(optionsRef, selectedRef, idValue) {
@@ -1663,11 +1742,12 @@ async function confirmAddColor() {
 
   const existed = (mauSacOptions.value || []).find((x) => lc(x.tenMauSac ?? x.ten) === lc(ten));
   if (existed) {
-    // ✅ nếu màu tồn tại mà backend chưa trả hex, vẫn đảm bảo UI có màu theo picker
-    if (!extractColorHex(existed)) existed.maMau = pickedHex;
+    if (!extractColorHex(existed)) {
+      setColorHexOverride(existed, pickedHex);
+    }
 
     selectedMauSac.value = dedupeById([...(selectedMauSac.value || []), existed]);
-    ensureColorFileKey(String(existed.id));
+    if (existed?.id != null) ensureColorFileKey(String(existed.id));
     addColor.open = false;
     toastInfo(`"${ten}" đã tồn tại.`);
     onVariantSelectionChanged();
@@ -1677,22 +1757,35 @@ async function confirmAddColor() {
   try {
     loading.value = true;
 
-    // ✅ vẫn gửi mã màu lên BE (nhưng user không phải gõ tay)
     const payload = { tenMauSac: ten, maMau: pickedHex };
-    await refDataService.createMauSac(payload);
+    const createRes = await refDataService.createMauSac(payload);
+    const created = createRes?.data ?? createRes ?? null;
+    const createdId = pickIdFrom(created, ["id", "idMauSac", "mauSacId", "id_mau_sac"]);
 
     const fresh = await refDataService.getMauSac();
     mauSacOptions.value = normalizeArr(fresh);
 
-    const found = mauSacOptions.value.find((x) => lc(x.tenMauSac ?? x.ten) === lc(ten)) || null;
+    let found = findColorOptionAfterCreate({
+      createdId,
+      ten,
+      pickedHex,
+    });
 
-    if (found) {
-      // ✅ nếu BE chưa trả/không lưu hex -> inject để UI hiển thị đúng ngay
-      if (!extractColorHex(found)) found.maMau = pickedHex;
-
-      selectedMauSac.value = dedupeById([...(selectedMauSac.value || []), found]);
-      ensureColorFileKey(String(found.id));
+    if (!found) {
+      found = {
+        ...(created && typeof created === "object" ? created : {}),
+        id: createdId ?? undefined,
+        tenMauSac: created?.tenMauSac ?? ten,
+        maMau: extractColorHex(created) || pickedHex,
+        __uiHex: pickedHex,
+      };
+      mauSacOptions.value = dedupeById([...(mauSacOptions.value || []), found]);
     }
+
+    setColorHexOverride(found, pickedHex);
+
+    selectedMauSac.value = dedupeById([...(selectedMauSac.value || []), found]);
+    if (found?.id != null) ensureColorFileKey(String(found.id));
 
     addColor.open = false;
     toastSuccess(`Thêm màu "${ten}" thành công`);

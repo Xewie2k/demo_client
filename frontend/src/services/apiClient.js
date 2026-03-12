@@ -18,7 +18,24 @@ function safeParseJson(str) {
 }
 
 /* =========================================================
- * ✅ LẤY ROLE ĐĂNG NHẬP (giống router)
+ * TOKEN
+ * ========================================================= */
+function getAccessToken() {
+  return (
+    localStorage.getItem("accessToken") ||
+    sessionStorage.getItem("accessToken") ||
+    localStorage.getItem("token") ||
+    sessionStorage.getItem("token") ||
+    localStorage.getItem("jwt") ||
+    sessionStorage.getItem("jwt") ||
+    localStorage.getItem("ss_token") ||
+    sessionStorage.getItem("ss_token") ||
+    null
+  );
+}
+
+/* =========================================================
+ * ✅ LẤY ROLE ĐĂNG NHẬP
  * ========================================================= */
 function normalizeRole(role) {
   const r = String(role || "").trim().toUpperCase();
@@ -53,38 +70,34 @@ function getUserRole() {
 }
 
 /* =========================================================
- * ✅ LẤY ID NHÂN VIÊN (để gắn header audit cho admin)
+ * ✅ LẤY ID NHÂN VIÊN
  * ========================================================= */
 function getNhanVienId() {
-  const prefer = safeParseJson(localStorage.getItem("ss_nguoi_ban") || "null");
-  const u1 = safeParseJson(localStorage.getItem("user") || "null");
-  const u2 = safeParseJson(sessionStorage.getItem("ss_nguoi_ban") || "null");
-  const u3 = safeParseJson(sessionStorage.getItem("user") || "null");
+  const preferLocal = safeParseJson(localStorage.getItem("ss_nguoi_ban") || "null");
+  const userLocal = safeParseJson(localStorage.getItem("user") || "null");
+  const preferSession = safeParseJson(sessionStorage.getItem("ss_nguoi_ban") || "null");
+  const userSession = safeParseJson(sessionStorage.getItem("user") || "null");
 
-  const u = prefer || u1 || u2 || u3;
+  const u = preferLocal || userLocal || preferSession || userSession;
   if (!u || typeof u !== "object") return null;
 
   const id = u.idNhanVien || u.nhanVienId || u.id || u.userId || u.nhanVien?.id || null;
-
   const n = Number(id);
+
   return Number.isFinite(n) && n > 0 ? String(n) : null;
 }
 
 /* =========================================================
- * ✅ Cấu hình chặn thao tác nếu chưa mở ca (CHỈ ADMIN)
+ * ✅ Cấu hình chặn thao tác nếu chưa mở ca
  * ========================================================= */
-const DS_API_KHONG_CHAN_MO_CA = [
-  "/login", // tuỳ dự án
-  "/giao-ca", // cho phép thao tác liên quan ca
-  "/nhan-vien", // tuỳ dự án
-];
+const DS_API_KHONG_CHAN_MO_CA = ["/login", "/giao-ca", "/nhan-vien"];
 
 function laApiKhongChanMoCa(url = "") {
   return DS_API_KHONG_CHAN_MO_CA.some((x) => url.includes(x));
 }
 
 function laMethodThayDoiDuLieu(method = "") {
-  const m = String(method).toLowerCase();
+  const m = String(method || "").toLowerCase();
   return ["post", "put", "patch", "delete"].includes(m);
 }
 
@@ -99,19 +112,16 @@ function laApiAdmin(url = "") {
 }
 
 function taoLoiChanMoCa() {
-  const err = new Error("Blocked by Shift Permission"); // giữ để tương thích
+  const err = new Error("Blocked by Shift Permission");
   err.code = "CHAN_MO_CA";
   err.isBlockedByShift = true;
-  err.userMessage = "LỖI: Chế độ chỉ xem. Bạn chưa mở ca làm việc nên không thể thực hiện thao tác này!";
+  err.userMessage =
+    "LỖI: Chế độ chỉ xem. Bạn chưa mở ca làm việc nên không thể thực hiện thao tác này!";
   return err;
 }
 
 /* =========================================================
- * ✅ Request interceptor:
- *  - BỎ CHẶN cho /api/client/**
- *  - CHỈ CHẶN cho /api/admin/** khi role = NHAN_VIEN và method là POST/PUT/PATCH/DELETE
- *  - GẮN header NV cho /api/admin/**
- *  - Xử lý Content-Type
+ * ✅ Request interceptor
  * ========================================================= */
 apiClient.interceptors.request.use(
   (config) => {
@@ -122,14 +132,32 @@ apiClient.interceptors.request.use(
     const method = String(config.method || "get").toLowerCase();
 
     // =========================
-    // 0) CLIENT API: KHÔNG LIÊN QUAN CA LÀM -> KHÔNG CHẶN
+    // 0) GẮN AUTHORIZATION TOKEN
     // =========================
-    if (laApiClient(url)) {
-      // vẫn xử lý content-type phía dưới
-    } else {
-      // =========================
-      // 1) LỚP BẢO VỆ: CHỈ CHẶN ADMIN + NHÂN VIÊN + THAY ĐỔI DỮ LIỆU
-      // =========================
+    const token = getAccessToken();
+    if (
+      token &&
+      !config.headers.Authorization &&
+      !config.headers.authorization
+    ) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+
+    // =========================
+    // 0.1) GẮN ROLE HEADER CHO ADMIN API
+    // =========================
+    if (laApiAdmin(url)) {
+      const role = getUserRole();
+      if (role) {
+        if (!config.headers["X-User-Role"]) config.headers["X-User-Role"] = role;
+        if (!config.headers["X-Role"]) config.headers["X-Role"] = role;
+      }
+    }
+
+    // =========================
+    // 1) CLIENT API: KHÔNG CHẶN MỞ CA
+    // =========================
+    if (!laApiClient(url)) {
       const role = getUserRole();
 
       if (
@@ -146,7 +174,6 @@ apiClient.interceptors.request.use(
           if (!hasActiveShift) {
             const err = taoLoiChanMoCa();
 
-            // Mặc định có cảnh báo, nhưng cho phép tắt theo từng request
             if (meta.tuDongCanhBao !== false) {
               alert(err.userMessage);
             }
@@ -158,26 +185,26 @@ apiClient.interceptors.request.use(
     }
 
     // =========================
-    // 2) GẮN HEADER NHÂN VIÊN (chỉ cho ADMIN API)
+    // 2) GẮN HEADER NHÂN VIÊN
     // =========================
     if (laApiAdmin(url)) {
       const nvId = getNhanVienId();
       if (nvId) {
         if (!config.headers["X-Nhan-Vien-Id"]) config.headers["X-Nhan-Vien-Id"] = nvId;
         if (!config.headers["X-NV-ID"]) config.headers["X-NV-ID"] = nvId;
+        if (!config.headers["X-NhanVienId"]) config.headers["X-NhanVienId"] = nvId;
+        if (!config.headers["X-Employee-Id"]) config.headers["X-Employee-Id"] = nvId;
       }
     }
 
     // =========================
-    // 3) CONTENT-TYPE: xử lý FormData + tránh ép JSON cho kiểu đặc biệt
+    // 3) CONTENT-TYPE
     // =========================
     const isFormData = typeof FormData !== "undefined" && config.data instanceof FormData;
-
     const isUrlSearchParams =
       typeof URLSearchParams !== "undefined" && config.data instanceof URLSearchParams;
-
-    const isArrayBuffer = typeof ArrayBuffer !== "undefined" && config.data instanceof ArrayBuffer;
-
+    const isArrayBuffer =
+      typeof ArrayBuffer !== "undefined" && config.data instanceof ArrayBuffer;
     const isBlob = typeof Blob !== "undefined" && config.data instanceof Blob;
     const isFile = typeof File !== "undefined" && config.data instanceof File;
 
@@ -185,7 +212,6 @@ apiClient.interceptors.request.use(
       if (config.headers?.["Content-Type"]) delete config.headers["Content-Type"];
     } else if (!isUrlSearchParams && !isArrayBuffer && !isBlob && !isFile) {
       if (!config.headers["Content-Type"] && config.data !== undefined) {
-        // chỉ set khi có data (tránh set thừa cho GET không body)
         config.headers["Content-Type"] = "application/json";
       }
     }
@@ -196,20 +222,19 @@ apiClient.interceptors.request.use(
 );
 
 /* =========================================================
- * ✅ Response interceptor: log có kiểm soát + userMessage
+ * ✅ Response interceptor
  * ========================================================= */
 apiClient.interceptors.response.use(
   (res) => res,
   (err) => {
-    // Nếu là lỗi do bị chặn mở ca thì không log
     if (err?.isBlockedByShift || err?.code === "CHAN_MO_CA") {
       return Promise.reject(err);
     }
 
     const status = err?.response?.status;
     const data = err?.response?.data;
-
     const isSilent = !!err?.config?.meta?.silent;
+
     if (!isSilent) {
       console.error("API error:", status, data || err?.message);
     }

@@ -1,8 +1,9 @@
+<!-- File: src/pages/lich_lam_viec/LichSuHoatDong.vue -->
 <template>
   <div class="ss-page ss-font">
     <div class="ss-head">
       <div class="ss-head-left">
-        <div class="ss-title">LỊCH SỬ GIAO CA & KẾT TOÁN</div>
+        <div class="ss-title">LỊCH SỬ HOẠT ĐỘNG</div>
         <div class="ss-subtitle">Theo dõi lịch sử đóng/mở ca và dòng tiền của nhân viên</div>
       </div>
     </div>
@@ -13,10 +14,10 @@
           <label class="ss-label">Tìm kiếm</label>
           <div class="ss-input-group">
             <span class="material-icons-outlined ss-input-icon">search</span>
-            <input
-              type="text"
-              class="form-control ss-input ss-input-with-icon"
-              placeholder="Tìm theo nhân viên / mã ca..."
+            <input 
+              type="text" 
+              class="form-control ss-input ss-input-with-icon" 
+              placeholder="Tìm theo nhân viên / mã ca..." 
             />
           </div>
         </div>
@@ -65,20 +66,20 @@
             </tr>
             <tr v-else v-for="(item, index) in rawData" :key="item.id">
               <td class="text-center">{{ index + 1 }}</td>
-
+              
               <td>{{ item.tenNhanVien || '—' }}</td>
-
+              
               <td>
                 <span :class="getMauCaLam(item.tenCaLam || item.maGiaoCa)">
                   {{ item.tenCaLam || item.maGiaoCa || '—' }}
                 </span>
               </td>
-
+              
               <td>
                 <div class="ss-time">{{ formatTime(item.thoiGianNhanCa) }}</div>
                 <div class="ss-date">{{ formatDate(item.thoiGianNhanCa) }}</div>
               </td>
-
+              
               <td>
                 <div v-if="item.thoiGianKetCa">
                   <div class="ss-time">{{ formatTime(item.thoiGianKetCa) }}</div>
@@ -86,16 +87,16 @@
                 </div>
                 <div v-else>—</div>
               </td>
-
+              
               <td class="text-end">{{ formatMoney(item.tienMatTrongCa) }} đ</td>
               <td class="text-end">{{ formatMoney(item.tienChuyenKhoanTrongCa) }} đ</td>
               <td class="text-end fw-bold">{{ formatMoney(item.tongTienTrongCa) }} đ</td>
-
-              <td class="text-end fw-bold"
+              
+              <td class="text-end fw-bold" 
                   :class="{'text-success': calcChenhLech(item) >= 0, 'text-danger': calcChenhLech(item) < 0}">
                 {{ formatMoney(calcChenhLech(item)) }} đ
               </td>
-
+              
               <td class="text-center">
                 <span class="ss-badge" :class="item.trangThai === 1 ? 'badge-closed' : 'badge-active'">
                   {{ item.trangThai === 1 ? 'Đã đóng' : 'Đang làm' }}
@@ -111,7 +112,7 @@
 
 <script setup>
 import { ref, onMounted } from 'vue';
-import { getLichSuGiaoCa } from '@/services/lich_lam_viec/giao_caService.js';
+import { getLichSuGiaoCa } from '@/services/lich_lam_viec/giao_caService.js'; 
 
 const rawData = ref([]);
 const isLoading = ref(false);
@@ -136,15 +137,15 @@ const loadData = async () => {
   isLoading.value = true;
   try {
     const res = await getLichSuGiaoCa(0, 100);
-
+    
     if (res && res.content) {
-      rawData.value = res.content;
+      rawData.value = res.content;                     
     } else if (res && res.data && res.data.content) {
-      rawData.value = res.data.content;
+      rawData.value = res.data.content;                
     } else if (res && res.data && Array.isArray(res.data)) {
-      rawData.value = res.data;
+      rawData.value = res.data;                        
     } else if (Array.isArray(res)) {
-      rawData.value = res;
+      rawData.value = res;                             
     } else {
       rawData.value = [];
     }
@@ -166,7 +167,7 @@ const getMauCaLam = (tenCa) => {
   if (!tenCa) return 'badge-xam';
   const name = String(tenCa).toLowerCase();
   if (name.includes('chiều')) return 'badge-hong';
-  return 'badge-xam';
+  return 'badge-xam'; 
 };
 
 const formatTime = (isoString) => {
@@ -210,7 +211,7 @@ const calcChenhLech = (item) => {
 .ss-title {
   font-size: 20px;
   font-weight: 700;
-  color: #212529;
+  color: #212529; 
   text-transform: uppercase;
 }
 .ss-subtitle {
@@ -336,7 +337,7 @@ const calcChenhLech = (item) => {
   color: #374151;
   border: 1px solid #e5e7eb;
   padding: 4px 14px;
-  border-radius: 9999px;
+  border-radius: 9999px; 
   font-size: 13px;
   font-weight: 500;
   display: inline-block;
@@ -348,7 +349,7 @@ const calcChenhLech = (item) => {
   color: #b91c1c;
   border: 1px solid #fecaca;
   padding: 4px 14px;
-  border-radius: 9999px;
+  border-radius: 9999px; 
   font-size: 13px;
   font-weight: 500;
   display: inline-block;
@@ -381,7 +382,7 @@ const calcChenhLech = (item) => {
 .ss-input[type="date"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   /* Ép icon thành màu đen và làm mờ một chút cho thanh lịch */
-  filter: brightness(0) opacity(0.6);
+  filter: brightness(0) opacity(0.6); 
   transition: 0.2s;
 }
 

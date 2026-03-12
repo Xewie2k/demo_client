@@ -37,7 +37,9 @@ public class HoaDon {
     @Column(name = "ma_hoa_don", insertable = false, updatable = false, length = 7)
     private String maHoaDon;
 
-    // 0: tại quầy | 1: giao hàng (POS) | 2: online
+    /**
+     * 0: Tại quầy | 1: Giao hàng | 2: Online
+     */
     @Column(name = "loai_don", nullable = false)
     private Integer loaiDon;
 
@@ -65,7 +67,10 @@ public class HoaDon {
     @Column(name = "email_khach_hang", length = 255)
     private String emailKhachHang;
 
-    // int code
+    /**
+     * 1 Chưa xác nhận | 2 Đã xác nhận | 3 Chờ giao | 4 Đang giao | 5 Hoàn thành | 6 Đã hủy
+     * Có thể mở rộng thêm 7 = Yêu cầu hủy nếu project của bạn dùng flow này.
+     */
     @Column(name = "trang_thai_hien_tai", nullable = false)
     private Integer trangThaiHienTai;
 
@@ -90,7 +95,11 @@ public class HoaDon {
     @Column(name = "nguoi_cap_nhat")
     private Integer nguoiCapNhat;
 
-    // null=không cần hoàn, false=chờ hoàn phí, true=đã hoàn phí
+    /**
+     * null = không cần hoàn phí
+     * false = chờ hoàn phí
+     * true = đã hoàn phí
+     */
     @Column(name = "da_hoan_phi")
     private Boolean daHoanPhi;
 }

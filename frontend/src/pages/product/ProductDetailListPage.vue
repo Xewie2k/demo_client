@@ -1,6 +1,23 @@
 <!-- File: src/pages/product/ProductDetailListPage.vue -->
 <template>
   <div class="ss-page ss-font">
+    <!-- TOAST -->
+    <transition name="ss-toast-fade">
+      <div
+        v-if="toast.show"
+        class="ss-toast"
+        :class="toast.type === 'success' ? 'ss-toast-success' : 'ss-toast-error'"
+      >
+        <span class="material-icons-outlined ss-toast-icon">
+          {{ toast.type === "success" ? "check_circle" : "error" }}
+        </span>
+        <div class="ss-toast-text">{{ toast.message }}</div>
+        <button class="ss-toast-close" type="button" @click="hideToast">
+          <span class="material-icons-outlined">close</span>
+        </button>
+      </div>
+    </transition>
+
     <!-- HEAD -->
     <div class="ss-head">
       <div class="ss-head-left">
@@ -152,9 +169,7 @@
           </div>
         </div>
 
-        <!-- ✅ ĐỔI THỨ TỰ + ĐỒNG BỘ ICON -->
         <div class="ss-filter-actions-under">
-          <!-- Excel (icon giống ProductManagePage) -->
           <button
             class="btn ss-btn-lite"
             type="button"
@@ -165,7 +180,6 @@
             Tải Excel
           </button>
 
-          <!-- QR (đã chọn) -->
           <button
             class="btn ss-btn-lite"
             type="button"
@@ -181,7 +195,6 @@
             Tải QR (Đã chọn)
           </button>
 
-          <!-- QR (tất cả theo lọc hiện tại) -->
           <button
             class="btn ss-btn-lite"
             type="button"
@@ -195,7 +208,6 @@
             Tải QR (Tất cả)
           </button>
 
-          <!-- Quét QR (icon giống ProductManagePage) -->
           <button
             class="btn ss-btn-warn"
             type="button"
@@ -208,7 +220,6 @@
             Quét QR
           </button>
 
-          <!-- Đặt lại (icon giống ProductManagePage) -->
           <button
             class="btn ss-btn-dark"
             type="button"
@@ -244,7 +255,6 @@
         <table class="table ss-table mb-0 align-middle">
           <thead>
             <tr>
-              <!-- ✅ Checkbox trước STT -->
               <th class="col-check text-center">
                 <input
                   ref="headerCheckRef"
@@ -290,7 +300,6 @@
 
           <tbody v-else>
             <tr v-for="(d, idx) in pagedDetails" :key="d.id">
-              <!-- ✅ checkbox dòng -->
               <td class="ss-td col-check text-center">
                 <input
                   type="checkbox"
@@ -645,12 +654,86 @@
           <button
             class="btn ss-btn-primary"
             type="button"
-            @click="saveEdit"
+            @click="openSaveConfirm"
             :disabled="editSaving"
           >
             <span v-if="editSaving" class="ss-spin"></span>
             Cập nhật chi tiết
           </button>
+        </div>
+
+        <!-- CONFIRM UPDATE -->
+        <div
+          v-if="confirmOpen"
+          class="ss-confirm-backdrop"
+          @click.self="closeSaveConfirm"
+        >
+          <div class="ss-confirm-box">
+            <div class="ss-confirm-icon-wrap">
+              <span class="material-icons-outlined ss-confirm-icon">help</span>
+            </div>
+
+            <div class="ss-confirm-title">Xác nhận cập nhật biến thể</div>
+
+            <div class="ss-confirm-desc">
+              Bạn có chắc chắn muốn cập nhật biến thể
+              <strong>{{ editForm.maCtsp || "-" }}</strong
+              >?
+            </div>
+
+            <div v-if="changedFields.length" class="ss-confirm-summary">
+              <div
+                v-for="item in changedFields"
+                :key="item.key"
+                class="ss-confirm-change-row"
+              >
+                <div class="ss-confirm-change-head">
+                  <span class="ss-confirm-change-dot"></span>
+                  <span class="ss-confirm-change-label">{{ item.label }}</span>
+                </div>
+
+                <div class="ss-confirm-change-values">
+                  <div class="ss-confirm-old">
+                    <span class="ss-confirm-side-label">Từ:</span>
+                    <span class="ss-confirm-old-value">{{ item.oldValue }}</span>
+                  </div>
+
+                  <span class="material-icons-outlined ss-confirm-arrow"
+                    >arrow_forward</span
+                  >
+
+                  <div class="ss-confirm-new">
+                    <span class="ss-confirm-side-label">Thành:</span>
+                    <span class="ss-confirm-new-value">{{ item.newValue }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div v-else class="ss-confirm-empty">
+              Hiện chưa có thay đổi nào để cập nhật.
+            </div>
+
+            <div class="ss-confirm-actions">
+              <button
+                class="btn ss-btn-outline"
+                type="button"
+                @click="closeSaveConfirm"
+                :disabled="editSaving"
+              >
+                Quay lại
+              </button>
+              <button
+                class="btn ss-btn-primary"
+                type="button"
+                @click="confirmSaveEdit"
+                :disabled="editSaving || changedFields.length === 0"
+              >
+                <span v-if="editSaving" class="ss-spin"></span>
+                Xác nhận cập nhật
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -788,6 +871,31 @@ const filters = reactive({
   idFormChan: [],
 });
 
+const toast = reactive({
+  show: false,
+  type: "success",
+  message: "",
+});
+let toastTimer = null;
+
+function showToast(type, message) {
+  toast.type = type;
+  toast.message = message;
+  toast.show = true;
+
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.show = false;
+  }, 2800);
+}
+function hideToast() {
+  toast.show = false;
+  if (toastTimer) {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+  }
+}
+
 function unwrapList(v) {
   if (Array.isArray(v)) return v;
   const d = v?.data ?? v;
@@ -816,6 +924,16 @@ function toIntOrNull(v) {
   if (v === "" || v === undefined || v === null) return null;
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
+}
+function normalizeCompareText(v) {
+  return String(v ?? "").trim();
+}
+function sameValue(a, b) {
+  return normalizeCompareText(a) === normalizeCompareText(b);
+}
+function displayValue(v) {
+  const s = String(v ?? "").trim();
+  return s === "" ? "-" : s;
 }
 
 function getTrangThai(obj) {
@@ -1687,11 +1805,13 @@ async function downloadQrAllZip() {
 }
 
 /* =======================
-   ✅ EDIT MODAL (GIỮ NGUYÊN)
+   ✅ EDIT MODAL
    ======================= */
 const editOpen = ref(false);
 const editSaving = ref(false);
 const editError = ref("");
+const confirmOpen = ref(false);
+const originalEdit = ref(null);
 
 const editForm = reactive({
   id: null,
@@ -1714,8 +1834,130 @@ const editForm = reactive({
   idFormChan: null,
 });
 
+function buildOriginalState(d) {
+  return {
+    soLuong: Number(pickSoLuong(d) || 0),
+    giaBan: Number(pickGia(d) || 0),
+    trangThaiText: getTrangThai(d) ? "Kinh doanh" : "Ngừng kinh doanh",
+    tenMauSac: displayValue(pickTenMauSac(d)),
+    tenKichThuoc: displayValue(pickTenKichThuoc(d)),
+    tenLoaiSan: displayValue(pickTenLoaiSan(d)),
+    tenFormChan: displayValue(pickTenFormChan(d)),
+    moTa: displayValue(d?.moTa ?? d?.mo_ta ?? d?.ghiChu ?? d?.ghi_chu ?? ""),
+    anh: "Không thay đổi",
+  };
+}
+
+function buildCurrentState() {
+  return {
+    soLuong: Number(editForm.soLuong || 0),
+    giaBan: Number(editForm.giaBan || 0),
+    trangThaiText: editForm.trangThai ? "Kinh doanh" : "Ngừng kinh doanh",
+    tenMauSac: displayValue(editForm.tenMauSac),
+    tenKichThuoc: displayValue(editForm.tenKichThuoc),
+    tenLoaiSan: displayValue(editForm.tenLoaiSan),
+    tenFormChan: displayValue(editForm.tenFormChan),
+    moTa: displayValue(editForm.moTa),
+    anh: editForm.file ? editForm.file.name : "Không thay đổi",
+  };
+}
+
+const changedFields = computed(() => {
+  const oldVal = originalEdit.value;
+  if (!oldVal) return [];
+
+  const cur = buildCurrentState();
+  const arr = [];
+
+  if (!sameValue(oldVal.soLuong, cur.soLuong)) {
+    arr.push({
+      key: "soLuong",
+      label: "Số lượng tồn",
+      oldValue: String(oldVal.soLuong),
+      newValue: String(cur.soLuong),
+    });
+  }
+
+  if (!sameValue(oldVal.giaBan, cur.giaBan)) {
+    arr.push({
+      key: "giaBan",
+      label: "Giá bán",
+      oldValue: `${formatMoney(oldVal.giaBan)} đ`,
+      newValue: `${formatMoney(cur.giaBan)} đ`,
+    });
+  }
+
+  if (!sameValue(oldVal.trangThaiText, cur.trangThaiText)) {
+    arr.push({
+      key: "trangThai",
+      label: "Trạng thái",
+      oldValue: oldVal.trangThaiText,
+      newValue: cur.trangThaiText,
+    });
+  }
+
+  if (!sameValue(oldVal.tenMauSac, cur.tenMauSac)) {
+    arr.push({
+      key: "tenMauSac",
+      label: "Màu sắc",
+      oldValue: oldVal.tenMauSac,
+      newValue: cur.tenMauSac,
+    });
+  }
+
+  if (!sameValue(oldVal.tenKichThuoc, cur.tenKichThuoc)) {
+    arr.push({
+      key: "tenKichThuoc",
+      label: "Kích thước",
+      oldValue: oldVal.tenKichThuoc,
+      newValue: cur.tenKichThuoc,
+    });
+  }
+
+  if (!sameValue(oldVal.tenLoaiSan, cur.tenLoaiSan)) {
+    arr.push({
+      key: "tenLoaiSan",
+      label: "Loại sân",
+      oldValue: oldVal.tenLoaiSan,
+      newValue: cur.tenLoaiSan,
+    });
+  }
+
+  if (!sameValue(oldVal.tenFormChan, cur.tenFormChan)) {
+    arr.push({
+      key: "tenFormChan",
+      label: "Form chân",
+      oldValue: oldVal.tenFormChan,
+      newValue: cur.tenFormChan,
+    });
+  }
+
+  if (!sameValue(oldVal.moTa, cur.moTa)) {
+    arr.push({
+      key: "moTa",
+      label: "Mô tả",
+      oldValue: oldVal.moTa,
+      newValue: cur.moTa,
+    });
+  }
+
+  if (!sameValue(oldVal.anh, cur.anh)) {
+    arr.push({
+      key: "anh",
+      label: "Hình ảnh",
+      oldValue: oldVal.anh,
+      newValue: cur.anh,
+    });
+  }
+
+  return arr;
+});
+
 function openEdit(d) {
   editError.value = "";
+  confirmOpen.value = false;
+  originalEdit.value = buildOriginalState(d);
+
   editForm.id = d?.id ?? null;
   editForm.maCtsp = pickMaCtsp(d);
   editForm.tenMauSac = pickTenMauSac(d);
@@ -1747,6 +1989,31 @@ function closeEdit() {
   editOpen.value = false;
   editSaving.value = false;
   editError.value = "";
+  confirmOpen.value = false;
+  originalEdit.value = null;
+}
+
+function openSaveConfirm() {
+  if (editSaving.value) return;
+  editError.value = "";
+
+  if (changedFields.value.length === 0) {
+    showToast("error", "Chưa có thay đổi nào để cập nhật.");
+    return;
+  }
+
+  confirmOpen.value = true;
+}
+
+function closeSaveConfirm() {
+  if (editSaving.value) return;
+  confirmOpen.value = false;
+}
+
+async function confirmSaveEdit() {
+  if (editSaving.value) return;
+  confirmOpen.value = false;
+  await saveEdit();
 }
 
 function clearPickedImage() {
@@ -1794,6 +2061,7 @@ async function saveEdit() {
   editError.value = "";
   if (!editForm.id) {
     editError.value = "Không xác định được bản ghi cần sửa.";
+    showToast("error", editError.value);
     return;
   }
 
@@ -1892,11 +2160,13 @@ async function saveEdit() {
       bumpImgVer();
     }
 
+    showToast("success", `Cập nhật biến thể ${editForm.maCtsp} thành công.`);
     closeEdit();
   } catch (e) {
     console.error(e);
     editError.value =
       "Cập nhật chưa thành công. Vui lòng kiểm tra API update chi tiết sản phẩm của BE/service.";
+    showToast("error", `Cập nhật biến thể ${editForm.maCtsp} thất bại.`);
   } finally {
     editSaving.value = false;
   }
@@ -2071,6 +2341,7 @@ async function closeQrCamera() {
 onBeforeUnmount(() => {
   stopQrCamera();
   if (editForm.previewUrl) URL.revokeObjectURL(editForm.previewUrl);
+  hideToast();
 });
 </script>
 
@@ -2084,7 +2355,6 @@ onBeforeUnmount(() => {
   background: #eef0f3 !important;
 }
 
-/* ✅ Ép toàn bộ không in đậm */
 .ss-font,
 .ss-font * {
   font-weight: 400 !important;
@@ -2095,11 +2365,73 @@ onBeforeUnmount(() => {
   color: rgba(17, 24, 39, 0.82);
 }
 
-/* không đè font icon */
 .material-icons,
 .material-icons-outlined {
   font-family: "Material Icons", "Material Icons Outlined" !important;
   font-weight: normal !important;
+}
+
+/* TOAST */
+.ss-toast {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 4000;
+  min-width: 320px;
+  max-width: min(520px, calc(100vw - 32px));
+  border-radius: 14px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  box-shadow: 0 14px 36px rgba(17, 24, 39, 0.16);
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  background: #fff;
+}
+.ss-toast-success {
+  border-left: 4px solid #22c55e;
+}
+.ss-toast-error {
+  border-left: 4px solid #ff4d4f;
+}
+.ss-toast-icon {
+  font-size: 20px;
+  margin-top: 1px;
+}
+.ss-toast-success .ss-toast-icon {
+  color: #22c55e;
+}
+.ss-toast-error .ss-toast-icon {
+  color: #ff4d4f;
+}
+.ss-toast-text {
+  flex: 1;
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.86);
+  line-height: 1.5;
+}
+.ss-toast-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.ss-toast-close .material-icons-outlined {
+  font-size: 18px;
+  color: rgba(17, 24, 39, 0.55);
+}
+.ss-toast-fade-enter-active,
+.ss-toast-fade-leave-active {
+  transition: all 0.22s ease;
+}
+.ss-toast-fade-enter-from,
+.ss-toast-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
 /* HEAD */
@@ -2351,7 +2683,6 @@ onBeforeUnmount(() => {
   color: rgba(17, 24, 39, 0.55);
 }
 
-/* ✅ checkbox */
 .ss-check {
   width: 16px;
   height: 16px;
@@ -2359,7 +2690,6 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-/* ✅ Giá bán màu đỏ */
 .ss-money {
   color: #ff4d4f;
   white-space: nowrap;
@@ -2371,7 +2701,6 @@ onBeforeUnmount(() => {
   white-space: nowrap;
 }
 
-/* thumb */
 .ss-thumb {
   width: 42px;
   height: 42px;
@@ -2389,7 +2718,6 @@ onBeforeUnmount(() => {
   object-fit: cover;
 }
 
-/* swatch */
 .ss-swatch {
   width: 14px;
   height: 14px;
@@ -2398,7 +2726,6 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
 }
 
-/* Badge */
 .ss-badge {
   display: inline-flex;
   align-items: center;
@@ -2423,7 +2750,6 @@ onBeforeUnmount(() => {
   border-color: rgba(17, 24, 39, 0.12);
 }
 
-/* icon view */
 .ss-icon-btn-view {
   width: 36px;
   height: 36px;
@@ -2445,7 +2771,6 @@ onBeforeUnmount(() => {
   border-color: rgba(17, 24, 39, 0.22);
 }
 
-/* ✅ Khoảng giá màu đỏ */
 .ss-price-hint {
   font-size: 13px;
   color: rgba(255, 77, 79, 0.95);
@@ -2599,7 +2924,6 @@ onBeforeUnmount(() => {
   color: rgba(17, 24, 39, 0.6);
 }
 
-/* dấu * màu đỏ */
 .ss-required {
   color: #ff4d4f;
 }
@@ -2625,6 +2949,7 @@ onBeforeUnmount(() => {
   width: min(720px, calc(100vw - 24px));
 }
 .ss-edit-modal {
+  position: relative;
   max-height: 86vh;
   overflow: auto;
 }
@@ -2704,7 +3029,6 @@ onBeforeUnmount(() => {
   border-color: rgba(255, 77, 79, 0.55);
 }
 
-/* status switch */
 .ss-status-row {
   display: flex;
   align-items: center;
@@ -2753,7 +3077,6 @@ onBeforeUnmount(() => {
   transform: translateX(20px);
 }
 
-/* box QR / ảnh */
 .ss-box {
   border: 1px solid rgba(17, 24, 39, 0.1);
   border-radius: 14px;
@@ -2783,7 +3106,6 @@ onBeforeUnmount(() => {
   background: rgba(17, 24, 39, 0.04);
 }
 
-/* QR */
 .ss-qr-wrap {
   display: grid;
   justify-items: center;
@@ -2811,7 +3133,6 @@ onBeforeUnmount(() => {
   color: rgba(17, 24, 39, 0.6);
 }
 
-/* ảnh */
 .ss-img-remove {
   width: 28px;
   height: 28px;
@@ -2862,7 +3183,6 @@ onBeforeUnmount(() => {
   color: rgba(17, 24, 39, 0.55);
 }
 
-/* footer */
 .ss-modal-foot {
   display: flex;
   justify-content: flex-end;
@@ -2872,7 +3192,139 @@ onBeforeUnmount(() => {
   border-top: 1px solid rgba(17, 24, 39, 0.08);
 }
 
-/* loading spin */
+/* confirm overlay */
+.ss-confirm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.48);
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  z-index: 10;
+  padding: 16px;
+}
+.ss-confirm-box {
+  width: min(560px, 100%);
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  box-shadow: 0 16px 40px rgba(17, 24, 39, 0.2);
+  padding: 18px;
+}
+.ss-confirm-icon-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  background: rgba(255, 77, 79, 0.12);
+  display: grid;
+  place-items: center;
+  margin: 0 auto 10px;
+}
+.ss-confirm-icon {
+  font-size: 28px;
+  color: #ff4d4f;
+}
+.ss-confirm-title {
+  text-align: center;
+  font-size: 17px;
+  color: rgba(17, 24, 39, 0.92);
+  margin-bottom: 8px;
+}
+.ss-confirm-desc {
+  text-align: center;
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.72);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+.ss-confirm-summary {
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 14px;
+  background: rgba(17, 24, 39, 0.025);
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  max-height: 360px;
+  overflow: auto;
+}
+.ss-confirm-change-row {
+  border: 1px solid rgba(255, 77, 79, 0.16);
+  background: rgba(255, 77, 79, 0.05);
+  border-radius: 12px;
+  padding: 10px;
+}
+.ss-confirm-change-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ss-confirm-change-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #ff4d4f;
+  flex: 0 0 auto;
+}
+.ss-confirm-change-label {
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.88);
+}
+.ss-confirm-change-values {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 10px;
+  align-items: stretch;
+}
+.ss-confirm-old,
+.ss-confirm-new {
+  border-radius: 10px;
+  padding: 8px 10px;
+  min-height: 56px;
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+.ss-confirm-old {
+  background: rgba(17, 24, 39, 0.04);
+  border: 1px solid rgba(17, 24, 39, 0.08);
+}
+.ss-confirm-new {
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.18);
+}
+.ss-confirm-side-label {
+  font-size: 11px;
+  color: rgba(17, 24, 39, 0.55);
+}
+.ss-confirm-old-value,
+.ss-confirm-new-value {
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.88);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.ss-confirm-arrow {
+  align-self: center;
+  color: #ff4d4f;
+  font-size: 20px;
+}
+.ss-confirm-empty {
+  border: 1px dashed rgba(17, 24, 39, 0.14);
+  border-radius: 14px;
+  background: rgba(17, 24, 39, 0.025);
+  padding: 14px;
+  text-align: center;
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.6);
+}
+.ss-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
 .ss-spin {
   width: 14px;
   height: 14px;
@@ -2928,6 +3380,20 @@ onBeforeUnmount(() => {
   }
   .ss-img-preview {
     height: 170px;
+  }
+  .ss-confirm-change-values {
+    grid-template-columns: 1fr;
+  }
+  .ss-confirm-arrow {
+    justify-self: center;
+    transform: rotate(90deg);
+  }
+  .ss-toast {
+    left: 12px;
+    right: 12px;
+    top: 12px;
+    min-width: unset;
+    max-width: unset;
   }
 }
 </style>

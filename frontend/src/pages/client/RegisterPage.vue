@@ -16,30 +16,27 @@
 
           <div v-if="errorMsg" class="alert alert-danger py-2 small rounded-3">{{ errorMsg }}</div>
 
-          <form @submit.prevent="handleRegister" novalidate>
+          <form @submit.prevent="handleRegister">
             <div class="mb-3">
               <label class="form-label small fw-semibold text-secondary">Họ và tên <span class="text-danger">*</span></label>
               <div class="input-group">
                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
-                <input type="text" :class="['form-control border-start-0 ps-0', errors.tenKhachHang && 'is-invalid']" v-model="form.tenKhachHang" placeholder="Nguyễn Văn A" autofocus>
+                <input type="text" class="form-control border-start-0 ps-0" v-model="form.tenKhachHang" required placeholder="Nguyễn Văn A" autofocus>
               </div>
-              <div v-if="errors.tenKhachHang" class="text-danger small mt-1">{{ errors.tenKhachHang }}</div>
             </div>
             <div class="mb-3">
               <label class="form-label small fw-semibold text-secondary">Email <span class="text-danger">*</span></label>
               <div class="input-group">
                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
-                <input type="text" :class="['form-control border-start-0 ps-0', errors.email && 'is-invalid']" v-model="form.email" placeholder="email@example.com">
+                <input type="email" class="form-control border-start-0 ps-0" v-model="form.email" required placeholder="email@example.com">
               </div>
-              <div v-if="errors.email" class="text-danger small mt-1">{{ errors.email }}</div>
             </div>
             <div class="mb-3">
               <label class="form-label small fw-semibold text-secondary">Số điện thoại</label>
               <div class="input-group">
                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-telephone text-muted"></i></span>
-                <input type="tel" :class="['form-control border-start-0 ps-0', errors.soDienThoai && 'is-invalid']" v-model="form.soDienThoai" placeholder="0123456789">
+                <input type="tel" class="form-control border-start-0 ps-0" v-model="form.soDienThoai" placeholder="0123456789">
               </div>
-              <div v-if="errors.soDienThoai" class="text-danger small mt-1">{{ errors.soDienThoai }}</div>
             </div>
             <div class="mb-3">
               <label class="form-label small fw-semibold text-secondary">Mật khẩu <span class="text-danger">*</span></label>
@@ -47,15 +44,16 @@
                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-lock text-muted"></i></span>
                 <input
                   :type="showPassword ? 'text' : 'password'"
-                  :class="['form-control border-start-0 border-end-0 ps-0', errors.matKhau && 'is-invalid']"
+                  class="form-control border-start-0 border-end-0 ps-0"
                   v-model="form.matKhau"
+                  required
                   placeholder="Nhập mật khẩu"
+                  minlength="6"
                 >
                 <button class="btn btn-outline-secondary border-start-0" type="button" @click="showPassword = !showPassword" tabindex="-1">
                   <i :class="showPassword ? 'bi bi-eye-slash' : 'bi bi-eye'" class="text-muted"></i>
                 </button>
               </div>
-              <div v-if="errors.matKhau" class="text-danger small mt-1">{{ errors.matKhau }}</div>
             </div>
             <div class="mb-4">
               <label class="form-label small fw-semibold text-secondary">Xác nhận mật khẩu <span class="text-danger">*</span></label>
@@ -63,12 +61,12 @@
                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-shield-lock text-muted"></i></span>
                 <input
                   :type="showPassword ? 'text' : 'password'"
-                  :class="['form-control border-start-0 ps-0', errors.confirmPassword && 'is-invalid']"
+                  class="form-control border-start-0 ps-0"
                   v-model="confirmPassword"
+                  required
                   placeholder="Nhập lại mật khẩu"
                 >
               </div>
-              <div v-if="errors.confirmPassword" class="text-danger small mt-1">{{ errors.confirmPassword }}</div>
             </div>
             <button
               type="submit"
@@ -111,42 +109,14 @@ const confirmPassword = ref('');
 const loading = ref(false);
 const errorMsg = ref('');
 const showPassword = ref(false);
-const errors = ref({});
-
-const PHONE_REGEX = /^(0[3|5|7|8|9])[0-9]{8}$/;
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-function validate() {
-  errors.value = {};
-  if (!form.tenKhachHang.trim()) {
-    errors.value.tenKhachHang = 'Vui lòng nhập họ và tên';
-  } else if (form.tenKhachHang.trim().length < 2) {
-    errors.value.tenKhachHang = 'Tên tối thiểu 2 ký tự';
-  }
-  if (!form.email.trim()) {
-    errors.value.email = 'Vui lòng nhập email';
-  } else if (!EMAIL_REGEX.test(form.email)) {
-    errors.value.email = 'Email không đúng định dạng';
-  }
-  if (form.soDienThoai && !PHONE_REGEX.test(form.soDienThoai)) {
-    errors.value.soDienThoai = 'Số điện thoại không hợp lệ (VD: 0912345678)';
-  }
-  if (!form.matKhau) {
-    errors.value.matKhau = 'Vui lòng nhập mật khẩu';
-  } else if (form.matKhau.length < 6) {
-    errors.value.matKhau = 'Mật khẩu tối thiểu 6 ký tự';
-  }
-  if (!confirmPassword.value) {
-    errors.value.confirmPassword = 'Vui lòng xác nhận mật khẩu';
-  } else if (form.matKhau !== confirmPassword.value) {
-    errors.value.confirmPassword = 'Mật khẩu xác nhận không khớp';
-  }
-  return Object.keys(errors.value).length === 0;
-}
 
 const handleRegister = async () => {
   errorMsg.value = '';
-  if (!validate()) return;
+
+  if (form.matKhau !== confirmPassword.value) {
+    errorMsg.value = 'Mật khẩu xác nhận không khớp!';
+    return;
+  }
 
   loading.value = true;
   try {

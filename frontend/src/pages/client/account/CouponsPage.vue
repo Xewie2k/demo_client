@@ -110,10 +110,9 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import apiClient from '@/services/apiClient';
 import { useClientAuth } from '@/services/authClient';
-import { connectChat } from '@/chatAI/services/chatService';
 
 const { customer } = useClientAuth();
 const coupons = ref([]);
@@ -227,25 +226,7 @@ const getStatusLabel = (status) => {
   return '';
 };
 
-let voucherSub = null;
-
-onMounted(async () => {
-  fetchCoupons();
-
-  const client = connectChat();
-  const waitConnected = () => new Promise(resolve => {
-    if (client.connected) { resolve(); return; }
-    const check = setInterval(() => { if (client.connected) { clearInterval(check); resolve(); } }, 100);
-  });
-  await waitConnected();
-  voucherSub = client.subscribe('/topic/vouchers/updated', () => {
-    fetchCoupons();
-  });
-});
-
-onBeforeUnmount(() => {
-  if (voucherSub) voucherSub.unsubscribe();
-});
+onMounted(fetchCoupons);
 </script>
 
 <style scoped>

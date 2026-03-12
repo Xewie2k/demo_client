@@ -6,7 +6,7 @@
       <!-- Progress line -->
       <div
         class="position-absolute"
-        :style="{ width: progressPercentage + '%', height: '4px', backgroundColor: isCancelled ? '#dc3545' : 'var(--ss-accent, #e53935)', top: '40px', left: 0, zIndex: 0, transition: 'width 0.5s ease' }"
+        :style="{ width: progressPercentage + '%', height: '4px', backgroundColor: 'var(--ss-accent, #e53935)', top: '40px', left: 0, zIndex: 0, transition: 'width 0.5s ease' }"
       ></div>
 
       <!-- Steps -->
@@ -17,12 +17,12 @@
           :style="circleStyle(step.code)"
           style="width:40px; height:40px; font-size:1.1rem; transition:all 0.3s;"
         >
-          <i v-if="isCancelled && step.code === 1" class="bi bi-x-lg"></i>
-          <i v-else-if="!isCancelled && step.code < statusCode" class="bi bi-check-lg"></i>
+          <i v-if="step.code < effectiveStatus" class="bi bi-check-lg"></i>
+          <i v-else-if="statusCode >= 6 && step.code === 1" :class="statusCode === 7 ? 'bi bi-exclamation-octagon-fill' : 'bi bi-x-circle-fill'"></i>
           <i v-else :class="step.icon"></i>
         </div>
         <!-- Label -->
-        <div class="mt-2 fw-bold" :style="stepLabelStyle(step.code)" style="font-size:0.72rem; line-height:1.3; transition:color 0.3s;">
+        <div class="mt-2 fw-bold" :style="step.code <= effectiveStatus ? { color: 'var(--ss-accent, #e53935)' } : { color: '#bbb' }" style="font-size:0.72rem; line-height:1.3;">
           {{ step.label }}
         </div>
         <!-- Timestamp (nếu có) -->
@@ -30,11 +30,6 @@
           {{ formatDate(getStepTime(step.code)) }}
         </div>
       </div>
-    </div>
-
-    <!-- Banner đơn hủy -->
-    <div v-if="isCancelled" class="alert alert-danger text-center mt-4 py-2 mb-0" style="font-size:0.9rem;">
-      <i class="bi bi-x-circle-fill me-1"></i> Đơn hàng này đã bị hủy
     </div>
   </div>
 </template>
@@ -61,29 +56,20 @@ export default {
   },
   computed: {
     allSteps() { return ALL_STEPS; },
-    isCancelled() { return this.statusCode >= 6; },
+    effectiveStatus() {
+      return this.statusCode >= 6 ? 1 : (this.statusCode || 1);
+    },
     progressPercentage() {
-      if (this.isCancelled) return 0;
-      const st = this.statusCode || 1;
+      const st = this.effectiveStatus;
       return Math.max(0, (st - 1) / (ALL_STEPS.length - 1) * 100);
     },
   },
   methods: {
     circleStyle(code) {
-      if (this.isCancelled) {
-        if (code === 1) return { backgroundColor: '#dc3545', borderColor: '#dc3545', color: '#fff' };
-        return { backgroundColor: '#fff', borderColor: '#dee2e6', color: '#bbb' };
-      }
-      if (code <= this.statusCode) {
+      if (code <= this.effectiveStatus) {
         return { backgroundColor: 'var(--ss-accent, #e53935)', borderColor: 'var(--ss-accent, #e53935)', color: '#fff' };
       }
       return { backgroundColor: '#fff', borderColor: '#dee2e6', color: '#bbb' };
-    },
-    stepLabelStyle(code) {
-      if (this.isCancelled) {
-        return code === 1 ? { color: '#dc3545' } : { color: '#bbb' };
-      }
-      return code <= this.statusCode ? { color: 'var(--ss-accent, #e53935)' } : { color: '#bbb' };
     },
     getStepTime(code) {
       if (!this.timeline || !this.timeline.length) return null;

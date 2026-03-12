@@ -1,3 +1,4 @@
+<!-- File: src/pages/khuyen_mai/dot_giam_gia/DetailDiscountPage.vue -->
 <template>
   <div class="discount-page">
     <div class="header-section">
@@ -98,12 +99,7 @@
           </div>
 
           <div class="action-buttons mt-4">
-            <button
-              class="btn-update"
-              type="button"
-              @click="submitUpdate"
-              v-if="!isEnded"
-            >
+            <button class="btn-update" type="button" @click="submitUpdate" v-if="!isEnded">
               <i class="fa-solid fa-floppy-disk me-1"></i> Lưu thay đổi
             </button>
             <button class="btn-delete ms-2" type="button" @click="softDelete">
@@ -120,11 +116,7 @@
           <div class="search-bar mb-3">
             <div class="input-wrapper">
               <i class="fa-solid fa-magnifying-glass search-icon"></i>
-              <input
-                v-model="searchKeyword"
-                type="text"
-                placeholder="Tìm theo tên hoặc mã sản phẩm..."
-              />
+              <input v-model="searchKeyword" type="text" placeholder="Tìm theo tên hoặc mã sản phẩm..." />
             </div>
           </div>
 
@@ -144,10 +136,10 @@
 
           <div class="table-wrapper-mini">
             <table class="custom-table">
+              <!-- ✅ BỎ CỘT ẢNH Ở BẢNG TRÊN -->
               <colgroup>
                 <col style="width: 40px" />
                 <col style="width: 50px" />
-                <col style="width: 60px" />
                 <col style="width: 150px" />
                 <col />
               </colgroup>
@@ -155,14 +147,13 @@
                 <tr>
                   <th></th>
                   <th class="text-center">#</th>
-                  <th class="text-center">Ảnh</th>
                   <th class="text-center">Mã SP</th>
                   <th class="text-center">Tên sản phẩm</th>
                 </tr>
               </thead>
               <tbody>
                 <tr v-if="filteredParentProducts.length === 0">
-                  <td colspan="5" class="text-center text-muted py-4">
+                  <td colspan="4" class="text-center text-muted py-4">
                     Không tìm thấy dữ liệu
                   </td>
                 </tr>
@@ -182,14 +173,6 @@
                         @change="handleParentCheck(group.idSanPham, $event.target.checked)"
                         :disabled="isEnded"
                       />
-                    </td>
-
-                    <!-- ✅ BADGE “SỐ MŨ” giống file thêm -->
-                    <td class="text-center" @click="toggleExpand(group.idSanPham)" style="cursor: pointer">
-                      <div class="thumb-wrap">
-                        <img :src="getGroupThumb(group)" class="product-thumb" @error="onImgError" alt="thumb" />
-                        <span v-if="badgeTheoDot" class="discount-badge">{{ badgeTheoDot }}</span>
-                      </div>
                     </td>
 
                     <td class="text-center" @click="toggleExpand(group.idSanPham)" style="cursor: pointer">
@@ -219,14 +202,6 @@
                         :disabled="isEnded"
                         @change="onSourceCheckboxChange"
                       />
-                    </td>
-
-                    <!-- ✅ BADGE “SỐ MŨ” giống file thêm -->
-                    <td class="text-center">
-                      <div class="thumb-wrap">
-                        <img :src="getVariantThumb(v)" class="product-thumb-sm" @error="onImgError" alt="thumb" />
-                        <span v-if="badgeTheoDot" class="discount-badge discount-badge--sm">{{ badgeTheoDot }}</span>
-                      </div>
                     </td>
 
                     <td class="text-center text-muted small">{{ v.maChiTietSanPham }}</td>
@@ -359,18 +334,23 @@
                   {{ (currentDetailPage - 1) * detailItemsPerPage + index + 1 }}
                 </td>
 
-                <!-- ✅ BADGE “SỐ MŨ” giống file thêm -->
+                <!-- ✅ ẢNH CTSP CHỈ Ở BẢNG DƯỚI + BADGE CÓ PHÂN MÀU -->
                 <td class="text-center">
                   <div class="thumb-wrap">
                     <img :src="getVariantThumb(item)" class="product-thumb-sm" @error="onImgError" alt="thumb" />
-                    <span v-if="badgeTheoDot" class="discount-badge discount-badge--sm">{{ badgeTheoDot }}</span>
+                    <span
+                      v-if="badgeTheoDot"
+                      class="discount-badge discount-badge--sm"
+                      :class="mauBadgeTheoDot"
+                    >
+                      {{ badgeTheoDot }}
+                    </span>
                   </div>
                 </td>
 
                 <td class="text-primary">{{ item.maChiTietSanPham }}</td>
                 <td class="text-wrap-name text-center">{{ item.tenSanPham }}</td>
 
-                <!-- ✅ FIX: hiển thị GIÁ THEO ĐỢT ĐANG XEM (KHÔNG bị “dính” đợt khác) -->
                 <td class="text-center">
                   <div v-if="getHienThiGiaTheoDot(item).hasDiscount">
                     <div class="old-price">
@@ -472,12 +452,6 @@ const extractRawImg = (v) => {
 
 const getVariantThumb = (v) => normalizeImgUrl(extractRawImg(v)) || IMG_PLACEHOLDER;
 
-const getGroupThumb = (group) => {
-  if (!group?.variants?.length) return IMG_PLACEHOLDER;
-  const pick = group.variants.find((x) => normalizeImgUrl(extractRawImg(x))) || group.variants[0];
-  return getVariantThumb(pick);
-};
-
 const onImgError = (e) => {
   const img = e?.target;
   if (!img) return;
@@ -497,7 +471,7 @@ const formData = reactive({
   trangThai: true,
 });
 
-/* ✅ BADGE “SỐ MŨ” dùng chung giống file thêm */
+/* ✅ BADGE “SỐ MŨ” */
 const badgeTheoDot = computed(() => {
   const val = Number(formData.giaTriGiamGia ?? 0);
   if (!Number.isFinite(val) || val <= 0) return null;
@@ -506,6 +480,17 @@ const badgeTheoDot = computed(() => {
   return isMoney
     ? `-${new Intl.NumberFormat("vi-VN").format(val)}đ`
     : `-${Math.round(val)}%`;
+});
+
+/* ✅ MÀU BADGE THEO KHOẢNG GIẢM:
+   <50%: đỏ | 50-70%: vàng | >70%: xanh lá
+*/
+const mauBadgeTheoDot = computed(() => {
+  const n = Number(formData.giaTriGiamGia ?? 0);
+  if (!Number.isFinite(n) || n <= 0) return "ss-badge-low";
+  if (n < 50) return "ss-badge-low";
+  if (n <= 70) return "ss-badge-mid";
+  return "ss-badge-high";
 });
 
 const currentPage = ref(1);
@@ -718,7 +703,6 @@ const formatCurrency = (value) => {
   }).format(value ?? 0);
 };
 
-/* ✅ GIÁ THỰC TẾ (variant) */
 const getGiaBienThe = (v) => {
   const raw =
     v?.giaBan ??
@@ -735,7 +719,6 @@ const getGiaBienThe = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 
-/* ✅ FIX: hiển thị giá theo ĐỢT ĐANG XEM */
 const getHienThiGiaTheoDot = (variant) => {
   const price = getGiaBienThe(variant);
 
@@ -744,11 +727,10 @@ const getHienThiGiaTheoDot = (variant) => {
     return { hasDiscount: false, originalPrice: price, finalPrice: price, badge: null };
   }
 
-  const isMoney = !!formData.loaiGiamGia; // hiện đang khóa %, nhưng để sẵn
-  const discountAmount = isMoney ? val : (price * val) / 100;
+  const discountAmount = (price * val) / 100;
   const finalPrice = Math.max(0, price - discountAmount);
 
-  const badge = isMoney ? `-${new Intl.NumberFormat("vi-VN").format(val)}đ` : `-${Math.round(val)}%`;
+  const badge = `-${Math.round(val)}%`;
 
   return { hasDiscount: true, originalPrice: price, finalPrice, badge };
 };
@@ -1322,9 +1304,6 @@ onMounted(() => loadData());
   }
 }
 
-.product-thumb {
-  width: 40px; height: 40px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; background:#fff;
-}
 .product-thumb-sm {
   width: 32px; height: 32px; object-fit: cover; border-radius: 4px; border: 1px solid #eee; background:#fff;
 }
@@ -1345,7 +1324,7 @@ onMounted(() => loadData());
   background-color: #fff !important;
 }
 
-/* ✅ BADGE “SỐ MŨ” giống file thêm */
+/* ✅ BADGE */
 .thumb-wrap { position: relative; display: inline-block; vertical-align: middle; }
 .discount-badge {
   position: absolute;
@@ -1364,6 +1343,28 @@ onMounted(() => loadData());
   line-height: 1.3;
   z-index: 2;
 }
-.discount-badge.sm { font-size: 8px; padding: 1px 3px; top: -3px; right: -3px; }
 
+/* ✅ class đang dùng trong template */
+.discount-badge--sm {
+  font-size: 8px;
+  padding: 1px 3px;
+  top: -3px;
+  right: -3px;
+}
+
+/* ✅ PHÂN MÀU BADGE THEO KHOẢNG:
+   <50% đỏ | 50-70% vàng | >70% xanh lá
+*/
+.discount-badge.ss-badge-low {
+  background: #ef4444;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
+}
+.discount-badge.ss-badge-mid {
+  background: #f59e0b;
+  box-shadow: 0 2px 6px rgba(245, 158, 11, 0.32);
+}
+.discount-badge.ss-badge-high {
+  background: #22c55e;
+  box-shadow: 0 2px 6px rgba(34, 197, 94, 0.32);
+}
 </style>

@@ -1,3 +1,4 @@
+// File: src/main/java/com/example/datn_sevenstrike/dto/response/HoaDonChiTietResponse.java
 package com.example.datn_sevenstrike.dto.response;
 
 import lombok.*;
@@ -20,26 +21,24 @@ public class HoaDonChiTietResponse {
 
     private Integer soLuong;
     private BigDecimal donGia;
-    // Giá cũ trước khi thay đổi (null nếu chưa thay đổi)
-    private BigDecimal donGiaCu;
+    private BigDecimal donGiaCu; // giá hiện tại (real-time) để FE so sánh
 
-    private BigDecimal thanhTien; // computed
+    private BigDecimal thanhTien;
 
     private String ghiChu;
     private Boolean xoaMem;
 
-    // tiện demo
     private String maHoaDon;
 
     private String maChiTietSanPham;
     private String maSanPham;
     private String tenSanPham;
 
-    // ✅ thêm thông tin biến thể để FE hiển thị rõ
     private String mauSac;
     private String kichCo;
     private String loaiSan;
     private String formChan;
 
     private String duongDanAnhDaiDien;
+    private Integer tonKho; // tồn kho hiện tại của chi_tiet_san_pham
 }

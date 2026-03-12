@@ -40,10 +40,4 @@ public class PhienChat {
 
     @Column(name = "thoi_gian_ket_thuc")
     private LocalDateTime thoiGianKetThuc;
-
-    @Column(name = "xoa_mem", nullable = false)
-    private Boolean xoaMem = false;
-
-    @Column(name = "ma_phien_chat", insertable = false, updatable = false)
-    private String maPhienChat;
 }

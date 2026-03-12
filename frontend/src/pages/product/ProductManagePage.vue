@@ -223,7 +223,7 @@
                     type="button"
                     :class="{ on: getTrangThaiKinhDoanh(p) }"
                     :disabled="switchLoadingIds.has(p.id)"
-                    @click="toggleTrangThai(p)"
+                    @click="openConfirmToggle(p)"
                     :title="getTrangThaiKinhDoanh(p) ? 'Tắt kinh doanh' : 'Bật kinh doanh'"
                     role="switch"
                     :aria-checked="getTrangThaiKinhDoanh(p)"
@@ -270,6 +270,49 @@
       </div>
 
       <div class="ss-pageinfo">Trang <span>{{ page }}</span> / <span>{{ totalPages }}</span></div>
+    </div>
+
+    <!-- ✅ CONFIRM MODAL: chuyển trạng thái nhanh -->
+    <div v-if="confirmToggle.open" class="ss-overlay" @click.self="closeConfirmToggle">
+      <div class="ss-modal" style="width: 520px">
+        <div class="ss-modal-header">
+          <div class="ss-modal-title">Xác nhận chuyển trạng thái</div>
+          <button class="btn btn-sm btn-outline-secondary" type="button" @click="closeConfirmToggle" :disabled="confirmToggle.loading">
+            X
+          </button>
+        </div>
+
+        <div class="ss-modal-body">
+          <div style="font-size: 13px; color: rgba(17, 24, 39, 0.78); line-height: 1.55">
+            Bạn có chắc muốn
+            <b style="color: rgba(17, 24, 39, 0.9)">
+              {{ confirmToggle.next ? "bật kinh doanh" : "ngừng kinh doanh" }}
+            </b>
+            cho sản phẩm:
+            <div style="margin-top: 8px">
+              <div>
+                <b>{{ confirmProductTen }}</b>
+              </div>
+              <div class="ss-muted" style="margin-top: 2px">Mã sản phẩm: <b>{{ confirmProductMa }}</b></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="ss-modal-footer">
+          <button class="btn ss-btn-dark" type="button" @click="closeConfirmToggle" :disabled="confirmToggle.loading">
+            Hủy
+          </button>
+          <button
+            class="btn"
+            :class="confirmToggle.next ? 'ss-btn-primary' : 'ss-btn-warn'"
+            type="button"
+            @click="confirmToggleTrangThai"
+            :disabled="confirmToggle.loading"
+          >
+            {{ confirmToggle.loading ? "Đang xử lý..." : "Xác nhận" }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <!-- QR MODAL -->
@@ -336,6 +379,61 @@ const switchLoadingIds = reactive(new Set());
 
 /** ✅ map CTSP -> id SP cha (để quét QR CTSP vẫn ra SP) */
 const ctspToProductId = reactive(new Map());
+
+/** ✅ confirm chuyển trạng thái nhanh */
+const confirmToggle = reactive({
+  open: false,
+  p: null,
+  next: true,
+  loading: false,
+});
+
+const confirmProductTen = computed(() => {
+  const p = confirmToggle.p;
+  const ten = p ? getTenSanPham(p) : "";
+  return ten || "—";
+});
+const confirmProductMa = computed(() => {
+  const p = confirmToggle.p;
+  const ma = p ? getMaSanPham(p) : "";
+  return ma || "—";
+});
+
+function openConfirmToggle(p) {
+  const id = p?.id;
+  if (!id || switchLoadingIds.has(id)) return;
+
+  confirmToggle.p = p;
+  confirmToggle.next = !getTrangThaiKinhDoanh(p);
+  confirmToggle.open = true;
+  confirmToggle.loading = false;
+}
+
+function closeConfirmToggle() {
+  if (confirmToggle.loading) return;
+  confirmToggle.open = false;
+  confirmToggle.p = null;
+  confirmToggle.next = true;
+  confirmToggle.loading = false;
+}
+
+async function confirmToggleTrangThai() {
+  if (confirmToggle.loading) return;
+
+  const p = confirmToggle.p;
+  const id = p?.id;
+  if (!p || !id) return;
+
+  confirmToggle.loading = true;
+  try {
+    await toggleTrangThai(p, confirmToggle.next);
+    closeConfirmToggle();
+  } catch (e) {
+    console.error(e);
+  } finally {
+    confirmToggle.loading = false;
+  }
+}
 
 function unwrapList(v) {
   if (Array.isArray(v)) return v;
@@ -761,13 +859,13 @@ async function loadRefOptions() {
   }
 }
 
-async function toggleTrangThai(p) {
+async function toggleTrangThai(p, forcedNext = null) {
   const id = p?.id;
   if (!id || switchLoadingIds.has(id)) return;
 
   try {
     switchLoadingIds.add(id);
-    const next = !getTrangThaiKinhDoanh(p);
+    const next = typeof forcedNext === "boolean" ? forcedNext : !getTrangThaiKinhDoanh(p);
 
     const payload = {
       ...p,
@@ -786,6 +884,7 @@ async function toggleTrangThai(p) {
     if (idx >= 0) products.value[idx] = { ...products.value[idx], ...payload };
   } catch (e) {
     console.error(e);
+    throw e;
   } finally {
     switchLoadingIds.delete(id);
   }

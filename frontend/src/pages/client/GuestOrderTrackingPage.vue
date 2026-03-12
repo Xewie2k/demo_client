@@ -91,6 +91,12 @@
               <div class="mb-4">
                 <h6 class="fw-bold mb-3 border-start border-4 ps-2" style="border-color: var(--ss-accent) !important;">Trạng thái đơn hàng</h6>
                 <OrderTimeline :status-code="selectedOrder.trangThaiHienTai" :timeline="selectedOrder.timeline" />
+                <div v-if="selectedOrder.trangThaiHienTai === 6" class="alert alert-danger text-center py-2 mt-2" style="font-size:0.9rem;">
+                  <i class="bi bi-x-circle-fill me-1"></i> Đơn hàng này đã bị hủy
+                </div>
+                <div v-if="selectedOrder.trangThaiHienTai === 7" class="alert alert-warning text-center py-2 mt-2" style="font-size:0.9rem;">
+                  <i class="bi bi-exclamation-triangle-fill me-1"></i> Yêu cầu hủy đang chờ cửa hàng xác nhận
+                </div>
               </div>
 
               <!-- Receiver Info -->
@@ -312,7 +318,9 @@
                       <div class="rounded-circle border d-flex align-items-center justify-content-center mx-auto shadow-sm"
                            :style="calcStepStyle(trackedOrder, step.code)"
                            style="width: 40px; height: 40px; transition: all 0.3s;">
-                        <i :class="step.icon"></i>
+                        <i v-if="trackedOrder.trangThaiHienTai >= 6 && step.code === 1"
+                           :class="trackedOrder.trangThaiHienTai === 7 ? 'bi bi-exclamation-octagon-fill' : 'bi bi-x-circle-fill'"></i>
+                        <i v-else :class="step.icon"></i>
                       </div>
                       <small class="d-block mt-2 fw-bold"
                         :style="isStepActive(trackedOrder, step.code) ? { color: trackedOrder.trangThaiHienTai === 6 ? '#dc3545' : trackedOrder.trangThaiHienTai === 7 ? '#f97316' : 'var(--ss-accent)' } : {}"
@@ -469,7 +477,9 @@
                 <div class="rounded-circle border d-flex align-items-center justify-content-center mx-auto shadow-sm"
                      :style="calcStepStyle(order, step.code)"
                      style="width: 40px; height: 40px; transition: all 0.3s;">
-                  <i :class="step.icon"></i>
+                  <i v-if="order.trangThaiHienTai >= 6 && step.code === 1"
+                     :class="order.trangThaiHienTai === 7 ? 'bi bi-exclamation-octagon-fill' : 'bi bi-x-circle-fill'"></i>
+                  <i v-else :class="step.icon"></i>
                 </div>
                 <small class="d-block mt-2 fw-bold"
                   :style="isStepActive(order, step.code) ? { color: order.trangThaiHienTai === 6 ? '#dc3545' : order.trangThaiHienTai === 7 ? '#f97316' : 'var(--ss-accent)' } : {}"
@@ -664,28 +674,41 @@
           </div>
           <div class="modal-body">
             <div v-if="editItems.length === 0" class="text-center text-muted py-3">Không có sản phẩm</div>
-            <div v-for="(item, i) in editItems" :key="i" class="d-flex align-items-center mb-3 p-2 bg-light rounded">
-              <img :src="item.anhDaiDien || 'https://placehold.co/50x50'" class="rounded me-3" width="50" height="50" style="object-fit:cover;">
-              <div class="flex-grow-1">
-                <div class="fw-semibold small">{{ item.tenSanPham }}</div>
-                <div class="text-muted small">{{ item.phanLoai }}</div>
-              </div>
-              <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-outline-secondary btn-sm px-2" @click="decreaseQty(i)" :disabled="item.soLuong <= 1">
-                  <i class="bi bi-dash"></i>
-                </button>
-                <span class="fw-bold px-2">{{ item.soLuong }}</span>
-                <button class="btn btn-outline-secondary btn-sm px-2" @click="item.soLuong++">
-                  <i class="bi bi-plus"></i>
-                </button>
-                <button class="btn btn-outline-danger btn-sm px-2 ms-2" @click="removeItem(i)"
-                  :disabled="editItems.length <= 1" :title="editItems.length <= 1 ? 'Phải còn ít nhất 1 sản phẩm' : 'Xóa'">
-                  <i class="bi bi-trash"></i>
-                </button>
+            <div v-for="(item, i) in editItems" :key="i" class="mb-3 p-2 rounded" :style="{ backgroundColor: isGiaDaThayDoi(item) ? '#fef3c7' : '#f3f4f6' }">
+              <div class="d-flex align-items-center">
+                <img :src="item.anhDaiDien || 'https://placehold.co/50x50'" class="rounded me-3" width="50" height="50" style="object-fit:cover;">
+                <div class="flex-grow-1">
+                  <div class="fw-semibold small">{{ item.tenSanPham }}</div>
+                  <div class="text-muted small">{{ item.phanLoai }}</div>
+                  <div v-if="isGiaDaThayDoi(item)" class="small text-warning fw-bold" style="color: #f97316 !important;">
+                    <i class="bi bi-exclamation-circle-fill me-1"></i>
+                    Giá đã thay đổi: {{ formatCurrency(item.giaBanLuc) }} → {{ formatCurrency(item.giaBanHienTai) }}
+                  </div>
+                  <div v-else class="small" style="color: var(--ss-accent);">{{ formatCurrency(item.donGia) }} / đôi</div>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <button class="btn btn-outline-secondary btn-sm px-2" @click="decreaseQty(i)" :disabled="item.soLuong <= 1">
+                    <i class="bi bi-dash"></i>
+                  </button>
+                  <span class="fw-bold px-2">{{ item.soLuong }}</span>
+                  <button class="btn btn-outline-secondary btn-sm px-2" @click="increaseQty(i)"
+                    :disabled="item.tonKho > 0 && totalQtyForProduct(item.idChiTietSanPham) >= item.tonKho"
+                    :title="item.tonKho > 0 && totalQtyForProduct(item.idChiTietSanPham) >= item.tonKho ? `Đã đạt giới hạn tồn kho (${item.tonKho})` : ''">
+                    <i class="bi bi-plus"></i>
+                  </button>
+                  <button class="btn btn-outline-danger btn-sm px-2 ms-2" @click="removeItem(i)"
+                    :disabled="editItems.length <= 1" :title="editItems.length <= 1 ? 'Phải còn ít nhất 1 sản phẩm' : 'Xóa'">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </div>
               </div>
             </div>
             <div v-if="editItems.length <= 1" class="alert alert-warning small mt-2">
               <i class="bi bi-exclamation-triangle me-1"></i> Đơn hàng phải có ít nhất 1 sản phẩm.
+            </div>
+            <div class="border-top pt-2 mt-2 d-flex justify-content-between fw-bold">
+              <span>Tạm tính:</span>
+              <span style="color: var(--ss-accent);">{{ formatCurrency(editItemsSubTotal) }}</span>
             </div>
           </div>
           <div class="modal-footer">
@@ -758,6 +781,7 @@ const showAddressPickModal = ref(false);
 const showItemsModal = ref(false);
 const itemsLoading = ref(false);
 const editItems = ref([]);
+const deletedItems = ref([]); // tracks hoaDonChiTietId values for rows removed from the modal
 // actionCtx: 'selected' | 'tracked' | 'guest'
 const actionCtx = ref('');
 // reference to the order object currently being acted on (for modal display info)
@@ -805,6 +829,14 @@ const calcChiTietTamTinh = (items) =>
 // Tính tạm tính từ ClientOrderDetailDTO.items
 const calcSelectedTamTinh = computed(() =>
   (selectedOrder.value?.items || []).reduce((s, i) => s + (i.donGia || 0) * (i.soLuong || 0), 0)
+);
+
+// Tổng tạm tính trong modal sửa sản phẩm (reactive theo soLuong, sử dụng giá hiện tại nếu giá thay đổi)
+const editItemsSubTotal = computed(() =>
+  editItems.value.reduce((s, i) => {
+    const price = isGiaDaThayDoi(i) ? i.giaBanHienTai : (i.donGia || i.giaBanLuc || 0);
+    return s + (price * (i.soLuong || 0));
+  }, 0)
 );
 
 const getStatusName = (code) => {
@@ -1023,28 +1055,80 @@ const doSaveDelivery = async () => {
   }
 };
 
-const openItemsModal = (ctx) => {
+const openItemsModal = async (ctx) => {
   actionCtx.value = ctx;
   const o = actionOrderData.value;
   // selectedOrder has .items (ClientOrderItemDTO); guest/tracked has .chiTietHoaDon (HoaDonChiTietResponse)
   const src = o?.items || o?.chiTietHoaDon || [];
   editItems.value = src.map(item => ({
-    idChiTietSanPham: item.idChiTietSanPham || item.id,
+    hoaDonChiTietId: item.id,             // hoa_don_chi_tiet.id — để xác định đúng bản ghi
+    idChiTietSanPham: item.idChiTietSanPham,
     tenSanPham: item.tenSanPham,
     phanLoai: item.phanLoai || (item.mauSac ? `${item.mauSac} - ${item.kichCo}` : ''),
     anhDaiDien: item.anhDaiDien || item.duongDanAnhDaiDien || null,
     soLuong: item.soLuong,
+    soLuongLuc: item.soLuong, // Lưu số lượng lúc mở modal
+    donGia: item.donGia || 0,
+    giaBanLuc: item.donGia || 0, // Giá lúc mở modal (giá cũ)
+    giaBanHienTai: item.donGiaCu || item.donGia || 0, // Giá hiện tại (từ response, đã tính khuyến mãi)
+    tonKho: item.tonKho ?? 0, // tồn kho hiện tại để chặn nút +
   }));
+  deletedItems.value = [];
   showItemsModal.value = true;
 };
+const isGiaDaThayDoi = (item) => {
+  return item.giaBanHienTai && Math.abs(item.giaBanHienTai - item.giaBanLuc) > 0.01;
+};
+
 const decreaseQty = (i) => { if (editItems.value[i].soLuong > 1) editItems.value[i].soLuong--; };
-const removeItem = (i) => { if (editItems.value.length > 1) editItems.value.splice(i, 1); };
+const totalQtyForProduct = (idCtsp) =>
+  editItems.value.filter(it => it.idChiTietSanPham === idCtsp).reduce((s, it) => s + it.soLuong, 0);
+
+const increaseQty = (i) => {
+  const target = editItems.value[i];
+  if (!target) return;
+  // Check tồn kho: tổng số lượng tất cả các dòng cùng sản phẩm không được vượt tonKho
+  if (target.tonKho > 0 && totalQtyForProduct(target.idChiTietSanPham) >= target.tonKho) return;
+  if (isGiaDaThayDoi(target)) {
+    // Old-price row: redirect to existing new-price row to avoid creating a duplicate record
+    const newPriceIdx = editItems.value.findIndex(
+      (it, idx) => idx !== i && it.idChiTietSanPham === target.idChiTietSanPham && !isGiaDaThayDoi(it)
+    );
+    if (newPriceIdx !== -1) {
+      editItems.value[newPriceIdx].soLuong++;
+    } else {
+      // No new-price row yet: increment own qty, backend will create a new record at current price
+      target.soLuong++;
+    }
+  } else {
+    target.soLuong++;
+  }
+};
+const removeItem = (i) => {
+  if (editItems.value.length <= 1) return; // prevent empty order
+  const target = editItems.value[i];
+  if (!target) return;
+  if (target.hoaDonChiTietId) deletedItems.value.push(target.hoaDonChiTietId);
+  editItems.value.splice(i, 1);
+};
 const doSaveItems = async () => {
   if (editItems.value.length === 0) return;
   itemsLoading.value = true;
   try {
     await apiClient.put(`/api/client/hoa-don/${getOrderId()}/items`, getAuthBody({
-      items: editItems.value.map(item => ({ idChiTietSanPham: item.idChiTietSanPham, soLuong: item.soLuong, xoaMem: false }))
+      items: [
+        ...editItems.value.map(item => ({
+          idHoaDonChiTiet: item.hoaDonChiTietId,
+          idChiTietSanPham: item.idChiTietSanPham,
+          soLuong: item.soLuong,
+          xoaMem: false,
+          soLuongTangThem: Math.max(0, item.soLuong - item.soLuongLuc),
+          isGiaDaThayDoi: isGiaDaThayDoi(item),
+          giaBanLuc: item.giaBanLuc,
+          giaBanHienTai: item.giaBanHienTai
+        })),
+        ...deletedItems.value.map(id => ({ idHoaDonChiTiet: id, xoaMem: true }))
+      ]
     }));
     showItemsModal.value = false;
     await refreshAfterAction();

@@ -21,7 +21,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,7 +35,6 @@ public class PhieuGiamGiaService {
     private final ModelMapper mapper;
 
     private final VoucherEmailService voucherEmailService;
-    private final SimpMessagingTemplate messagingTemplate;
 
     public List<PhieuGiamGiaResponse> all() {
         return repo.findAllByXoaMemFalseOrderByIdDesc()
@@ -81,7 +79,6 @@ public class PhieuGiamGiaService {
             chiTietRepo.deleteByPhieuGiamGia(saved);
         }
 
-        messagingTemplate.convertAndSend("/topic/vouchers/updated", (Object) "created");
         return toResponse(saved);
     }
 
@@ -165,7 +162,6 @@ public class PhieuGiamGiaService {
             caNhanRepo.resetDaGuiMailAliveByVoucherId(saved.getId());
         }
 
-        messagingTemplate.convertAndSend("/topic/vouchers/updated", (Object) "updated");
         return toResponse(saved);
     }
 
@@ -179,7 +175,6 @@ public class PhieuGiamGiaService {
 
         caNhanRepo.softDeleteAliveByVoucherId(id);
         chiTietRepo.deleteByPhieuGiamGia(db);
-        messagingTemplate.convertAndSend("/topic/vouchers/updated", (Object) "deleted");
     }
 
     public List<Integer> getCustomerIdsByVoucher(Integer voucherId) {

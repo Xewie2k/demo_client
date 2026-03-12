@@ -1,18 +1,4 @@
 <template>
-  <!-- Toast notification (khi widget đóng mà có tin nhắn mới) -->
-  <transition name="toast-slide">
-    <div v-if="showToast && !isOpen" class="chat-toast" @click="openFromToast">
-      <div class="chat-toast__icon">
-        <span class="material-icons" style="font-size:16px">support_agent</span>
-      </div>
-      <div class="chat-toast__body">
-        <div class="chat-toast__title">SevenStrike Hỗ Trợ</div>
-        <div class="chat-toast__msg">{{ toastMessage }}</div>
-      </div>
-      <button class="chat-toast__close" @click.stop="showToast = false">×</button>
-    </div>
-  </transition>
-
   <!-- Bubble trigger -->
   <button
     class="chat-bubble"
@@ -21,20 +7,21 @@
   >
     <span v-if="!isOpen" class="material-icons">chat</span>
     <span v-else class="material-icons">close</span>
-    <span v-if="unreadCount > 0 && !isOpen" class="chat-badge">{{ unreadCount }}</span>
+    <span v-if="unreadCount > 0 && !isOpen" class="chat-badge">
+      {{ unreadCount }}
+    </span>
   </button>
 
   <!-- Chat window -->
   <transition name="chat-slide">
     <div v-if="isOpen" class="chat-window">
-
       <!-- Header -->
       <div class="chat-header">
         <div class="d-flex align-items-center gap-2">
-          <span class="material-icons" style="font-size:20px">support_agent</span>
+          <span class="material-icons" style="font-size: 20px">support_agent</span>
           <div>
-            <div class="fw-bold" style="font-size:14px">SevenStrike Hỗ Trợ</div>
-            <div style="font-size:11px; opacity:.8">
+            <div class="fw-bold" style="font-size: 14px">SevenStrike Hỗ Trợ</div>
+            <div style="font-size: 11px; opacity: 0.8">
               <span v-if="trangThai === 'BOT_DANG_XU_LY'">🤖 Trợ lý AI</span>
               <span v-else-if="trangThai === 'CHO_NHAN_VIEN'">⏳ Đang kết nối nhân viên...</span>
               <span v-else-if="trangThai === 'DANG_XU_LY'">🟢 Nhân viên đang hỗ trợ</span>
@@ -43,26 +30,29 @@
             </div>
           </div>
         </div>
+
         <button class="btn btn-link text-white p-0" @click="isOpen = false">
-          <span class="material-icons" style="font-size:20px">expand_more</span>
+          <span class="material-icons" style="font-size: 20px">expand_more</span>
         </button>
       </div>
 
       <!-- Messages -->
       <div class="chat-messages" ref="messagesEl">
         <div
-          v-for="msg in messages"
-          :key="msg.id || msg.thoiGian"
+          v-for="(msg, index) in messages"
+          :key="msg.id ?? `${msg.thoiGian || 'msg'}-${index}`"
           class="chat-msg"
           :class="{
-            'chat-msg--bot':  msg.nguoiGui === 'BOT',
+            'chat-msg--bot': msg.nguoiGui === 'BOT',
             'chat-msg--khach': msg.nguoiGui === 'KHACH',
-            'chat-msg--nv':   msg.nguoiGui === 'NHAN_VIEN',
+            'chat-msg--nv': msg.nguoiGui === 'NHAN_VIEN',
           }"
         >
           <div class="chat-msg__name">{{ msg.tenNguoiGui }}</div>
-          <div class="chat-msg__bubble" v-if="msg.nguoiGui === 'KHACH'">{{ msg.noiDung }}</div>
-          <div class="chat-msg__bubble" v-else v-html="renderMessage(msg.noiDung)"></div>
+          <div
+            class="chat-msg__bubble"
+            v-html="renderMessage(msg.noiDung)"
+          ></div>
         </div>
 
         <!-- Loading indicator -->
@@ -74,10 +64,10 @@
         </div>
       </div>
 
-      <!-- Nút gặp nhân viên (chỉ khi AI đang trả lời) -->
+      <!-- Nút gặp nhân viên -->
       <div v-if="trangThai === 'BOT_DANG_XU_LY'" class="chat-quick-action">
         <button class="btn btn-sm btn-outline-secondary w-100" @click="yeuCauNhanVien">
-          <span class="material-icons" style="font-size:14px; vertical-align:middle">person</span>
+          <span class="material-icons" style="font-size: 14px; vertical-align: middle">person</span>
           Gặp nhân viên hỗ trợ
         </button>
       </div>
@@ -92,17 +82,25 @@
               :key="s"
               class="chip"
               @click="chonGoiY(s)"
-            >{{ s }}</button>
+            >
+              {{ s }}
+            </button>
+
             <button
               v-if="!showAllSuggestions && suggestions.length > 3"
               class="chip chip--more"
               @click="showAllSuggestions = true"
-            >• • •</button>
+            >
+              • • •
+            </button>
+
             <button
               v-if="showAllSuggestions"
               class="chip chip--less"
               @click="showAllSuggestions = false"
-            >Thu gọn ↑</button>
+            >
+              Thu gọn ↑
+            </button>
           </div>
         </div>
       </transition>
@@ -121,13 +119,17 @@
           class="btn-suggest"
           @click="showSuggestions = !showSuggestions"
           title="Gợi ý câu hỏi"
-        >💡</button>
+        >
+          💡
+        </button>
+
         <input
           v-model="inputText"
           class="chat-input"
           placeholder="Nhập tin nhắn..."
           @keyup.enter="guiTin"
         />
+
         <button
           class="chat-send-btn"
           @click="guiTin"
@@ -136,7 +138,6 @@
           <span class="material-icons">send</span>
         </button>
       </div>
-
     </div>
   </transition>
 </template>
@@ -144,104 +145,146 @@
 <script setup>
 import { ref, computed, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import {
-  connectChat, sendStompMessage,
-  khoiTaoPhien, layTinNhan, getPhien, disconnectChat
+  connectChat,
+  sendStompMessage,
+  khoiTaoPhien,
+  layTinNhan,
+  getPhien,
+  disconnectChat,
 } from '@/chatAI/services/chatService'
 import { useClientAuth } from '@/services/authClient'
 
 const { customer } = useClientAuth()
 
-const isOpen      = ref(false)
-const messages    = ref([])
-const inputText   = ref('')
-const trangThai   = ref('BOT_DANG_XU_LY')
-const isWaiting   = ref(false)
+const isOpen = ref(false)
+const messages = ref([])
+const inputText = ref('')
+const trangThai = ref('BOT_DANG_XU_LY')
+const isWaiting = ref(false)
 const unreadCount = ref(0)
 const phienChatId = ref(null)
-const messagesEl  = ref(null)
+const messagesEl = ref(null)
 
-// ── Toast notification ────────────────────────────────────────────────────────
-const showToast   = ref(false)
-const toastMessage = ref('')
-let toastTimer = null
-
-function showNewMessageToast(text) {
-  if (toastTimer) clearTimeout(toastTimer)
-  const preview = (text || '').length > 60 ? (text || '').slice(0, 60) + '...' : (text || 'Có tin nhắn mới')
-  toastMessage.value = preview
-  showToast.value = true
-  toastTimer = setTimeout(() => { showToast.value = false }, 5000)
-}
-
-function openFromToast() {
-  showToast.value = false
-  isOpen.value = true
-  unreadCount.value = 0
-  scrollToBottom()
-}
-
-// ── Render message với link sản phẩm ─────────────────────────────────────────
-function renderMessage(text) {
-  if (!text) return ''
-  const escaped = text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-  const linked = escaped.replace(
-    /\[([^\]]+)\]\((\/client\/[^)]+)\)/g,
-    '<a href="$2" style="color:var(--ss-accent);text-decoration:underline;" target="_self">$1</a>'
-  )
-  return linked.replace(/\n/g, '<br>')
-}
-
-// ── Gợi ý câu hỏi ─────────────────────────────────────────────────────────────
-const showSuggestions    = ref(true)
+// ── Gợi ý câu hỏi ────────────────────────────────────────────────────────────
+const showSuggestions = ref(true)
 const showAllSuggestions = ref(false)
+
 const suggestions = [
-  'Giày phù hợp với sân cỏ nhân tạo?',
+  'Làm thế nào để đặt hàng?',
   'Phí vận chuyển là bao nhiêu?',
-  'Cách chọn size giày đúng?',
-  'Có voucher giảm giá cho đơn đầu tiên không?',
-  'Sản phẩm Nike/Adidas có chính hãng không?',
-  'Cách theo dõi trạng thái đơn hàng?',
-  'Gặp nhân viên hỗ trợ trực tiếp',
+  'Kiểm tra trạng thái đơn hàng',
+  'Có voucher giảm giá không?',
+  'Sản phẩm có bảo hành không?',
+  'Hướng dẫn thanh toán online',
+  'Liên hệ nhân viên hỗ trợ',
 ]
+
 const shouldShowSuggestions = computed(() => showSuggestions.value)
-const visibleSuggestions    = computed(() =>
+const visibleSuggestions = computed(() =>
   showAllSuggestions.value ? suggestions : suggestions.slice(0, 3)
 )
 
 let subscription = null
 
-// ── LocalStorage helpers ───────────────────────────────────────────────────────
+// ── LocalStorage helpers ─────────────────────────────────────────────────────
 function getChatKey() {
   const id = customer.value?.id
   return id ? `ss_chat_pid_${id}` : 'ss_chat_pid_guest'
 }
+
 function saveChatSession(phienId) {
   localStorage.setItem(getChatKey(), String(phienId))
 }
+
 function loadChatSession() {
   return localStorage.getItem(getChatKey())
 }
+
 function clearChatSession() {
   localStorage.removeItem(getChatKey())
 }
 
-// ── Khởi tạo phiên và kết nối WS ─────────────────────────────────────────────
-onMounted(async () => {
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function normalizeText(text) {
+  return String(text || '').toLowerCase()
+}
+
+function updateTrangThaiFromMessage(data) {
+  const noiDung = normalizeText(data?.noiDung)
+
+  if (data?.nguoiGui === 'NHAN_VIEN') {
+    trangThai.value = 'DANG_XU_LY'
+    return
+  }
+
+  if (data?.nguoiGui === 'BOT' && noiDung.includes('tiếp nhận')) {
+    trangThai.value = 'DANG_XU_LY'
+    return
+  }
+
+  if (data?.nguoiGui === 'BOT' && noiDung.includes('kết thúc')) {
+    trangThai.value = 'DA_DONG'
+    clearChatSession()
+  }
+}
+
+async function waitForConnected(client, timeoutMs = 10000) {
+  if (client?.connected) return
+
+  const startedAt = Date.now()
+
+  await new Promise((resolve, reject) => {
+    const check = setInterval(() => {
+      if (client?.connected) {
+        clearInterval(check)
+        resolve()
+        return
+      }
+
+      if (Date.now() - startedAt >= timeoutMs) {
+        clearInterval(check)
+        reject(new Error('Kết nối chat timeout'))
+      }
+    }, 100)
+  })
+}
+
+function handleIncomingMessage(msg) {
+  const data = JSON.parse(msg.body)
+  messages.value.push(data)
+  isWaiting.value = false
+
+  updateTrangThaiFromMessage(data)
+
+  if (!isOpen.value) unreadCount.value++
+  scrollToBottom()
+}
+
+async function subscribeToSession(sessionId) {
+  if (subscription) {
+    subscription.unsubscribe()
+    subscription = null
+  }
+
+  const client = connectChat()
+  await waitForConnected(client)
+
+  subscription = client.subscribe(`/topic/chat/${sessionId}`, handleIncomingMessage)
+}
+
+async function initSession({ forceNew = false } = {}) {
   const tenKhach = customer.value?.hoTen || 'Khách vãng lai'
   const khachHangId = customer.value?.id || null
 
-  try {
-    let phien = null
+  let phien = null
+
+  if (!forceNew) {
     const storedId = loadChatSession()
 
     if (storedId) {
       try {
         const stored = await getPhien(Number(storedId))
-        if (stored.trangThai !== 'DA_DONG') {
+        if (stored?.trangThai !== 'DA_DONG') {
           phien = stored
         } else {
           clearChatSession()
@@ -250,73 +293,48 @@ onMounted(async () => {
         clearChatSession()
       }
     }
+  }
 
-    if (!phien) {
-      phien = await khoiTaoPhien(tenKhach, khachHangId)
-      saveChatSession(phien.id)
-    }
+  if (!phien) {
+    phien = await khoiTaoPhien(tenKhach, khachHangId)
+    saveChatSession(phien.id)
+  }
 
-    phienChatId.value = phien.id
-    trangThai.value   = phien.trangThai
+  phienChatId.value = phien.id
+  trangThai.value = phien.trangThai || 'BOT_DANG_XU_LY'
 
-    // Lấy toàn bộ lịch sử tin nhắn
-    const history = await layTinNhan(phien.id)
-    messages.value = history
-    await scrollToBottom()
+  const history = await layTinNhan(phien.id)
+  messages.value = Array.isArray(history) ? history : []
+  await scrollToBottom()
 
-    // Kết nối WebSocket
-    const client = connectChat()
+  await subscribeToSession(phien.id)
+}
 
-    // Đợi kết nối STOMP hoàn tất rồi subscribe
-    const waitConnected = () => new Promise((resolve) => {
-      if (client.connected) { resolve(); return }
-      const check = setInterval(() => {
-        if (client.connected) { clearInterval(check); resolve() }
-      }, 100)
-    })
-    await waitConnected()
-
-    subscription = client.subscribe(`/topic/chat/${phien.id}`, (msg) => {
-      const data = JSON.parse(msg.body)
-      messages.value.push(data)
-      isWaiting.value = false
-
-      // Cập nhật trạng thái theo type tin nhắn
-      if (data.nguoiGui === 'NHAN_VIEN') trangThai.value = 'DANG_XU_LY'
-      if (data.nguoiGui === 'BOT' && data.noiDung?.includes('tiếp nhận')) trangThai.value = 'DANG_XU_LY'
-
-      // Phiên đóng → clear localStorage để lần sau tạo phiên mới
-      if (data.nguoiGui === 'BOT' && data.noiDung?.includes('kết thúc')) {
-        trangThai.value = 'DA_DONG'
-        clearChatSession()
-      }
-
-      if (!isOpen.value) {
-        unreadCount.value++
-        if (data.nguoiGui === 'NHAN_VIEN' || data.nguoiGui === 'BOT') {
-          showNewMessageToast(data.noiDung)
-        }
-      }
-      scrollToBottom()
-    })
+// ── Lifecycle ────────────────────────────────────────────────────────────────
+onMounted(async () => {
+  try {
+    await initSession()
   } catch (e) {
     console.error('[ChatWidget] Khởi tạo thất bại:', e)
   }
 })
 
 onBeforeUnmount(() => {
-  if (subscription) subscription.unsubscribe()
+  if (subscription) {
+    subscription.unsubscribe()
+    subscription = null
+  }
   disconnectChat()
 })
 
-// ── Gửi tin nhắn ─────────────────────────────────────────────────────────────
+// ── Actions ──────────────────────────────────────────────────────────────────
 async function guiTin() {
   const text = inputText.value.trim()
-  if (!text || !phienChatId.value) return
+  if (!text || !phienChatId.value || trangThai.value === 'DA_DONG') return
 
   inputText.value = ''
   showSuggestions.value = false
-  isWaiting.value = (trangThai.value === 'BOT_DANG_XU_LY')
+  isWaiting.value = trangThai.value === 'BOT_DANG_XU_LY'
 
   sendStompMessage(`/app/chat/${phienChatId.value}/send`, {
     noiDung: text,
@@ -324,86 +342,52 @@ async function guiTin() {
   })
 }
 
-// ── Chọn gợi ý câu hỏi ───────────────────────────────────────────────────────
 function chonGoiY(text) {
   inputText.value = text
   showSuggestions.value = false
   guiTin()
 }
 
-// ── Yêu cầu gặp nhân viên ────────────────────────────────────────────────────
 function yeuCauNhanVien() {
+  if (!phienChatId.value || trangThai.value === 'DA_DONG') return
+
   trangThai.value = 'CHO_NHAN_VIEN'
+  showSuggestions.value = false
+
   sendStompMessage(`/app/chat/${phienChatId.value}/send`, {
     noiDung: 'Tôi muốn nói chuyện với nhân viên hỗ trợ.',
     tenNguoiGui: customer.value?.hoTen || 'Khách vãng lai',
   })
 }
 
-// ── Bắt đầu phiên mới khi phiên cũ đã đóng ───────────────────────────────────
 async function batDauMoi() {
-  if (subscription) { subscription.unsubscribe(); subscription = null }
-  messages.value = []
-  trangThai.value = 'BOT_DANG_XU_LY'
-  phienChatId.value = null
-  isWaiting.value = false
-  showSuggestions.value = true
-  showAllSuggestions.value = false
-
-  const tenKhach = customer.value?.hoTen || 'Khách vãng lai'
-  const khachHangId = customer.value?.id || null
-
   try {
-    const phien = await khoiTaoPhien(tenKhach, khachHangId)
-    saveChatSession(phien.id)
-    phienChatId.value = phien.id
-    trangThai.value = phien.trangThai
+    if (subscription) {
+      subscription.unsubscribe()
+      subscription = null
+    }
 
-    const history = await layTinNhan(phien.id)
-    messages.value = history
-    await scrollToBottom()
+    messages.value = []
+    inputText.value = ''
+    trangThai.value = 'BOT_DANG_XU_LY'
+    phienChatId.value = null
+    isWaiting.value = false
+    unreadCount.value = 0
+    showSuggestions.value = true
+    showAllSuggestions.value = false
 
-    const client = connectChat()
-    const waitConnected = () => new Promise((resolve) => {
-      if (client.connected) { resolve(); return }
-      const check = setInterval(() => {
-        if (client.connected) { clearInterval(check); resolve() }
-      }, 100)
-    })
-    await waitConnected()
-
-    subscription = client.subscribe(`/topic/chat/${phien.id}`, (msg) => {
-      const data = JSON.parse(msg.body)
-      messages.value.push(data)
-      isWaiting.value = false
-
-      if (data.nguoiGui === 'NHAN_VIEN') trangThai.value = 'DANG_XU_LY'
-      if (data.nguoiGui === 'BOT' && data.noiDung?.includes('tiếp nhận')) trangThai.value = 'DANG_XU_LY'
-      if (data.nguoiGui === 'BOT' && data.noiDung?.includes('kết thúc')) {
-        trangThai.value = 'DA_DONG'
-        clearChatSession()
-      }
-
-      if (!isOpen.value) {
-        unreadCount.value++
-        if (data.nguoiGui === 'NHAN_VIEN' || data.nguoiGui === 'BOT') {
-          showNewMessageToast(data.noiDung)
-        }
-      }
-      scrollToBottom()
-    })
+    clearChatSession()
+    await initSession({ forceNew: true })
   } catch (e) {
     console.error('[ChatWidget] Bắt đầu mới thất bại:', e)
   }
 }
 
-// ── Toggle cửa sổ chat ────────────────────────────────────────────────────────
 function toggleChat() {
   isOpen.value = !isOpen.value
+
   if (isOpen.value) {
     unreadCount.value = 0
-    showToast.value = false
-    if (toastTimer) { clearTimeout(toastTimer); toastTimer = null }
     scrollToBottom()
   }
 }
@@ -413,6 +397,24 @@ async function scrollToBottom() {
   if (messagesEl.value) {
     messagesEl.value.scrollTop = messagesEl.value.scrollHeight
   }
+}
+
+// ── Render message an toàn + hỗ trợ link sản phẩm ───────────────────────────
+function renderMessage(text) {
+  if (!text) return ''
+
+  let safe = String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+
+  safe = safe.replace(
+    /\/client\/products\/(\d+)/g,
+    '<a href="/client/products/$1" target="_blank" rel="noopener noreferrer" class="chat-link">Xem sản phẩm #$1</a>'
+  )
+
+  safe = safe.replace(/\n/g, '<br>')
+  return safe
 }
 </script>
 
@@ -428,25 +430,33 @@ async function scrollToBottom() {
   background: var(--ss-accent, #ff4d4f);
   color: #fff;
   border: none;
-  box-shadow: 0 4px 16px rgba(255,77,79,.45);
+  box-shadow: 0 4px 16px rgba(255, 77, 79, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   z-index: 9000;
-  transition: transform .2s;
+  transition: transform 0.2s;
 }
-.chat-bubble:hover { transform: scale(1.08); }
+
+.chat-bubble:hover {
+  transform: scale(1.08);
+}
+
 .chat-badge {
   position: absolute;
-  top: -4px; right: -4px;
+  top: -4px;
+  right: -4px;
   background: #f59e0b;
   color: #fff;
   font-size: 11px;
   font-weight: 700;
   border-radius: 50%;
-  width: 20px; height: 20px;
-  display: flex; align-items: center; justify-content: center;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* ── Window ───────────────────────────────────────────────────────────────── */
@@ -458,7 +468,7 @@ async function scrollToBottom() {
   height: 500px;
   background: #fff;
   border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -485,17 +495,34 @@ async function scrollToBottom() {
   gap: 10px;
   background: #f8f9fa;
 }
-.chat-msg { display: flex; flex-direction: column; max-width: 80%; }
-.chat-msg--bot   { align-self: flex-start; }
-.chat-msg--khach { align-self: flex-end; }
-.chat-msg--nv    { align-self: flex-start; }
+
+.chat-msg {
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+}
+
+.chat-msg--bot {
+  align-self: flex-start;
+}
+
+.chat-msg--khach {
+  align-self: flex-end;
+}
+
+.chat-msg--nv {
+  align-self: flex-start;
+}
 
 .chat-msg__name {
   font-size: 10px;
   color: #9ca3af;
   margin-bottom: 3px;
 }
-.chat-msg--khach .chat-msg__name { text-align: right; }
+
+.chat-msg--khach .chat-msg__name {
+  text-align: right;
+}
 
 .chat-msg__bubble {
   padding: 9px 13px;
@@ -504,28 +531,66 @@ async function scrollToBottom() {
   line-height: 1.5;
   word-break: break-word;
 }
-/* BOT (trái - người kia) → trắng, border xám */
-.chat-msg--bot   .chat-msg__bubble { background: #fff; border: 1px solid #e5e7eb; color: #374151; border-radius: 2px 12px 12px 12px; white-space: pre-wrap; }
 
-/* Khách (phải - là "tôi") → đỏ accent */
-.chat-msg--khach .chat-msg__bubble { background: var(--ss-accent, #ff4d4f); color: #fff; border-radius: 12px 2px 12px 12px; }
+.chat-msg--bot .chat-msg__bubble {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  color: #374151;
+  border-radius: 2px 12px 12px 12px;
+  white-space: normal;
+}
 
-/* Nhân viên (trái - người kia) → xám trung tính, khớp với admin panel */
-.chat-msg--nv    .chat-msg__bubble { background: #f3f4f6; color: #111827; border: 1px solid #e5e7eb; border-radius: 2px 12px 12px 12px; }
+.chat-msg--khach .chat-msg__bubble {
+  background: var(--ss-accent, #ff4d4f);
+  color: #fff;
+  border-radius: 12px 2px 12px 12px;
+}
+
+.chat-msg--nv .chat-msg__bubble {
+  background: #1e3a8a;
+  color: #fff;
+  border-radius: 2px 12px 12px 12px;
+}
+
+:deep(.chat-link) {
+  color: var(--ss-accent, #ff4d4f);
+  font-weight: 600;
+  text-decoration: underline;
+}
 
 /* Typing animation */
-.chat-msg__bubble--typing { display: flex; gap: 5px; align-items: center; padding: 12px; }
+.chat-msg__bubble--typing {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  padding: 12px;
+}
+
 .chat-msg__bubble--typing span {
-  width: 8px; height: 8px;
+  width: 8px;
+  height: 8px;
   background: #9ca3af;
   border-radius: 50%;
-  animation: typing-bounce .9s infinite;
+  animation: typing-bounce 0.9s infinite;
 }
-.chat-msg__bubble--typing span:nth-child(2) { animation-delay: .2s; }
-.chat-msg__bubble--typing span:nth-child(3) { animation-delay: .4s; }
+
+.chat-msg__bubble--typing span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.chat-msg__bubble--typing span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
 @keyframes typing-bounce {
-  0%, 60%, 100% { transform: translateY(0); }
-  30% { transform: translateY(-6px); }
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-6px);
+  }
 }
 
 /* ── Quick action ─────────────────────────────────────────────────────────── */
@@ -543,6 +608,7 @@ async function scrollToBottom() {
   gap: 8px;
   background: #fff;
 }
+
 .chat-input {
   flex: 1;
   border: 1px solid #e5e7eb;
@@ -550,21 +616,32 @@ async function scrollToBottom() {
   padding: 7px 14px;
   font-size: 13.5px;
   outline: none;
-  transition: border-color .2s;
+  transition: border-color 0.2s;
 }
-.chat-input:focus { border-color: var(--ss-accent, #ff4d4f); }
+
+.chat-input:focus {
+  border-color: var(--ss-accent, #ff4d4f);
+}
+
 .chat-send-btn {
-  width: 36px; height: 36px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: var(--ss-accent, #ff4d4f);
   color: #fff;
   border: none;
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: opacity .2s;
+  transition: opacity 0.2s;
 }
-.chat-send-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+.chat-send-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 /* ── Suggestion panel ─────────────────────────────────────────────────────── */
 .suggestion-panel {
@@ -572,17 +649,20 @@ async function scrollToBottom() {
   border-top: 1px solid #e5e7eb;
   background: #fff;
 }
+
 .suggestion-label {
   font-size: 11px;
   color: #9ca3af;
   display: block;
   margin-bottom: 6px;
 }
+
 .suggestion-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
 }
+
 .chip {
   font-size: 12px;
   padding: 4px 10px;
@@ -591,31 +671,40 @@ async function scrollToBottom() {
   border-radius: 999px;
   background: #fff;
   cursor: pointer;
-  transition: all .15s;
+  transition: all 0.15s;
   white-space: nowrap;
 }
+
 .chip:hover {
   background: var(--ss-accent, #ff4d4f);
   color: #fff;
 }
+
 .chip--more,
 .chip--less {
   border-style: dashed;
-  opacity: .7;
+  opacity: 0.7;
 }
+
 .chip--more:hover,
-.chip--less:hover { opacity: 1; }
+.chip--less:hover {
+  opacity: 1;
+}
+
 .btn-suggest {
   background: none;
   border: none;
   cursor: pointer;
   font-size: 16px;
   padding: 0 4px;
-  opacity: .65;
+  opacity: 0.65;
   flex-shrink: 0;
   line-height: 1;
 }
-.btn-suggest:hover { opacity: 1; }
+
+.btn-suggest:hover {
+  opacity: 1;
+}
 
 /* ── Ended bar ────────────────────────────────────────────────────────────── */
 .chat-ended-bar {
@@ -627,10 +716,12 @@ async function scrollToBottom() {
   border-top: 1px solid #e5e7eb;
   background: #fff8f8;
 }
+
 .chat-ended-text {
   font-size: 12px;
   color: #9ca3af;
 }
+
 .chat-restart-btn {
   font-size: 13px;
   padding: 6px 16px;
@@ -639,8 +730,9 @@ async function scrollToBottom() {
   background: #fff;
   border-radius: 20px;
   cursor: pointer;
-  transition: all .15s;
+  transition: all 0.15s;
 }
+
 .chat-restart-btn:hover {
   background: #ff4d4f;
   color: #fff;
@@ -649,55 +741,23 @@ async function scrollToBottom() {
 /* ── Transition ───────────────────────────────────────────────────────────── */
 .chat-slide-enter-active,
 .chat-slide-leave-active {
-  transition: opacity .2s ease, transform .2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
+
 .chat-slide-enter-from,
 .chat-slide-leave-to {
   opacity: 0;
-  transform: translateY(16px) scale(.97);
+  transform: translateY(16px) scale(0.97);
 }
-.slide-up-enter-active,
-.slide-up-leave-active { transition: opacity .2s ease, transform .2s ease; }
-.slide-up-enter-from,
-.slide-up-leave-to { opacity: 0; transform: translateY(8px); }
 
-/* ── Toast notification ───────────────────────────────────────────────────── */
-.chat-toast {
-  position: fixed;
-  bottom: 96px;
-  right: 28px;
-  width: 280px;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 20px rgba(0,0,0,.18);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  cursor: pointer;
-  z-index: 9001;
-  border-left: 3px solid var(--ss-accent, #ff4d4f);
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
 }
-.chat-toast:hover { box-shadow: 0 6px 24px rgba(0,0,0,.22); }
-.chat-toast__icon {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  background: var(--ss-accent, #ff4d4f);
-  color: #fff;
-  display: flex; align-items: center; justify-content: center;
-  flex-shrink: 0;
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
 }
-.chat-toast__body { flex: 1; min-width: 0; }
-.chat-toast__title { font-size: 12px; font-weight: 700; color: #374151; margin-bottom: 2px; }
-.chat-toast__msg { font-size: 12px; color: #6b7280; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chat-toast__close {
-  background: none; border: none; color: #9ca3af;
-  font-size: 16px; line-height: 1; cursor: pointer; padding: 0;
-  flex-shrink: 0;
-}
-.chat-toast__close:hover { color: #374151; }
-.toast-slide-enter-active,
-.toast-slide-leave-active { transition: opacity .25s ease, transform .25s ease; }
-.toast-slide-enter-from,
-.toast-slide-leave-to { opacity: 0; transform: translateY(12px); }
 </style>
