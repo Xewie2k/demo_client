@@ -1,3 +1,4 @@
+<!-- File: src/pages/lich_lam_viec/LichCaLam.vue -->
 <template>
   <div class="lich-page">
     <!-- toast status messages (same style used in taikhoan_nhanvien) -->

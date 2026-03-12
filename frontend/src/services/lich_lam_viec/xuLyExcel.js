@@ -1,10 +1,178 @@
+// File: src/services/lich_lam_viec/xuLyExcel.js
 import * as XLSX from "xlsx";
 
-/**
- * Parse file Excel thành dữ liệu JSON để preview
- * @param {File} file - File Excel
- * @returns {Promise<Array>} - Array chứa dữ liệu các dòng
- */
+const boDau = (value) => {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/g, "d")
+    .replace(/Đ/g, "D");
+};
+
+const chuanHoaText = (value) => {
+  return boDau(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+};
+
+const normalizeHeaderKey = (header) => {
+  const key = chuanHoaText(header);
+
+  if (key === "stt") return "STT";
+  if (["manhanvien", "manv"].includes(key)) return "MaNhanVien";
+  if (["tennhanvien", "tennv", "nhanvien1", "nhanvien"].includes(key)) return "TenNhanVien";
+  if (["calam", "tenca", "ca"].includes(key)) return "TenCa";
+  if (["ngaylam", "ngay"].includes(key)) return "NgayLam";
+  if (["ghichu", "ghichu1", "note"].includes(key)) return "GhiChu";
+
+  return header;
+};
+
+const laDongTrong = (row) => {
+  return (
+    !String(row.MaNhanVien || "").trim() &&
+    !String(row.TenNhanVien || "").trim() &&
+    !String(row.TenCa || "").trim() &&
+    !String(row.NgayLam || "").trim() &&
+    !String(row.GhiChu || "").trim()
+  );
+};
+
+const pad2 = (value) => String(value).padStart(2, "0");
+
+const taoNgayISO = (year, month, day) => {
+  const y = Number(year);
+  const m = Number(month);
+  const d = Number(day);
+
+  if (
+    !Number.isInteger(y) ||
+    !Number.isInteger(m) ||
+    !Number.isInteger(d) ||
+    y < 1000 ||
+    m < 1 ||
+    m > 12 ||
+    d < 1 ||
+    d > 31
+  ) {
+    return null;
+  }
+
+  const check = new Date(Date.UTC(y, m - 1, d));
+  if (
+    check.getUTCFullYear() !== y ||
+    check.getUTCMonth() + 1 !== m ||
+    check.getUTCDate() !== d
+  ) {
+    return null;
+  }
+
+  return `${String(y).padStart(4, "0")}-${pad2(m)}-${pad2(d)}`;
+};
+
+export const parseNgayToISO = (giaTriNgay) => {
+  if (giaTriNgay === null || giaTriNgay === undefined || giaTriNgay === "") {
+    return null;
+  }
+
+  // Trường hợp [yyyy, mm, dd]
+  if (Array.isArray(giaTriNgay) && giaTriNgay.length >= 3) {
+    const [year, month, day] = giaTriNgay;
+    return taoNgayISO(year, month, day);
+  }
+
+  // Trường hợp Date object
+  if (giaTriNgay instanceof Date && !Number.isNaN(giaTriNgay.getTime())) {
+    return taoNgayISO(
+      giaTriNgay.getFullYear(),
+      giaTriNgay.getMonth() + 1,
+      giaTriNgay.getDate()
+    );
+  }
+
+  // Trường hợp Excel serial number
+  if (typeof giaTriNgay === "number" && !Number.isNaN(giaTriNgay)) {
+    const parsed = XLSX.SSF.parse_date_code(giaTriNgay);
+    if (parsed && parsed.y && parsed.m && parsed.d) {
+      return taoNgayISO(parsed.y, parsed.m, parsed.d);
+    }
+    return null;
+  }
+
+  const value = String(giaTriNgay).trim();
+  if (!value) return null;
+
+  const normalizedValue = value
+    .replace(/\./g, "/")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // yyyy-MM-dd hoặc yyyy-MM-ddTHH:mm:ss
+  let match = normalizedValue.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/);
+  if (match) {
+    const [, y, m, d] = match;
+    return taoNgayISO(y, m, d);
+  }
+
+  // yyyy/MM/dd
+  match = normalizedValue.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/);
+  if (match) {
+    const [, y, m, d] = match;
+    return taoNgayISO(y, m, d);
+  }
+
+  // dd/MM/yyyy
+  match = normalizedValue.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (match) {
+    const [, d, m, y] = match;
+    return taoNgayISO(y, m, d);
+  }
+
+  // dd-MM-yyyy
+  match = normalizedValue.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/);
+  if (match) {
+    const [, d, m, y] = match;
+    return taoNgayISO(y, m, d);
+  }
+
+  return null;
+};
+
+export const dinhDangNgayPreview = (giaTriNgay) => {
+  const iso = parseNgayToISO(giaTriNgay);
+  if (!iso) return "-";
+
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+};
+
+export const normalizeExcelRows = (rows = []) => {
+  return rows
+    .map((row, index) => {
+      const normalized = {
+        rowNum: row?.rowNum || index + 2,
+        STT: "",
+        MaNhanVien: "",
+        TenNhanVien: "",
+        TenCa: "",
+        NgayLam: "",
+        GhiChu: "",
+      };
+
+      Object.keys(row || {}).forEach((rawKey) => {
+        if (rawKey === "rowNum") return;
+
+        const mappedKey = normalizeHeaderKey(rawKey);
+        if (Object.prototype.hasOwnProperty.call(normalized, mappedKey)) {
+          normalized[mappedKey] = row[rawKey];
+        }
+      });
+
+      return normalized;
+    })
+    .filter((row) => !laDongTrong(row));
+};
+
 export const parseExcelFile = (file) => {
   return new Promise((resolve, reject) => {
     if (!file) {
@@ -13,23 +181,39 @@ export const parseExcelFile = (file) => {
     }
 
     const reader = new FileReader();
-    
+
     reader.onload = (e) => {
       try {
         const data = e.target.result;
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(sheet);
-        
-        if (rows.length === 0) {
+
+        const workbook = XLSX.read(data, {
+          type: "array",
+          cellDates: false,
+        });
+
+        const firstSheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[firstSheetName];
+
+        if (!sheet) {
+          reject(new Error("Không tìm thấy sheet dữ liệu"));
+          return;
+        }
+
+        // Đọc theo text hiển thị của Excel để tránh lệch timezone
+        const rows = XLSX.utils.sheet_to_json(sheet, {
+          defval: "",
+          raw: false,
+          dateNF: "dd/MM/yyyy",
+        });
+
+        if (!rows || rows.length === 0) {
           reject(new Error("File Excel không có dữ liệu"));
           return;
         }
 
-        // Transform data để dễ preview
         const transformedData = rows.map((row, index) => ({
-          rowNum: index + 2, // +2 vì bỏ header (row 1) và 1-indexed
-          ...row
+          rowNum: index + 2,
+          ...row,
         }));
 
         resolve(transformedData);
@@ -46,79 +230,96 @@ export const parseExcelFile = (file) => {
   });
 };
 
-/**
- * Validate dữ liệu trước khi import
- * @param {Array} data - Dữ liệu để validate
- * @param {Array} listCa - Danh sách các ca làm
- * @param {Array} listNhanVien - Danh sách nhân viên
- * @returns {Object} - {valid: boolean, errors: Array, warnings: Array}
- */
-// excelScheduleService.js
-
-export const validateScheduleData = (data, listCa, listNhanVien) => {
+export const validateScheduleData = (data = [], listCa = [], listNhanVien = []) => {
   const errors = [];
   const warnings = [];
 
-  data.forEach((row, index) => {
-    const rowNum = index + 2; // Dòng trong Excel
-    let ngayLam = row['Ngày Làm'];
+  const rows = normalizeExcelRows(data);
+  const duplicateSet = new Set();
 
-    // 1. Chuyển đổi mọi định dạng về String YYYY-MM-DD để kiểm tra
-    if (ngayLam instanceof Date) {
-      ngayLam = ngayLam.toISOString().split('T')[0];
-    } else if (typeof ngayLam === 'number') {
-      // Xử lý số serial của Excel (ví dụ 45352)
-      const date = new Date(Math.round((ngayLam - 25569) * 864e5));
-      ngayLam = date.toISOString().split('T')[0];
+  rows.forEach((row) => {
+    const rowNum = row.rowNum || 0;
+
+    const maNhanVien = String(row.MaNhanVien || "").trim();
+    const tenNhanVien = String(row.TenNhanVien || "").trim();
+    const tenCa = String(row.TenCa || "").trim();
+    const ngayLamISO = parseNgayToISO(row.NgayLam);
+
+    if (!maNhanVien) {
+      errors.push(`Dòng ${rowNum}: Mã Nhân Viên không được để trống`);
     }
 
-    // 2. Regex kiểm tra format
-    const regexISO = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD
-    const regexVN = /^\d{1,2}\/\d{1,2}\/\d{4}$/; // DD/MM/YYYY
+    if (!tenNhanVien) {
+      errors.push(`Dòng ${rowNum}: Tên Nhân Viên không được để trống`);
+    }
 
-    if (!ngayLam) {
+    if (!tenCa) {
+      errors.push(`Dòng ${rowNum}: Ca Làm không được để trống`);
+    }
+
+    if (!row.NgayLam) {
       errors.push(`Dòng ${rowNum}: Ngày Làm không được để trống`);
-    } else if (!regexISO.test(ngayLam) && !regexVN.test(ngayLam)) {
-      errors.push(`Dòng ${rowNum}: Ngày Làm (${ngayLam}) không đúng format (YYYY-MM-DD hoặc DD/MM/YYYY)`);
+    } else if (!ngayLamISO) {
+      errors.push(`Dòng ${rowNum}: Ngày Làm không đúng định dạng (YYYY-MM-DD hoặc DD/MM/YYYY)`);
     }
 
-    // Kiểm tra Ca Làm
-    if (!row['Ca Làm']) {
-      errors.push(`Dòng ${rowNum}: Thiếu thông tin Ca Làm`);
+    const nhanVien = maNhanVien
+      ? listNhanVien.find(
+          (nv) => chuanHoaText(nv.maNhanVien) === chuanHoaText(maNhanVien)
+        )
+      : null;
+
+    if (maNhanVien && !nhanVien) {
+      errors.push(`Dòng ${rowNum}: Mã Nhân Viên "${maNhanVien}" không tồn tại`);
+    }
+
+    if (
+      nhanVien &&
+      tenNhanVien &&
+      chuanHoaText(tenNhanVien) !== chuanHoaText(nhanVien.tenNhanVien)
+    ) {
+      warnings.push(
+        `Dòng ${rowNum}: Tên Nhân Viên không khớp với mã "${maNhanVien}". Hệ thống sẽ ưu tiên dữ liệu theo mã nhân viên.`
+      );
+    }
+
+    const ca = tenCa
+      ? listCa.find((item) => chuanHoaText(item.tenCa) === chuanHoaText(tenCa))
+      : null;
+
+    if (tenCa && !ca) {
+      errors.push(`Dòng ${rowNum}: Ca Làm "${tenCa}" không tồn tại`);
+    }
+
+    if (nhanVien && ca && ngayLamISO) {
+      const duplicateKey = `${nhanVien.id}-${ca.id}-${ngayLamISO}`;
+
+      if (duplicateSet.has(duplicateKey)) {
+        warnings.push(`Dòng ${rowNum}: Bị trùng nhân viên + ca làm + ngày làm với một dòng khác trong file`);
+      } else {
+        duplicateSet.add(duplicateKey);
+      }
     }
   });
 
-  return { errors, warnings };
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    normalizedData: rows,
+  };
 };
 
-/**
- * Kiểm tra xem chuỗi có phải là ngày hợp lệ không
- */
-function isValidDate(dateString) {
-  // Kiểm tra format YYYY-MM-DD
-  const regex1 = /^\d{4}-\d{2}-\d{2}$/;
-  if (regex1.test(dateString)) {
-    const date = new Date(dateString);
-    return date instanceof Date && !isNaN(date);
-  }
+export const isValidDate = (dateValue) => {
+  return !!parseNgayToISO(dateValue);
+};
 
-  // Kiểm tra format DD/MM/YYYY
-  const regex2 = /^\d{2}\/\d{2}\/\d{4}$/;
-  if (regex2.test(dateString)) {
-    const [day, month, year] = dateString.split('/');
-    const date = new Date(`${year}-${month}-${day}`);
-    return date instanceof Date && !isNaN(date);
-  }
+export const formatDataForPreview = (data = []) => {
+  const rows = normalizeExcelRows(data);
 
-  return false;
-}
-
-/**
- * Format dữ liệu để hiển thị trong preview
- */
-export const formatDataForPreview = (data) => {
-  return data.map(row => ({
+  return rows.map((row, index) => ({
     ...row,
-    displayText: `Dòng ${row.rowNum}: ${Object.values(row).slice(1).join(" | ")}`
+    STT: row.STT || index + 1,
+    displayText: `Dòng ${row.rowNum}: ${row.MaNhanVien || "-"} | ${row.TenNhanVien || "-"} | ${row.TenCa || "-"} | ${dinhDangNgayPreview(row.NgayLam)} | ${row.GhiChu || "-"}`,
   }));
 };

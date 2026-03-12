@@ -2,7 +2,9 @@
 <template>
   <div class="container-fluid login-page p-0">
     <div class="row g-0 h-100">
-      <div class="col-md-6 d-none d-md-flex left-section justify-content-center align-items-center position-relative">
+      <div
+        class="col-md-6 d-none d-md-flex left-section justify-content-center align-items-center position-relative"
+      >
         <div class="left-decor">
           <span class="deco deco-circle deco-circle-lg"></span>
           <span class="deco deco-circle deco-circle-sm"></span>
@@ -26,7 +28,11 @@
       <div class="col-12 col-md-6 right-section d-flex justify-content-center align-items-center">
         <div class="login-card w-100 p-4">
           <div class="text-center mb-5">
-            <img src="@/assets/images/logo/Logo_SevenStrike.png" alt="Small Logo" class="small-logo" />
+            <img
+              src="@/assets/images/logo/Logo_SevenStrike.png"
+              alt="Small Logo"
+              class="small-logo"
+            />
           </div>
 
           <form @submit.prevent="handleLogin">
@@ -73,7 +79,9 @@
             <div class="mb-4">
               <div class="form-check">
                 <input class="form-check-input" type="checkbox" v-model="rememberMe" id="rememberMe" />
-                <label class="form-check-label small text-secondary" for="rememberMe">Ghi nhớ tôi</label>
+                <label class="form-check-label small text-secondary" for="rememberMe">
+                  Ghi nhớ tôi
+                </label>
               </div>
             </div>
 
@@ -150,6 +158,8 @@ export default {
         localStorage.removeItem(key);
         sessionStorage.removeItem(key);
       });
+
+      delete axios.defaults.headers.common.Authorization;
     },
 
     pickErrorMessage(error) {
@@ -206,10 +216,7 @@ export default {
         nestedData?.ss_token ||
         null;
 
-      const message =
-        data.message ||
-        nestedData?.message ||
-        "";
+      const message = data.message || nestedData?.message || "";
 
       return {
         message,
@@ -236,6 +243,12 @@ export default {
 
       if (token) {
         store.setItem("accessToken", token);
+        store.setItem("token", token);
+        store.setItem("jwt", token);
+        store.setItem("ss_token", token);
+        axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+      } else {
+        delete axios.defaults.headers.common.Authorization;
       }
     },
 
@@ -333,6 +346,21 @@ export default {
 
       const user = JSON.parse(raw);
       const role = this.getRoleFromUser(user);
+
+      const token =
+        localStorage.getItem("accessToken") ||
+        sessionStorage.getItem("accessToken") ||
+        localStorage.getItem("token") ||
+        sessionStorage.getItem("token") ||
+        localStorage.getItem("jwt") ||
+        sessionStorage.getItem("jwt") ||
+        localStorage.getItem("ss_token") ||
+        sessionStorage.getItem("ss_token") ||
+        null;
+
+      if (token) {
+        axios.defaults.headers.common.Authorization = `Bearer ${token}`;
+      }
 
       if (this.isAdminRole(role)) {
         this.$router.replace(this.resolveRedirect(role));

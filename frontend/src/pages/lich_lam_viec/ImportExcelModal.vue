@@ -5,9 +5,17 @@
         <div class="modal-header">
           <h3>
             <i class="fa-solid fa-file-excel"></i>
-            {{ buoc === 1 ? 'Chọn File Excel' : buoc === 2 ? 'Kiểm Tra Dữ Liệu' : 'Kết Quả Import' }}
+            {{
+              buoc === 1
+                ? "Chọn File Excel"
+                : buoc === 2
+                ? "Kiểm Tra Dữ Liệu"
+                : "Kết Quả Import"
+            }}
           </h3>
-          <button @click="closeModal" class="btn-close"></button>
+          <button @click="closeModal" class="btn-close">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
         </div>
 
         <div class="modal-body">
@@ -16,10 +24,33 @@
               <div class="instruction-box">
                 <h4><i class="fa-solid fa-circle-info"></i> Hướng Dẫn</h4>
                 <ul>
-                  <li>File phải có các cột: <strong>Ca Làm</strong>, <strong>Ngày Làm</strong>, <strong>Nhân
-                      Viên</strong></li>
-                  <li>Ngày Làm: Định dạng YYYY-MM-DD hoặc DD/MM/YYYY</li>
-                  <li>Nhân Viên: Có thể nhập nhiều người, cách nhau bằng dấu phẩy (,) hoặc dấu chấm phẩy (;)</li>
+                  <li>
+                    Template đúng gồm các cột:
+                    <strong>STT</strong>,
+                    <strong>Mã Nhân Viên</strong>,
+                    <strong>Ca Làm</strong>,
+                    <strong>Ngày Làm</strong>,
+                    <strong>Tên Nhân Viên</strong>,
+                    <strong>Ghi Chú</strong>
+                  </li>
+                  <li>
+                    Cột bắt buộc để import là:
+                    <strong>Mã Nhân Viên</strong>,
+                    <strong>Tên Nhân Viên</strong>,
+                    <strong>Ca Làm</strong>,
+                    <strong>Ngày Làm</strong>
+                  </li>
+                  <li>
+                    File template tải từ hệ thống đã có sẵn combobox ở cột
+                    <strong>Mã Nhân Viên</strong> và <strong>Ca Làm</strong>
+                  </li>
+                  <li>
+                    Cột <strong>Tên Nhân Viên</strong> trong template sẽ tự điền theo mã nhân viên
+                  </li>
+                  <li>
+                    Ngày làm hỗ trợ định dạng <strong>YYYY-MM-DD</strong>,
+                    <strong>DD/MM/YYYY</strong> hoặc ngày Excel
+                  </li>
                 </ul>
               </div>
 
@@ -27,9 +58,14 @@
                 <div class="file-input-wrapper">
                   <label class="file-label">Chọn File Excel:</label>
                   <div class="input-group">
-                    <input type="file" id="fileExcel" @change="xuLyKhiChonFile" accept=".xlsx, .xls"
-                      class="file-input" />
-                    <span class="file-name">{{ fileDaChon?.name || 'Chưa chọn file' }}</span>
+                    <input
+                      type="file"
+                      id="fileExcel"
+                      @change="xuLyKhiChonFile"
+                      accept=".xlsx,.xls"
+                      class="file-input"
+                    />
+                    <span class="file-name">{{ fileDaChon?.name || "Chưa chọn file" }}</span>
                   </div>
                 </div>
 
@@ -56,27 +92,24 @@
                 </ul>
               </div>
 
-              <div v-if="duLieuTuExcel.length > 0" class="preview-table">
-                <h4>Xem Trước Dữ Liệu ({{ duLieuTuExcel.length }} dòng):</h4>
+              <div v-if="duLieuChuanHoa.length > 0" class="preview-table">
+                <h4>Xem Trước Dữ Liệu ({{ duLieuChuanHoa.length }} dòng):</h4>
                 <table>
                   <thead>
                     <tr>
-                      <th v-for="(key, idx) in cacCotXemTruoc" :key="idx">{{ key }}</th>
+                      <th v-for="(col, idx) in cotXemTruoc" :key="idx">{{ col }}</th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(row, rowIdx) in duLieuTuExcel.slice(0, 10)" :key="rowIdx">
-                      <td v-for="(col, colIdx) in cacCotXemTruoc" :key="colIdx">
-                        <template v-if="col === 'Ngày Làm'">
-                          {{ dinhDangNgay(row[col]) }}
-                        </template>
-                        <template v-else>
-                          {{ row[col] || '-' }}
-                        </template>
+                    <tr v-for="(row, rowIdx) in duLieuChuanHoa.slice(0, 10)" :key="rowIdx">
+                      <td v-for="(col, colIdx) in cotXemTruoc" :key="colIdx">
+                        {{ layGiaTriXemTruoc(row, col, rowIdx) }}
                       </td>
                     </tr>
-                    <tr v-if="duLieuTuExcel.length > 10">
-                      <td colspan="100" class="text-center">... và {{ duLieuTuExcel.length - 10 }} dòng nữa</td>
+                    <tr v-if="duLieuChuanHoa.length > 10">
+                      <td colspan="100" class="text-center">
+                        ... và {{ duLieuChuanHoa.length - 10 }} dòng nữa
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -93,15 +126,20 @@
 
               <div v-else class="success-box large">
                 <h4><i class="fa-solid fa-circle-check"></i> Import Thành Công!</h4>
-                <p>Đã import {{ ketQuaImport?.length || 0 }} lịch làm việc</p>
+                <p>Đã import {{ ketQuaImport?.length || 0 }} phân công làm việc</p>
 
                 <div v-if="ketQuaImport && ketQuaImport.length > 0" class="result-list">
-                  <h5>Chi Tiết Lịch Được Tạo:</h5>
+                  <h5>Chi Tiết Phân Công Được Tạo:</h5>
                   <ul>
-                    <li v-for="(item, idx) in ketQuaImport.slice(0, 5)" :key="idx">
-                      {{ item.tenCa }} - {{ dinhDangNgay(item.ngayLam) }}
+                    <li v-for="(item, idx) in ketQuaImport.slice(0, 8)" :key="idx">
+                      {{ item.maNhanVien || "-" }} -
+                      {{ item.tenNhanVien || "-" }} -
+                      {{ item.tenCa || "-" }} -
+                      {{ dinhDangNgayPreview(item.ngayLam) }}
                     </li>
-                    <li v-if="ketQuaImport.length > 5">... và {{ ketQuaImport.length - 5 }} lịch nữa</li>
+                    <li v-if="ketQuaImport.length > 8">
+                      ... và {{ ketQuaImport.length - 8 }} phân công nữa
+                    </li>
                   </ul>
                 </div>
               </div>
@@ -114,13 +152,23 @@
             <i class="fa-solid fa-arrow-left"></i> Quay Lại
           </button>
 
-          <button v-if="buoc === 1" class="btn-primary" @click="xemTruocDuLieu" :disabled="!fileDaChon || dangXuLy">
+          <button
+            v-if="buoc === 1"
+            class="btn-primary"
+            @click="xemTruocDuLieu"
+            :disabled="!fileDaChon || dangXuLy"
+          >
             <i class="fa-solid fa-arrow-right"></i> Tiếp Tục
           </button>
 
-          <button v-if="buoc === 2" class="btn-primary" @click="thucHienImport"
-            :disabled="danhSachLoi.length > 0 || dangXuLy">
-            <i class="fa-solid fa-upload"></i> {{ dangXuLy ? 'Đang Import...' : 'Import Ngay' }}
+          <button
+            v-if="buoc === 2"
+            class="btn-primary"
+            @click="thucHienImport"
+            :disabled="danhSachLoi.length > 0 || dangXuLy"
+          >
+            <i class="fa-solid fa-upload"></i>
+            {{ dangXuLy ? "Đang Import..." : "Import Ngay" }}
           </button>
 
           <button v-if="buoc === 3" class="btn-primary" @click="hoanTat">
@@ -133,92 +181,131 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
-import { parseExcelFile, validateScheduleData} from '@/services/lich_lam_viec/xuLyExcel';
-import { importLichExcel } from '@/services/lich_lam_viec/lich_lam_viecService';
+import { ref } from "vue";
+import {
+  parseExcelFile,
+  validateScheduleData,
+  normalizeExcelRows,
+  dinhDangNgayPreview,
+} from "@/services/lich_lam_viec/xuLyExcel";
+import { importLichExcel } from "@/services/lich_lam_viec/lich_lam_viecService";
 
 const props = defineProps({
-  listNhanVien: Array,
-  listCa: Array,
-  onImportSuccess: Function
+  listNhanVien: {
+    type: Array,
+    default: () => [],
+  },
+  listCa: {
+    type: Array,
+    default: () => [],
+  },
 });
 
-const emit = defineEmits(['close']);
+const emit = defineEmits(["close", "import-success"]);
 
-// Trạng thái modal và tiến trình
 const hienThiModal = ref(false);
 const buoc = ref(1);
 const dangXuLy = ref(false);
 
-// Dữ liệu file
 const fileDaChon = ref(null);
 const duLieuTuExcel = ref([]);
+const duLieuChuanHoa = ref([]);
 
-// Trạng thái kiểm tra (Validation)
 const danhSachLoi = ref([]);
 const danhSachCanhBao = ref([]);
-const loiDocFile = ref('');
+const loiDocFile = ref("");
 
-// Kết quả sau cùng
-const loiImport = ref('');
+const loiImport = ref("");
 const ketQuaImport = ref(null);
 
-// Tính toán các cột hiển thị dựa trên dữ liệu excel
-const cacCotXemTruoc = computed(() => {
-  if (duLieuTuExcel.value.length === 0) return [];
-  
-  return Object.keys(duLieuTuExcel.value[0]).filter(key => key !== 'rowNum');
-});
+const cotXemTruoc = [
+  "STT",
+  "Mã Nhân Viên",
+  "Ca Làm",
+  "Ngày Làm",
+  "Tên Nhân Viên",
+  "Ghi Chú",
+];
 
 const openModal = () => {
   hienThiModal.value = true;
-  buoc.value = 1;
   datLaiTrangThai();
 };
 
 const closeModal = () => {
   hienThiModal.value = false;
   datLaiTrangThai();
-  emit('close');
+  emit("close");
 };
 
 const datLaiTrangThai = () => {
   fileDaChon.value = null;
   duLieuTuExcel.value = [];
+  duLieuChuanHoa.value = [];
   danhSachLoi.value = [];
   danhSachCanhBao.value = [];
-  loiDocFile.value = '';
-  loiImport.value = '';
+  loiDocFile.value = "";
+  loiImport.value = "";
   ketQuaImport.value = null;
   buoc.value = 1;
 };
 
 const xuLyKhiChonFile = (event) => {
   fileDaChon.value = event.target.files[0];
-  loiDocFile.value = '';
+  loiDocFile.value = "";
+};
+
+const layGiaTriXemTruoc = (row, col, rowIdx) => {
+  switch (col) {
+    case "STT":
+      return row.STT || rowIdx + 1;
+    case "Mã Nhân Viên":
+      return row.MaNhanVien || "-";
+    case "Ca Làm":
+      return row.TenCa || "-";
+    case "Ngày Làm":
+      return dinhDangNgayPreview(row.NgayLam);
+    case "Tên Nhân Viên":
+      return row.TenNhanVien || "-";
+    case "Ghi Chú":
+      return row.GhiChu || "-";
+    default:
+      return "-";
+  }
 };
 
 const xemTruocDuLieu = async () => {
   if (!fileDaChon.value) {
-    loiDocFile.value = 'Vui lòng chọn file Excel';
+    loiDocFile.value = "Vui lòng chọn file Excel.";
     return;
   }
 
   dangXuLy.value = true;
+  loiDocFile.value = "";
+
   try {
-    // Đọc file Excel
     const duLieu = await parseExcelFile(fileDaChon.value);
-    duLieuTuExcel.value = duLieu;
+    duLieuTuExcel.value = duLieu || [];
 
-    // Kiểm tra tính hợp lệ
-    const ketQuaKiemTra = validateScheduleData(duLieu, props.listCa, props.listNhanVien);
-    danhSachLoi.value = ketQuaKiemTra.errors;
-    danhSachCanhBao.value = ketQuaKiemTra.warnings;
+    const normalized = normalizeExcelRows(duLieuTuExcel.value);
+    duLieuChuanHoa.value = normalized;
 
-    // Chuyển sang bước 2
+    if (normalized.length === 0) {
+      loiDocFile.value = "File Excel không có dữ liệu hợp lệ.";
+      return;
+    }
+
+    const ketQuaKiemTra = validateScheduleData(
+      normalized,
+      props.listCa,
+      props.listNhanVien
+    );
+
+    danhSachLoi.value = ketQuaKiemTra.errors || [];
+    danhSachCanhBao.value = ketQuaKiemTra.warnings || [];
     buoc.value = 2;
   } catch (error) {
-    loiDocFile.value = error.message || 'Lỗi khi đọc file Excel';
+    loiDocFile.value = error?.message || "Lỗi khi đọc file Excel.";
   } finally {
     dangXuLy.value = false;
   }
@@ -228,24 +315,29 @@ const thucHienImport = async () => {
   if (!fileDaChon.value) return;
 
   dangXuLy.value = true;
-  loiImport.value = '';
+  loiImport.value = "";
 
   try {
     const duLieuForm = new FormData();
-    duLieuForm.append('file', fileDaChon.value);
+    duLieuForm.append("file", fileDaChon.value);
 
     const ketQua = await importLichExcel(duLieuForm);
-    ketQuaImport.value = Array.isArray(ketQua) ? ketQua : ketQua.content || [ketQua];
+
+    ketQuaImport.value = Array.isArray(ketQua)
+      ? ketQua
+      : ketQua?.content
+      ? ketQua.content
+      : ketQua
+      ? [ketQua]
+      : [];
 
     buoc.value = 3;
-
-    // Thông báo cho component cha cập nhật lại danh sách
-    if (props.onImportSuccess) {
-      props.onImportSuccess();
-    }
+    emit("import-success");
   } catch (error) {
-    loiImport.value = error.message || 'Có lỗi xảy ra khi import';
-    console.error('Import error:', error);
+    console.error("Import error:", error);
+    loiImport.value = error?.message || "Có lỗi xảy ra khi import.";
+    ketQuaImport.value = [];
+    buoc.value = 3;
   } finally {
     dangXuLy.value = false;
   }
@@ -255,44 +347,9 @@ const hoanTat = () => {
   closeModal();
 };
 
-const dinhDangNgay = (giaTriNgay) => {
-  if (giaTriNgay === null || giaTriNgay === undefined || giaTriNgay === '') return "-";
-
-  let date;
-
-  if (Array.isArray(giaTriNgay)) {
-    const [year, month, day] = giaTriNgay;
-    return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
-  }
-
-  if (typeof giaTriNgay === 'number') {
-    date = new Date(Math.round((giaTriNgay - 25569) * 864e5));
-  }
-  else {
-    const stringDate = String(giaTriNgay).trim();
-
-    if (stringDate.includes('-') && stringDate.split('-')[0].length === 4) {
-      const [y, m, d] = stringDate.split('-');
-      return `${d.padStart(2, '0')}/${m.padStart(2, '0')}/${y}`;
-    }
-
-    date = new Date(stringDate);
-  }
-
-  // Trả về định dạng DD/MM/YYYY
-  if (date instanceof Date && !isNaN(date.getTime())) {
-    const d = String(date.getDate()).padStart(2, '0');
-    const m = String(date.getMonth() + 1).padStart(2, '0');
-    const y = date.getFullYear();
-    return `${d}/${m}/${y}`;
-  }
-
-  return String(giaTriNgay);
-};
-
 defineExpose({
   openModal,
-  closeModal
+  closeModal,
 });
 </script>
 
@@ -308,10 +365,7 @@ defineExpose({
 
 .modal-overlay {
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  inset: 0;
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
@@ -329,7 +383,7 @@ defineExpose({
 }
 
 .modal-content.large {
-  max-width: 900px;
+  max-width: 950px;
 }
 
 .modal-header {
@@ -351,18 +405,20 @@ defineExpose({
 
 .btn-close {
   border: none;
+  background: rgba(239, 68, 68, 0.1);
   cursor: pointer;
-  color: #9ca3af;
+  color: #dc2626;
   padding: 0;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .btn-close:hover {
-  color: #374151;
+  background: rgba(239, 68, 68, 0.18);
 }
 
 .modal-body {
@@ -378,15 +434,15 @@ defineExpose({
 }
 
 .instruction-box {
-  background: #f0f4f8;
-  border-left: 4px solid #3b82f6;
+  background: #fff5f5;
+  border-left: 4px solid #ef4444;
   padding: 15px;
   border-radius: 6px;
 }
 
 .instruction-box h4 {
   margin: 0 0 10px 0;
-  color: #1f2937;
+  color: #991b1b;
   font-size: 14px;
   display: flex;
   align-items: center;
@@ -432,7 +488,7 @@ defineExpose({
 .file-input {
   flex: 1;
   padding: 8px 12px;
-  border: 2px dashed #d1d5db;
+  border: 2px dashed #fca5a5;
   border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
@@ -440,15 +496,15 @@ defineExpose({
 
 .file-input:focus {
   outline: none;
-  border-color: #3b82f6;
+  border-color: #ef4444;
 }
 
 .file-name {
   padding: 8px 12px;
-  background: #f3f4f6;
+  background: #fef2f2;
   border-radius: 6px;
   font-size: 13px;
-  color: #6b7280;
+  color: #7f1d1d;
 }
 
 .error-box {
@@ -482,19 +538,26 @@ defineExpose({
   margin-bottom: 6px;
 }
 
+.error-box p {
+  white-space: pre-line;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .warning-box {
-  background: #fffbeb;
-  border-left: 4px solid #f59e0b;
+  background: #fff1f2;
+  border-left: 4px solid #fb7185;
   padding: 15px;
   border-radius: 6px;
-  color: #78350f;
+  color: #9f1239;
 }
 
 .warning-box h4,
 .warning-box.large h4 {
   margin: 0 0 10px 0;
   font-size: 14px;
-  color: #92400e;
+  color: #be123c;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -514,18 +577,18 @@ defineExpose({
 }
 
 .success-box {
-  background: #f0fdf4;
-  border-left: 4px solid #22c55e;
+  background: #fff5f5;
+  border-left: 4px solid #ef4444;
   padding: 15px;
   border-radius: 6px;
-  color: #166534;
+  color: #7f1d1d;
 }
 
 .success-box h4,
 .success-box.large h4 {
   margin: 0 0 10px 0;
   font-size: 14px;
-  color: #166534;
+  color: #b91c1c;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -543,7 +606,7 @@ defineExpose({
 .result-list h5 {
   margin: 0 0 10px 0;
   font-size: 13px;
-  color: #166534;
+  color: #b91c1c;
 }
 
 .result-list ul {
@@ -575,26 +638,26 @@ defineExpose({
 }
 
 .preview-table th {
-  background: #f3f4f6;
+  background: #fff1f2;
   padding: 10px;
   text-align: left;
   font-weight: 600;
-  color: #374151;
-  border-bottom: 2px solid #e5e7eb;
+  color: #7f1d1d;
+  border-bottom: 2px solid #fecdd3;
 }
 
 .preview-table td {
   padding: 10px;
   border-bottom: 1px solid #e5e7eb;
   color: #6b7280;
-  max-width: 150px;
+  max-width: 180px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .preview-table tr:hover {
-  background: #f9fafb;
+  background: #fffafa;
 }
 
 .text-center {
@@ -614,12 +677,11 @@ defineExpose({
 
 .btn-primary,
 .btn-secondary {
-  padding: 8px 16px;
+  padding: 9px 16px;
   border-radius: 6px;
-  border: none;
   cursor: pointer;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 6px;
@@ -627,24 +689,31 @@ defineExpose({
 }
 
 .btn-primary {
+  border: none;
   background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%);
   color: white;
   box-shadow: 0 4px 6px rgba(255, 77, 79, 0.2);
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(255, 77, 79, 0.24);
 }
 
 .btn-primary:disabled {
   background: #9ca3af;
   cursor: not-allowed;
   opacity: 0.6;
+  box-shadow: none;
 }
 
 .btn-secondary {
-  background: white;
-  color: #374151;
-  border: 1px solid #d1d5db;
+  border: 1px solid #ef4444;
+  background: #fff5f5;
+  color: #dc2626;
 }
 
 .btn-secondary:hover {
-  background: #f3f4f6;
+  background: #fee2e2;
 }
 </style>

@@ -138,6 +138,7 @@ export function useBanHangHoaDonSubmit(deps) {
       },
       phiVanChuyen: 0,
       phiVanChuyenText: "0",
+      __lastSyncedItemCount: 0,
     };
   }
 
@@ -251,6 +252,9 @@ export function useBanHangHoaDonSubmit(deps) {
     if (!id) throw new Error("CREATE_HD_FAIL");
 
     t.hoaDonId = id;
+    if (typeof t.__lastSyncedItemCount !== "number") {
+      t.__lastSyncedItemCount = 0;
+    }
     persistTabs();
 
     return id;
@@ -278,8 +282,9 @@ export function useBanHangHoaDonSubmit(deps) {
 
     let diaChi = isShipping ? "" : "Tại quầy";
     if (isShipping) {
-      if (selectedKh.value) diaChi = selectedDiaChi.value ? deps.renderDiaChi(selectedDiaChi.value) : "";
-      else {
+      if (selectedKh.value) {
+        diaChi = selectedDiaChi.value ? deps.renderDiaChi(selectedDiaChi.value) : "";
+      } else {
         const parts = [guest.diaChiCuThe, guest.xaPhuong, guest.huyenQuan, guest.tinhThanh].filter((x) =>
           String(x || "").trim(),
         );
@@ -314,25 +319,51 @@ export function useBanHangHoaDonSubmit(deps) {
     };
   }
 
-  function buildChiTietSnapshotPayload(idHoaDon) {
-    return (cartItems.value || []).map((it) => {
-      const donGia = Math.round(Number(it?.__giaBanChot ?? it?.giaBan ?? 0) || 0);
-      const giaGoc = Math.round(Number(it?.__giaGocChot ?? it?.giaGoc ?? 0) || 0);
+  function getCtspIdFromItem(it) {
+    const raw = it?.id ?? it?.idCtsp ?? it?.ctspId ?? it?.idChiTietSanPham ?? null;
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
 
-      return {
-        idHoaDon,
-        idChiTietSanPham: it.id,
-        soLuong: Number(it.qty || 1),
-        donGia,
-        giaGoc,
-        ghiChu: null,
-        xoaMem: false,
-      };
-    });
+  function buildChiTietSnapshotPayload(idHoaDon) {
+    return (cartItems.value || [])
+      .map((it) => {
+        const ctspId = getCtspIdFromItem(it);
+        const qty = Number(it?.qty || 0);
+
+        if (!ctspId || !Number.isFinite(qty) || qty <= 0) return null;
+
+        const donGia = Math.round(Number(it?.__giaBanChot ?? it?.giaBan ?? 0) || 0);
+        const giaGoc = Math.round(Number(it?.__giaGocChot ?? it?.giaGoc ?? 0) || 0);
+
+        return {
+          idHoaDon,
+          idChiTietSanPham: ctspId,
+          soLuong: qty,
+          donGia,
+          giaGoc,
+          ghiChu: null,
+          xoaMem: false,
+        };
+      })
+      .filter(Boolean);
   }
 
   function taoRowId() {
     return `row_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+  }
+
+  function getLastSyncedItemCount() {
+    const t = getActiveTabObj();
+    if (!t) return 0;
+    return Number(t.__lastSyncedItemCount || 0);
+  }
+
+  function setLastSyncedItemCount(n) {
+    const t = getActiveTabObj();
+    if (!t) return;
+    t.__lastSyncedItemCount = Math.max(0, Number(n || 0));
+    persistTabs();
   }
 
   async function reloadCartFromDb(idHoaDon) {
@@ -385,12 +416,29 @@ export function useBanHangHoaDonSubmit(deps) {
         .filter((x) => x.id != null);
 
       cartItems.value = out;
+      setLastSyncedItemCount(out.length);
 
       await ensureBaseQtyIfCartHasItems();
       await capNhatDotGiamGiaChoGioHang();
       scheduleAutoVoucher();
       persistActiveTab();
     } catch (e) {}
+  }
+
+  async function dongBoChiTietHoaDon(idHoaDon) {
+    const snapshot = buildChiTietSnapshotPayload(idHoaDon);
+    const currentCount = snapshot.length;
+    const lastCount = getLastSyncedItemCount();
+
+    // Tab đang rỗng ngay từ đầu thì bỏ qua call /chi-tiet cho đỡ spam log
+    if (currentCount === 0 && lastCount === 0) {
+      return true;
+    }
+
+    // Nếu trước đó đã có item mà giờ rỗng -> vẫn post [] để clear DB
+    await apiClient.post(`/api/admin/hoa-don/${idHoaDon}/chi-tiet`, snapshot);
+    setLastSyncedItemCount(currentCount);
+    return true;
   }
 
   async function syncHoaDonToDb(opts = {}) {
@@ -405,8 +453,7 @@ export function useBanHangHoaDonSubmit(deps) {
       const idHoaDon = await ensureHoaDonChoTab();
 
       await apiClient.put(`/api/admin/hoa-don/${idHoaDon}/thong-tin`, buildThongTinHoaDonPayload());
-
-      await apiClient.post(`/api/admin/hoa-don/${idHoaDon}/chi-tiet`, buildChiTietSnapshotPayload(idHoaDon));
+      await dongBoChiTietHoaDon(idHoaDon);
 
       return true;
     } catch (e) {
@@ -418,8 +465,7 @@ export function useBanHangHoaDonSubmit(deps) {
             const newId = await ensureHoaDonChoTab();
 
             await apiClient.put(`/api/admin/hoa-don/${newId}/thong-tin`, buildThongTinHoaDonPayload());
-
-            await apiClient.post(`/api/admin/hoa-don/${newId}/chi-tiet`, buildChiTietSnapshotPayload(newId));
+            await dongBoChiTietHoaDon(newId);
 
             return true;
           } catch (eRetry) {
@@ -431,8 +477,6 @@ export function useBanHangHoaDonSubmit(deps) {
             }
             if (!silent) throw eRetry;
             return false;
-          } finally {
-            syncingHoaDon.value = false;
           }
         }
       }
@@ -524,7 +568,13 @@ export function useBanHangHoaDonSubmit(deps) {
       }
       return {
         ghiChu: noteBase,
-        thanhToans: [{ tenPhuongThuc: "Chuyển khoản", soTien: ck, maThamChieu: (pay.payMaThamChieu.value || "").trim() || null }],
+        thanhToans: [
+          {
+            tenPhuongThuc: "Chuyển khoản",
+            soTien: ck,
+            maThamChieu: (pay.payMaThamChieu.value || "").trim() || null,
+          },
+        ],
       };
     }
 
@@ -565,7 +615,6 @@ export function useBanHangHoaDonSubmit(deps) {
         lastErr = e;
         const status = e?.response?.status;
         if (status === 404 || status === 405 || status === 401 || status === 403) continue;
-        continue;
       }
     }
 
@@ -670,7 +719,13 @@ export function useBanHangHoaDonSubmit(deps) {
             thanhToans: [
               ...(pay.payTienMatNum.value > 0 ? [{ tenPhuongThuc: "Tiền mặt", soTien: pay.payTienMatNum.value }] : []),
               ...(pay.payChuyenKhoanNum.value > 0
-                ? [{ tenPhuongThuc: "Chuyển khoản", soTien: pay.payChuyenKhoanNum.value, maThamChieu: (pay.payMaThamChieu.value || "").trim() || null }]
+                ? [
+                    {
+                      tenPhuongThuc: "Chuyển khoản",
+                      soTien: pay.payChuyenKhoanNum.value,
+                      maThamChieu: (pay.payMaThamChieu.value || "").trim() || null,
+                    },
+                  ]
                 : []),
             ],
           };

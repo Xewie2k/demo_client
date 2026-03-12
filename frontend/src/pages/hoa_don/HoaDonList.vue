@@ -47,12 +47,22 @@
           </div>
 
           <div class="col-12 d-flex justify-content-end gap-2 mt-3 flex-wrap">
-            <button class="btn ss-btn ss-btn-dark" type="button" @click="lamMoi" title="Đặt lại bộ lọc">
+            <button
+              class="btn ss-btn ss-btn-dark"
+              type="button"
+              @click="lamMoi"
+              title="Đặt lại bộ lọc"
+            >
               <span class="material-icons-outlined ss-btn-ic">restart_alt</span>
               Đặt lại bộ lọc
             </button>
 
-            <button class="btn ss-btn ss-btn-lite" type="button" @click="xuatFile" title="Xuất Excel">
+            <button
+              class="btn ss-btn ss-btn-lite"
+              type="button"
+              @click="xuatFile"
+              title="Xuất Excel"
+            >
               <span class="material-icons-outlined ss-btn-ic">description</span>
               Xuất Excel
             </button>
@@ -140,8 +150,8 @@
                       hd.loaiDonCode === 1
                         ? 'ss-pill-ship'
                         : hd.loaiDonCode === 2
-                          ? 'ss-pill-online'
-                          : 'ss-pill-store'
+                        ? 'ss-pill-online'
+                        : 'ss-pill-store'
                     "
                   >
                     {{ hd.loaiDonLabel }}
@@ -151,8 +161,17 @@
                 <td class="ss-td-text">{{ hd.sdtKhachHang }}</td>
 
                 <td>
-                  <span class="ss-pill ss-pill-status" :style="getTrangThaiStyle(hd.trangThaiHienTai)">
-                    {{ hienTrangThai(hd.trangThaiHienTai) }}
+                  <span
+                    class="ss-pill ss-pill-status"
+                    :style="getTrangThaiStyle(hd.trangThaiHienTai)"
+                  >
+                    {{
+                      tabTrangThai === TRANG_THAI.CAN_HOAN_PHI &&
+                      hd.trangThaiHienTai === TRANG_THAI.HUY_DON &&
+                      hd.daHoanPhi === false
+                        ? "Cần hoàn phí"
+                        : hienTrangThai(hd.trangThaiHienTai)
+                    }}
                   </span>
                 </td>
 
@@ -165,37 +184,49 @@
                   >
                     <span class="material-icons-outlined">visibility</span>
                   </button>
+
                   <button
-                    v-if="tabTrangThai === TRANG_THAI.YEU_CAU_HUY"
+                    v-if="laAdmin() && tabTrangThai === TRANG_THAI.YEU_CAU_HUY"
                     class="btn btn-danger btn-sm ms-1"
                     type="button"
                     :disabled="xacNhanHuyLoadingId === hd.id"
                     @click="xacNhanHuyInList(hd)"
                     title="Xác nhận hủy đơn"
                   >
-                    <span v-if="xacNhanHuyLoadingId === hd.id" class="spinner-border spinner-border-sm"></span>
+                    <span
+                      v-if="xacNhanHuyLoadingId === hd.id"
+                      class="spinner-border spinner-border-sm"
+                    ></span>
                     <i v-else class="bi bi-check-circle"></i>
                   </button>
+
                   <button
-                    v-if="tabTrangThai === TRANG_THAI.YEU_CAU_HUY"
+                    v-if="laAdmin() && tabTrangThai === TRANG_THAI.YEU_CAU_HUY"
                     class="btn btn-outline-secondary btn-sm ms-1"
                     type="button"
                     :disabled="tuChoiHuyLoadingId === hd.id"
                     @click="tuChoiHuyInList(hd)"
                     title="Từ chối yêu cầu hủy"
                   >
-                    <span v-if="tuChoiHuyLoadingId === hd.id" class="spinner-border spinner-border-sm"></span>
+                    <span
+                      v-if="tuChoiHuyLoadingId === hd.id"
+                      class="spinner-border spinner-border-sm"
+                    ></span>
                     <i v-else class="bi bi-x-circle"></i>
                   </button>
+
                   <button
-                    v-if="tabTrangThai === TRANG_THAI.CAN_HOAN_PHI"
+                    v-if="laAdmin() && tabTrangThai === TRANG_THAI.CAN_HOAN_PHI"
                     class="btn btn-success btn-sm ms-1"
                     type="button"
                     :disabled="hoanPhiLoadingId === hd.id"
                     @click="xacNhanHoanPhiInList(hd)"
                     title="Xác nhận đã hoàn tiền cho khách"
                   >
-                    <span v-if="hoanPhiLoadingId === hd.id" class="spinner-border spinner-border-sm"></span>
+                    <span
+                      v-if="hoanPhiLoadingId === hd.id"
+                      class="spinner-border spinner-border-sm"
+                    ></span>
                     <i v-else class="bi bi-cash-coin"></i>
                   </button>
                 </td>
@@ -215,7 +246,9 @@
     <!-- PAGINATION -->
     <div class="ss-pagination-bar" v-if="!loading && filteredHoaDon.length">
       <div class="ss-pagination">
-        <button class="ss-pagebtn" :disabled="page <= 1" @click="page--" title="Trang trước">‹</button>
+        <button class="ss-pagebtn" :disabled="page <= 1" @click="page--" title="Trang trước">
+          ‹
+        </button>
 
         <button
           v-for="p in pageButtons"
@@ -228,7 +261,14 @@
           {{ p }}
         </button>
 
-        <button class="ss-pagebtn" :disabled="page >= totalPages" @click="page++" title="Trang sau">›</button>
+        <button
+          class="ss-pagebtn"
+          :disabled="page >= totalPages"
+          @click="page++"
+          title="Trang sau"
+        >
+          ›
+        </button>
       </div>
 
       <div class="ss-pageinfo">
@@ -265,6 +305,136 @@ const today = () => {
 const filterNgayBD = ref(today());
 const filterNgayKT = ref(today());
 
+/* ================== ROLE / USER ================== */
+const normalizeRole = (role) => {
+  const r = String(role || "").trim().toUpperCase();
+  if (r === "STAFF") return "NHAN_VIEN";
+  if (r === "NHANVIEN" || r === "NHÂN_VIÊN" || r === "NHÂN VIÊN") return "NHAN_VIEN";
+  return r;
+};
+
+const getUser = () => {
+  const raw =
+    localStorage.getItem("user") ||
+    sessionStorage.getItem("user") ||
+    localStorage.getItem("nguoiDung") ||
+    sessionStorage.getItem("nguoiDung");
+
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+};
+
+const getUserRole = () => {
+  const u = getUser();
+  const role =
+    u?.role ||
+    u?.vaiTro ||
+    u?.tenVaiTro ||
+    u?.tenQuyenHan ||
+    u?.quyenHan?.tenQuyenHan ||
+    u?.quyenHan;
+
+  return normalizeRole(role);
+};
+
+const laAdmin = () => {
+  const role = getUserRole();
+  return role === "ADMIN" || role === "QUAN_LY" || role === "MANAGER";
+};
+
+const tachMaNhanVienTuChuoi = (s) => {
+  const m = String(s || "").match(/NV\d{5}/i);
+  return m ? m[0].toUpperCase() : null;
+};
+
+const maNhanVienToId = (ma) => {
+  if (!ma) return null;
+  const m = String(ma).toUpperCase();
+  if (!/^NV\d{5}$/.test(m)) return null;
+  const n = Number(m.slice(2));
+  return Number.isNaN(n) ? null : n;
+};
+
+const getCurrentNhanVienInfo = () => {
+  const u = getUser() || {};
+
+  const toNumberId = (val) => {
+    const raw = String(val ?? "").trim();
+    if (!raw) return null;
+
+    const ma = tachMaNhanVienTuChuoi(raw);
+    if (ma) return maNhanVienToId(ma);
+
+    const digits = raw.replace(/\D/g, "");
+    if (!digits) return null;
+
+    const n = Number(digits);
+    return Number.isNaN(n) || n <= 0 ? null : n;
+  };
+
+  const id =
+    toNumberId(u?.idNhanVien) ??
+    toNumberId(u?.nhanVienId) ??
+    toNumberId(u?.id_nhan_vien) ??
+    toNumberId(u?.nvId) ??
+    toNumberId(u?.nv_id) ??
+    toNumberId(u?.id) ??
+    toNumberId(u?.userId) ??
+    toNumberId(u?.uid) ??
+    toNumberId(u?.maNhanVien) ??
+    null;
+
+  const ma =
+    tachMaNhanVienTuChuoi(u?.maNhanVien) ||
+    tachMaNhanVienTuChuoi(u?.ma_nhan_vien) ||
+    (id ? `NV${String(id).padStart(5, "0")}` : null);
+
+  const tenTaiKhoan = String(
+    u?.tenTaiKhoan ??
+      u?.ten_tai_khoan ??
+      u?.username ??
+      u?.taiKhoan ??
+      u?.account ??
+      ""
+  ).trim();
+
+  return {
+    idNhanVien: id || null,
+    maNhanVien: ma || null,
+    tenTaiKhoan: tenTaiKhoan || "",
+  };
+};
+
+const taoConfigHeaderNhanVien = () => {
+  const info = getCurrentNhanVienInfo();
+  const headers = {};
+
+  if (info?.idNhanVien) {
+    headers["X-Nhan-Vien-Id"] = String(info.idNhanVien);
+    headers["X-NhanVienId"] = String(info.idNhanVien);
+    headers["X-NV-ID"] = String(info.idNhanVien);
+    headers["X-Employee-Id"] = String(info.idNhanVien);
+  }
+
+  if (info?.maNhanVien) headers["X-Ma-Nhan-Vien"] = String(info.maNhanVien);
+  if (info?.tenTaiKhoan) headers["X-Ten-Tai-Khoan"] = String(info.tenTaiKhoan);
+
+  return Object.keys(headers).length ? { headers } : {};
+};
+
+const canDoAdminAction = () => {
+  if (!laAdmin()) {
+    alert("Chỉ Admin/Quản lý mới được thực hiện thao tác này.");
+    return false;
+  }
+  return true;
+};
+
 /* ================== TRẠNG THÁI ================== */
 const TRANG_THAI = {
   CHO_XAC_NHAN: 1,
@@ -277,17 +447,24 @@ const TRANG_THAI = {
   CAN_HOAN_PHI: "CAN_HOAN_PHI",
 };
 
-const tabList = [
-  { label: "Tất cả", value: "ALL" },
-  { label: "Chờ xác nhận", value: TRANG_THAI.CHO_XAC_NHAN },
-  { label: "Chờ giao hàng", value: TRANG_THAI.CHO_GIAO_HANG },
-  { label: "Vận chuyển", value: TRANG_THAI.DANG_VAN_CHUYEN },
-  { label: "Đã giao hàng", value: TRANG_THAI.DA_GIAO_HANG },
-  { label: "Hoàn thành", value: TRANG_THAI.HOAN_THANH },
-  { label: "Đã hủy", value: TRANG_THAI.HUY_DON },
-  { label: "⚠️ Yêu cầu hủy", value: TRANG_THAI.YEU_CAU_HUY },
-  { label: "💰 Cần hoàn phí", value: TRANG_THAI.CAN_HOAN_PHI },
-];
+const tabList = computed(() => {
+  const base = [
+    { label: "Tất cả", value: "ALL" },
+    { label: "Chờ xác nhận", value: TRANG_THAI.CHO_XAC_NHAN },
+    { label: "Chờ giao hàng", value: TRANG_THAI.CHO_GIAO_HANG },
+    { label: "Vận chuyển", value: TRANG_THAI.DANG_VAN_CHUYEN },
+    { label: "Đã giao hàng", value: TRANG_THAI.DA_GIAO_HANG },
+    { label: "Hoàn thành", value: TRANG_THAI.HOAN_THANH },
+    { label: "Đã hủy", value: TRANG_THAI.HUY_DON },
+    { label: "⚠️ Yêu cầu hủy", value: TRANG_THAI.YEU_CAU_HUY },
+  ];
+
+  if (laAdmin()) {
+    base.push({ label: "💰 Cần hoàn phí", value: TRANG_THAI.CAN_HOAN_PHI });
+  }
+
+  return base;
+});
 
 const trangThaiMap = {
   1: { label: "Chờ xác nhận", bg: "#fff7ed", color: "#c2410c" },
@@ -357,7 +534,10 @@ const loadHoaDon = async () => {
           daHoanPhi: hd.daHoanPhi,
         };
       })
-      .sort((a, b) => new Date(a.ngayTaoRaw || a.ngayTao) - new Date(b.ngayTaoRaw || b.ngayTao));
+      .sort(
+        (a, b) =>
+          new Date(a.ngayTaoRaw || a.ngayTao) - new Date(b.ngayTaoRaw || b.ngayTao)
+      );
 
     filteredHoaDon.value = [...hoaDonList.value];
   } finally {
@@ -372,9 +552,10 @@ const apDungBoLoc = () => {
       ? (hd.maHD || "").toLowerCase().includes(filterMaHD.value.toLowerCase())
       : true;
 
-    const loai = filterLoaiDon.value !== ""
-      ? Number(hd.loaiDonCode) === Number(filterLoaiDon.value)
-      : true;
+    const loai =
+      filterLoaiDon.value !== ""
+        ? Number(hd.loaiDonCode) === Number(filterLoaiDon.value)
+        : true;
 
     const bd = filterNgayBD.value ? hd.ngayTao >= filterNgayBD.value : true;
     const kt = filterNgayKT.value ? hd.ngayTao <= filterNgayKT.value : true;
@@ -383,8 +564,8 @@ const apDungBoLoc = () => {
       tabTrangThai.value === "ALL"
         ? true
         : tabTrangThai.value === TRANG_THAI.CAN_HOAN_PHI
-          ? (hd.trangThaiHienTai === TRANG_THAI.HUY_DON && hd.daHoanPhi === false)
-          : Number(hd.trangThaiHienTai) === Number(tabTrangThai.value);
+        ? hd.trangThaiHienTai === TRANG_THAI.HUY_DON && hd.daHoanPhi === false
+        : Number(hd.trangThaiHienTai) === Number(tabTrangThai.value);
 
     return ma && loai && bd && kt && trangThai;
   });
@@ -420,7 +601,12 @@ const xuatFile = () => {
     "Tổng tiền": hd.tongTien,
     "Ngày tạo": hd.ngayTao,
     "Loại đơn": hd.loaiDonLabel,
-    "Trạng thái": hienTrangThai(hd.trangThaiHienTai),
+    "Trạng thái":
+      hd.trangThaiHienTai === TRANG_THAI.HUY_DON && hd.daHoanPhi === false
+        ? "Đã hủy - Chưa hoàn phí"
+        : hienTrangThai(hd.trangThaiHienTai),
+    "Hoàn phí":
+      hd.daHoanPhi === true ? "Đã hoàn" : hd.daHoanPhi === false ? "Chưa hoàn" : "",
   }));
 
   const ws = XLSX.utils.json_to_sheet(data);
@@ -433,40 +619,52 @@ const xuatFile = () => {
 const xacNhanHuyLoadingId = ref(null);
 const tuChoiHuyLoadingId = ref(null);
 
-const getCurrentNhanVienId = () => {
-  try {
-    const raw = localStorage.getItem("user") || sessionStorage.getItem("user")
-      || localStorage.getItem("nguoiDung") || sessionStorage.getItem("nguoiDung");
-    const u = JSON.parse(raw || 'null');
-    return u?.id || null;
-  } catch { return null; }
-};
-
 const xacNhanHuyInList = async (hd) => {
+  if (!canDoAdminAction()) return;
   if (!confirm(`Xác nhận hủy đơn ${hd.maHD} theo yêu cầu khách hàng?`)) return;
+
   xacNhanHuyLoadingId.value = hd.id;
   try {
-    await axios.post(`${API_HD}/${hd.id}/xac-nhan-huy-theo-yeu-cau`, { nhanVienId: getCurrentNhanVienId() });
+    const info = getCurrentNhanVienInfo();
+
+    await axios.post(
+      `${API_HD}/${hd.id}/xac-nhan-huy-theo-yeu-cau`,
+      { nhanVienId: info?.idNhanVien || null },
+      taoConfigHeaderNhanVien()
+    );
+
     await loadHoaDon();
+    apDungBoLoc();
   } catch (e) {
-    alert(e.response?.data?.message || 'Không thể xác nhận hủy đơn');
+    alert(e.response?.data?.message || "Không thể xác nhận hủy đơn");
   } finally {
     xacNhanHuyLoadingId.value = null;
   }
 };
 
 const tuChoiHuyInList = async (hd) => {
+  if (!canDoAdminAction()) return;
+
   const lyDo = prompt(`Lý do từ chối hủy đơn ${hd.maHD} (tùy chọn):`);
-  if (lyDo === null) return; // user pressed Cancel
+  if (lyDo === null) return;
+
   tuChoiHuyLoadingId.value = hd.id;
   try {
-    await axios.post(`${API_HD}/${hd.id}/tu-choi-huy`, {
-      nhanVienId: getCurrentNhanVienId(),
-      lyDo: lyDo || null,
-    });
+    const info = getCurrentNhanVienInfo();
+
+    await axios.post(
+      `${API_HD}/${hd.id}/tu-choi-huy`,
+      {
+        nhanVienId: info?.idNhanVien || null,
+        lyDo: lyDo || null,
+      },
+      taoConfigHeaderNhanVien()
+    );
+
     await loadHoaDon();
+    apDungBoLoc();
   } catch (e) {
-    alert(e.response?.data?.message || 'Không thể từ chối yêu cầu hủy');
+    alert(e.response?.data?.message || "Không thể từ chối yêu cầu hủy");
   } finally {
     tuChoiHuyLoadingId.value = null;
   }
@@ -476,12 +674,21 @@ const tuChoiHuyInList = async (hd) => {
 const hoanPhiLoadingId = ref(null);
 
 const xacNhanHoanPhiInList = async (hd) => {
+  if (!canDoAdminAction()) return;
   if (!confirm(`Xác nhận đã hoàn tiền cho đơn ${hd.maHD}?`)) return;
+
   hoanPhiLoadingId.value = hd.id;
   try {
-    await axios.post(`${API_HD}/${hd.id}/xac-nhan-hoan-phi`, {
-      nhanVienId: getCurrentNhanVienId(),
-    });
+    const info = getCurrentNhanVienInfo();
+
+    await axios.post(
+      `${API_HD}/${hd.id}/xac-nhan-hoan-phi`,
+      {
+        nhanVienId: info?.idNhanVien || null,
+      },
+      taoConfigHeaderNhanVien()
+    );
+
     await loadHoaDon();
     apDungBoLoc();
   } catch (e) {

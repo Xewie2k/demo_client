@@ -12,7 +12,7 @@
         </div>
       </div>
 
-      <div class="toolbar-body column-layout">
+      <div class="toolbar-body">
         <div class="filters-bar">
           <div class="form-group row-layout">
             <label>Nhân viên <span class="req">*</span></label>
@@ -35,7 +35,7 @@
                   v-for="nv in filteredNhanVienList"
                   :key="nv.id"
                   @click="selectNhanVien(nv)"
-                  :class="{ active: nv.id === form.idNhanVien }"
+                  :class="{ active: nv.id === filterNv }"
                 >
                   <span class="fw-bold">{{ nv.tenNhanVien }}</span>
                   <small v-if="nv.maNhanVien"> - {{ nv.maNhanVien }}</small>
@@ -53,23 +53,17 @@
           </div>
         </div>
 
-        <button v-if="hasPermission" class="btn-add mt-10" @click="openModal(null)">
-          <i class="fa-solid fa-plus"></i> Thêm mới lịch làm việc
-        </button>
-      </div>
-    </div>
+        <div class="toolbar-actions" v-if="hasPermission">
+          <button class="btn-template" type="button" @click="downloadTemplate">
+            <i class="fa-solid fa-file-arrow-down"></i> Tải template
+          </button>
 
-    <div class="card-box mt-20">
-      <div class="toolbar-header">
-        <h3><i class="fa-regular fa-file-excel"></i> Nhập Dữ Liệu Từ Excel</h3>
-      </div>
-      <div class="import-body">
-        <p class="import-description">
-          Nhập lịch làm việc từ file Excel. Chọn file chứa danh sách nhân viên, ca làm và ngày làm việc.
-        </p>
-        <div class="import-actions">
-          <button class="btn-import" @click="openExcelModal" v-if="hasPermission">
+          <button class="btn-import" type="button" @click="openExcelModal">
             <i class="fa-solid fa-upload"></i> Import Excel
+          </button>
+
+          <button class="btn-add" type="button" @click="openModal(null)">
+            <i class="fa-solid fa-plus"></i> Thêm mới lịch làm việc
           </button>
         </div>
       </div>
@@ -97,13 +91,17 @@
             viewMode === "table"
               ? "Danh Sách Lịch Làm Việc"
               : viewMode === "week"
-              ? "Lịch Làm Việc Tuần"
-              : "Lịch Làm Việc Tháng " + (currentMonth + 1)
+                ? "Lịch Làm Việc Tuần"
+                : "Lịch Làm Việc Tháng " + (currentMonth + 1)
           }}
         </h3>
 
         <div class="view-modes">
-          <button class="mode-btn" :class="{ active: viewMode === 'table' }" @click="viewMode = 'table'">
+          <button
+            class="mode-btn"
+            :class="{ active: viewMode === 'table' }"
+            @click="viewMode = 'table'"
+          >
             <i class="fa-solid fa-table"></i> Bảng
           </button>
           <button
@@ -140,11 +138,21 @@
               </td>
               <td>{{ formatDate(l.ngayLam) }}</td>
               <td class="text-right action-col">
-                <button v-if="hasPermission" class="ss-icon-btn-view" @click="openModal(l)" title="Xem / Sửa">
+                <button
+                  v-if="hasPermission"
+                  class="ss-icon-btn-view"
+                  @click="openModal(l)"
+                  title="Xem / Sửa"
+                >
                   <span class="material-icons-outlined">visibility</span>
                 </button>
 
-                <button v-if="hasPermission" class="ss-icon-btn-view" @click="deletePhanCong(l.id)" title="Xóa">
+                <button
+                  v-if="hasPermission"
+                  class="ss-icon-btn-view"
+                  @click="deletePhanCong(l.id)"
+                  title="Xóa"
+                >
                   <span class="fa-solid fa-trash"></span>
                 </button>
               </td>
@@ -175,10 +183,18 @@
 
           <div class="nav-right">
             <div class="btn-toggle-group">
-              <button class="btn-toggle" :class="{ active: viewMode === 'day' }" @click="viewMode = 'day'">
+              <button
+                class="btn-toggle"
+                :class="{ active: viewMode === 'day' }"
+                @click="viewMode = 'day'"
+              >
                 Ngày
               </button>
-              <button class="btn-toggle" :class="{ active: viewMode === 'week' }" @click="viewMode = 'week'">
+              <button
+                class="btn-toggle"
+                :class="{ active: viewMode === 'week' }"
+                @click="viewMode = 'week'"
+              >
                 Tuần
               </button>
               <button
@@ -203,15 +219,34 @@
         </div>
 
         <div v-if="viewMode === 'calendar'" class="cal-grid-body">
-          <div v-for="blank in startPadding" :key="'blank-' + blank" class="cal-cell disabled"></div>
+          <div
+            v-for="blank in startPadding"
+            :key="'blank-' + blank"
+            class="cal-cell disabled"
+          ></div>
 
-          <div v-for="day in daysInMonth" :key="'day-' + day" class="cal-cell" :class="{ 'is-today': isToday(day) }">
+          <div
+            v-for="day in daysInMonth"
+            :key="'day-' + day"
+            class="cal-cell"
+            :class="{ 'is-today': isToday(day) }"
+          >
             <div class="cal-date-num">{{ day }}</div>
             <div class="cal-events-container">
-              <div v-for="nv in getEventsForDayGrouped(day)" :key="nv.id" class="event-item" @click="openModal(nv)">
+              <div
+                v-for="nv in getEventsForDayGrouped(day)"
+                :key="nv.id"
+                class="event-item"
+                @click="openModal(nv)"
+              >
                 <div class="avatar-circle">
-                  <img v-if="isImg(nv.nhanVien?.anhNhanVien)" :src="nv.nhanVien?.anhNhanVien" />
-                  <span v-else class="initial">{{ getAvatarLabel(nv.tenNhanVien) }}</span>
+                  <img
+                    v-if="isImg(nv.nhanVien?.anhNhanVien)"
+                    :src="nv.nhanVien?.anhNhanVien"
+                  />
+                  <span v-else class="initial">{{
+                    getAvatarLabel(nv.tenNhanVien)
+                  }}</span>
                 </div>
                 <span class="event-name">{{ nv.nhanVien?.tenTaiKhoan }}</span>
               </div>
@@ -233,20 +268,31 @@
             v-for="wd in weekDays"
             :key="'week-day-' + wd.dateFull.getTime()"
             class="cal-cell"
-            :class="{ 'is-today': isToday(wd.day) && currentMonth === wd.month }"
+            :class="{
+              'is-today': isToday(wd.day) && currentMonth === wd.month,
+            }"
           >
             <div class="cal-date-num">{{ wd.day }}/{{ wd.month + 1 }}</div>
 
             <div class="cal-events-container">
               <div
-                v-for="nv in getEventsForSpecificDayGrouped(wd.day, wd.month, wd.year)"
+                v-for="nv in getEventsForSpecificDayGrouped(
+                  wd.day,
+                  wd.month,
+                  wd.year,
+                )"
                 :key="nv.id"
                 class="event-item"
                 @click="openModal(nv)"
               >
                 <div class="avatar-circle">
-                  <img v-if="isImg(nv.nhanVien?.anhNhanVien)" :src="nv.nhanVien?.anhNhanVien" />
-                  <span v-else class="initial">{{ getAvatarLabel(nv.tenNhanVien) }}</span>
+                  <img
+                    v-if="isImg(nv.nhanVien?.anhNhanVien)"
+                    :src="nv.nhanVien?.anhNhanVien"
+                  />
+                  <span v-else class="initial">{{
+                    getAvatarLabel(nv.tenNhanVien)
+                  }}</span>
                 </div>
                 <span class="event-name">{{ nv.nhanVien?.tenTaiKhoan }}</span>
               </div>
@@ -267,7 +313,10 @@
         <div v-else-if="viewMode === 'day'" class="matrix-view day-matrix">
           <div class="matrix-header">
             <div class="matrix-cell-header shift-col">CA LÀM VIỆC</div>
-            <div class="matrix-cell-header day-col flex-1" :class="{ 'is-today': isTodayDate(currentDate) }">
+            <div
+              class="matrix-cell-header day-col flex-1"
+              :class="{ 'is-today': isTodayDate(currentDate) }"
+            >
               <div class="day-name">{{ getDayName(currentDate) }}</div>
               <div class="day-date">{{ formatDateFull(currentDate) }}</div>
             </div>
@@ -277,12 +326,21 @@
             <div v-for="ca in listCa" :key="ca.id" class="matrix-row">
               <div class="matrix-cell shift-col">
                 <div class="shift-name">{{ ca.tenCa }}</div>
-                <div class="shift-time">{{ formatTime(ca.gioBatDau) }} - {{ formatTime(ca.gioKetThuc) }}</div>
+                <div class="shift-time">
+                  {{ formatTime(ca.gioBatDau) }} -
+                  {{ formatTime(ca.gioKetThuc) }}
+                </div>
               </div>
 
-              <div class="matrix-cell day-col flex-1" :class="{ 'is-today': isTodayDate(currentDate) }">
+              <div
+                class="matrix-cell day-col flex-1"
+                :class="{ 'is-today': isTodayDate(currentDate) }"
+              >
                 <div
-                  v-if="hasPermission && getEventsForShiftAndDate(ca.id, currentDate).length === 0"
+                  v-if="
+                    hasPermission &&
+                    getEventsForShiftAndDate(ca.id, currentDate).length === 0
+                  "
                   class="add-full-btn"
                   @click="openModalVoiNgayCa(currentDate, ca.id)"
                 >
@@ -297,21 +355,32 @@
                     <i class="fa-solid fa-plus"></i>
                   </button>
                   <div
-                    v-for="(nv, index) in getEventsForShiftAndDate(ca.id, currentDate)"
+                    v-for="nv in getEventsForShiftAndDate(ca.id, currentDate)"
                     :key="nv.id"
                     class="employee-card large"
                     :class="['border-color-4']"
                     @click="openModal(nv)"
                   >
                     <div class="avatar-circle">
-                      <img v-if="isImg(nv.nhanVien?.anhNhanVien)" :src="nv.nhanVien?.anhNhanVien" />
+                      <img
+                        v-if="isImg(nv.nhanVien?.anhNhanVien)"
+                        :src="nv.nhanVien?.anhNhanVien"
+                      />
                       <span v-else class="initial">
-                        {{ getAvatarLabel(nv.tenNhanVien || nv.nhanVien?.tenTaiKhoan) }}
+                        {{
+                          getAvatarLabel(
+                            nv.tenNhanVien || nv.nhanVien?.tenTaiKhoan,
+                          )
+                        }}
                       </span>
                     </div>
                     <div class="emp-info">
-                      <div class="emp-name">{{ nv.tenNhanVien || nv.nhanVien?.tenTaiKhoan }}</div>
-                      <div class="emp-id">{{ nv.nhanVien?.maNhanVien || nv.maNhanVien }}</div>
+                      <div class="emp-name">
+                        {{ nv.tenNhanVien || nv.nhanVien?.tenTaiKhoan }}
+                      </div>
+                      <div class="emp-id">
+                        {{ nv.nhanVien?.maNhanVien || nv.maNhanVien }}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -319,11 +388,11 @@
             </div>
           </div>
         </div>
-      </div> 
+      </div>
     </div>
 
     <div v-if="showModal" class="modal-overlay">
-      <div class="modal-content">
+      <div class="modal-content form-modal">
         <div class="modal-header">
           <h3>{{ isEditing ? "Cập Nhật Lịch Làm Việc" : "Thêm Mới Lịch" }}</h3>
           <button @click="closeModal" class="btn-close"></button>
@@ -334,9 +403,16 @@
 
             <div v-if="!isEditing">
               <div class="selected-tags" v-if="selectedNhanViens.length > 0">
-                <div v-for="(nv, index) in selectedNhanViens" :key="nv.id" class="tag-item">
+                <div
+                  v-for="(nv, index) in selectedNhanViens"
+                  :key="nv.id"
+                  class="tag-item"
+                >
                   <span>{{ nv.tenNhanVien }}</span>
-                  <i class="fa-solid fa-xmark remove-tag" @click="removeSelectedNv(index)"></i>
+                  <i
+                    class="fa-solid fa-xmark remove-tag"
+                    @click="removeSelectedNv(index)"
+                  ></i>
                 </div>
               </div>
 
@@ -359,7 +435,10 @@
                   >
                     <span class="fw-bold">{{ nv.tenNhanVien }}</span>
                     <small> - {{ nv.maNhanVien }}</small>
-                    <i v-if="isNvSelected(nv.id)" class="fa-solid fa-check float-right"></i>
+                    <i
+                      v-if="isNvSelected(nv.id)"
+                      class="fa-solid fa-check float-right"
+                    ></i>
                   </li>
                   <li v-if="filteredNvModal.length === 0" class="no-result">
                     Không tìm thấy
@@ -401,9 +480,16 @@
             <label>Ca làm việc <span class="req">*</span></label>
 
             <div class="selected-tags" v-if="selectedCas.length > 0">
-              <div v-for="(ca, index) in selectedCas" :key="ca.id" class="tag-item">
+              <div
+                v-for="(ca, index) in selectedCas"
+                :key="ca.id"
+                class="tag-item"
+              >
                 <span>{{ ca.tenCa }}</span>
-                <i class="fa-solid fa-xmark remove-tag" @click="removeSelectedCa(index)"></i>
+                <i
+                  class="fa-solid fa-xmark remove-tag"
+                  @click="removeSelectedCa(index)"
+                ></i>
               </div>
             </div>
 
@@ -425,10 +511,18 @@
                   :class="{ active: isCaSelected(ca.id) }"
                 >
                   <span class="fw-bold">{{ ca.tenCa }}</span>
-                  <small> - ({{ formatTime(ca.gioBatDau) }} - {{ formatTime(ca.gioKetThuc) }})</small>
-                  <i v-if="isCaSelected(ca.id)" class="fa-solid fa-check float-right"></i>
+                  <small>
+                    - ({{ formatTime(ca.gioBatDau) }} -
+                    {{ formatTime(ca.gioKetThuc) }})
+                  </small>
+                  <i
+                    v-if="isCaSelected(ca.id)"
+                    class="fa-solid fa-check float-right"
+                  ></i>
                 </li>
-                <li v-if="filteredCaModal.length === 0" class="no-result">Không tìm thấy</li>
+                <li v-if="filteredCaModal.length === 0" class="no-result">
+                  Không tìm thấy
+                </li>
               </ul>
             </div>
           </div>
@@ -438,9 +532,6 @@
             <div class="input-with-icon">
               <input type="date" v-model="form.ngayLam" class="btn-date" />
             </div>
-          </div>
-
-          <div v-if="isEditing && form.danhSachCa && form.danhSachCa.length > 0" class="assigned-shifts-section">
           </div>
         </div>
         <div class="modal-footer">
@@ -455,6 +546,8 @@
 
 <script setup>
 import { ref, onMounted, reactive, computed } from "vue";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 import {
   createPhanCong,
   removePhanCong,
@@ -469,6 +562,18 @@ import {
 import ImportExcelModal from "./ImportExcelModal.vue";
 
 const excelModalRef = ref(null);
+
+const toArray = (res) => {
+  if (Array.isArray(res)) return res;
+  return res?.content || [];
+};
+
+const formatDateInputLocal = (date = new Date()) => {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+};
 
 const openExcelModal = () => {
   if (excelModalRef.value) {
@@ -510,7 +615,6 @@ const listNhanVien = ref([]);
 const listCa = ref([]);
 const loading = ref(false);
 const filterNv = ref(null);
-const filterCaLam = ref(null);
 const filterDate = ref(null);
 
 const selectedNhanViens = ref([]);
@@ -554,7 +658,11 @@ const getAvatarLabel = (name) => {
 const isImg = (s) => {
   if (!s) return false;
   const v = String(s).trim();
-  return v.startsWith("data:image/") || v.startsWith("http://") || v.startsWith("https://");
+  return (
+    v.startsWith("data:image/") ||
+    v.startsWith("http://") ||
+    v.startsWith("https://")
+  );
 };
 
 const isNvSelected = (id) => {
@@ -640,6 +748,188 @@ const getDayName = (d) => {
   return dayIndex === 0 ? "CN" : `T${dayIndex + 1}`;
 };
 
+const formatTime = (arr) => {
+  if (Array.isArray(arr)) {
+    return `${arr[0]}:${arr[1] < 10 ? "0" + arr[1] : arr[1]}`;
+  }
+  if (typeof arr === "string") return arr.substring(0, 5);
+  return "";
+};
+
+const downloadTemplate = async () => {
+  try {
+    const [nvRes, caRes] = await Promise.all([getAllNhanVien(), getAllCaLam()]);
+
+    const freshNhanVien = toArray(nvRes).filter((nv) => nv.idQuyenHan !== 1);
+    const freshCa = toArray(caRes);
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "SevenStrike";
+    workbook.created = new Date();
+
+    const sheet = workbook.addWorksheet("Lịch Làm Việc");
+    const guideSheet = workbook.addWorksheet("Hướng Dẫn");
+    const danhMucSheet = workbook.addWorksheet("DanhMuc");
+
+    danhMucSheet.state = "hidden";
+
+    danhMucSheet.getCell("A1").value = "MaNhanVien";
+    danhMucSheet.getCell("B1").value = "TenNhanVien";
+    danhMucSheet.getCell("D1").value = "TenCa";
+    danhMucSheet.getCell("E1").value = "KhungGio";
+
+    freshNhanVien.forEach((nv, index) => {
+      const row = index + 2;
+      danhMucSheet.getCell(`A${row}`).value = nv.maNhanVien || "";
+      danhMucSheet.getCell(`B${row}`).value = nv.tenNhanVien || "";
+    });
+
+    freshCa.forEach((ca, index) => {
+      const row = index + 2;
+      danhMucSheet.getCell(`D${row}`).value = ca.tenCa || "";
+      danhMucSheet.getCell(`E${row}`).value =
+        `${formatTime(ca.gioBatDau)} - ${formatTime(ca.gioKetThuc)}`;
+    });
+
+    const employeeLastRow = Math.max(freshNhanVien.length + 1, 2);
+    const shiftLastRow = Math.max(freshCa.length + 1, 2);
+
+    workbook.definedNames.add(
+      `DanhMuc!$A$2:$A$${employeeLastRow}`,
+      "DS_MA_NHAN_VIEN",
+    );
+    workbook.definedNames.add(`DanhMuc!$D$2:$D$${shiftLastRow}`, "DS_CA_LAM");
+
+    sheet.columns = [
+      { header: "STT", key: "stt", width: 10 },
+      { header: "Mã Nhân Viên", key: "maNhanVien", width: 20 },
+      { header: "Ca Làm", key: "tenCa", width: 22 },
+      { header: "Ngày Làm", key: "ngayLam", width: 18 },
+      { header: "Tên Nhân Viên", key: "tenNhanVien", width: 30 },
+      { header: "Ghi Chú", key: "ghiChu", width: 28 },
+    ];
+
+    const headerRow = sheet.getRow(1);
+    headerRow.height = 22;
+
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = {
+        type: "pattern",
+        pattern: "solid",
+        fgColor: { argb: "FFDC2626" },
+      };
+      cell.alignment = { vertical: "middle", horizontal: "center" };
+      cell.border = {
+        top: { style: "thin", color: { argb: "FFFECACA" } },
+        left: { style: "thin", color: { argb: "FFFECACA" } },
+        bottom: { style: "thin", color: { argb: "FFFECACA" } },
+        right: { style: "thin", color: { argb: "FFFECACA" } },
+      };
+    });
+
+    sheet.views = [{ state: "frozen", ySplit: 1 }];
+    sheet.autoFilter = "A1:F1";
+
+    for (let row = 2; row <= 300; row += 1) {
+      sheet.getCell(`A${row}`).value = row - 1;
+      sheet.getCell(`A${row}`).alignment = { horizontal: "center" };
+
+      sheet.getCell(`B${row}`).dataValidation = {
+        type: "list",
+        allowBlank: true,
+        formulae: ["=DS_MA_NHAN_VIEN"],
+        showErrorMessage: true,
+        errorTitle: "Mã nhân viên không hợp lệ",
+        error: "Vui lòng chọn mã nhân viên từ danh sách.",
+      };
+
+      sheet.getCell(`C${row}`).dataValidation = {
+        type: "list",
+        allowBlank: true,
+        formulae: ["=DS_CA_LAM"],
+        showErrorMessage: true,
+        errorTitle: "Ca làm không hợp lệ",
+        error: "Vui lòng chọn ca làm từ danh sách.",
+      };
+
+      // Giữ cột ngày ở dạng TEXT để Excel không tự đảo dd/MM thành MM/dd
+      sheet.getCell(`D${row}`).value = "";
+      sheet.getCell(`D${row}`).numFmt = "@";
+      sheet.getCell(`D${row}`).alignment = {
+        horizontal: "left",
+        vertical: "middle",
+      };
+
+      sheet.getCell(`E${row}`).value = {
+        formula: `IF(B${row}="","",IFERROR(VLOOKUP(B${row},DanhMuc!$A$2:$B$${employeeLastRow},2,FALSE),""))`,
+      };
+
+      ["A", "B", "C", "D", "E", "F"].forEach((col) => {
+        sheet.getCell(`${col}${row}`).border = {
+          top: { style: "thin", color: { argb: "FFE5E7EB" } },
+          left: { style: "thin", color: { argb: "FFE5E7EB" } },
+          bottom: { style: "thin", color: { argb: "FFE5E7EB" } },
+          right: { style: "thin", color: { argb: "FFE5E7EB" } },
+        };
+      });
+    }
+
+    guideSheet.columns = [{ width: 28 }, { width: 95 }];
+    guideSheet.mergeCells("A1:B1");
+    guideSheet.getCell("A1").value = "HƯỚNG DẪN NHẬP LỊCH LÀM VIỆC";
+    guideSheet.getCell("A1").font = {
+      bold: true,
+      size: 14,
+      color: { argb: "FFB91C1C" },
+    };
+    guideSheet.getCell("A1").alignment = { horizontal: "center" };
+
+    const guideData = [
+      ["1.", "Nhập dữ liệu trong sheet “Lịch Làm Việc”."],
+      [
+        "2.",
+        "Cột “Mã Nhân Viên” có sẵn combobox để chọn mã nhân viên hiện tại.",
+      ],
+      ["3.", "Cột “Ca Làm” có sẵn combobox để chọn ca làm hiện tại."],
+      ["4.", "Cột “Tên Nhân Viên” tự điền theo mã nhân viên đã chọn."],
+      [
+        "5.",
+        "Cột bắt buộc để import: Mã Nhân Viên, Tên Nhân Viên, Ca Làm, Ngày Làm.",
+      ],
+      [
+        "6.",
+        "Cột STT và Ghi Chú chỉ để hỗ trợ nhập liệu, hệ thống không bắt buộc.",
+      ],
+      [
+        "7.",
+        "Cột Ngày Làm đã để kiểu Text để tránh Excel tự đảo ngày/tháng. Hãy nhập 10/03/2026 hoặc 2026-03-10.",
+      ],
+    ];
+
+    guideData.forEach((item, index) => {
+      const row = guideSheet.getRow(index + 3);
+      row.getCell(1).value = item[0];
+      row.getCell(2).value = item[1];
+      row.getCell(1).font = { bold: true };
+      row.getCell(1).alignment = { vertical: "top" };
+      row.getCell(2).alignment = { wrapText: true, vertical: "top" };
+      row.height = 22;
+    });
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(
+      new Blob([buffer], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      "template_lich_lam_viec.xlsx",
+    );
+  } catch (error) {
+    console.error("Lỗi khi tải template:", error);
+    alert("Không thể tải template Excel lúc này.");
+  }
+};
+
 const getEventsForShiftAndDate = (idCa, d) => {
   if (!lichNhanVienList.value || lichNhanVienList.value.length === 0) return [];
 
@@ -652,7 +942,10 @@ const getEventsForShiftAndDate = (idCa, d) => {
     let shiftId = null;
 
     if (l.lichLamViec && l.lichLamViec.idCaLam) {
-      shiftId = typeof l.lichLamViec.idCaLam === "object" ? l.lichLamViec.idCaLam.id : l.lichLamViec.idCaLam;
+      shiftId =
+        typeof l.lichLamViec.idCaLam === "object"
+          ? l.lichLamViec.idCaLam.id
+          : l.lichLamViec.idCaLam;
     } else {
       shiftId = l.idCaLam;
     }
@@ -664,7 +957,9 @@ const getEventsForShiftAndDate = (idCa, d) => {
     }
 
     if (Array.isArray(l.ngayLam)) {
-      return l.ngayLam[0] === year && l.ngayLam[1] === m && l.ngayLam[2] === day;
+      return (
+        l.ngayLam[0] === year && l.ngayLam[1] === m && l.ngayLam[2] === day
+      );
     }
 
     return false;
@@ -684,7 +979,9 @@ const openModalVoiNgayCa = (dateObj, idCa) => {
 
   const ca = listCa.value.find((c) => c.id === idCa);
   selectedCas.value = ca ? [ca] : [];
-  searchCaModal.value = ca ? `${ca.tenCa} (${formatTime(ca.gioBatDau)} - ${formatTime(ca.gioKetThuc)})` : "";
+  searchCaModal.value = ca
+    ? `${ca.tenCa} (${formatTime(ca.gioBatDau)} - ${formatTime(ca.gioKetThuc)})`
+    : "";
 
   const year = dateObj.getFullYear();
   const m = dateObj.getMonth() + 1;
@@ -753,7 +1050,9 @@ const getEventsForSpecificDay = (day, month, year) => {
 
   return filterLichList.value.filter((l) => {
     if (Array.isArray(l.ngayLam)) {
-      return l.ngayLam[0] === year && l.ngayLam[1] === m && l.ngayLam[2] === day;
+      return (
+        l.ngayLam[0] === year && l.ngayLam[1] === m && l.ngayLam[2] === day
+      );
     }
     return l.ngayLam === dateString;
   });
@@ -774,7 +1073,11 @@ const getEventsForDay = (day) => {
 
   return filterLichList.value.filter((l) => {
     if (Array.isArray(l.ngayLam)) {
-      return l.ngayLam[0] === currentYear.value && l.ngayLam[1] === m && l.ngayLam[2] === day;
+      return (
+        l.ngayLam[0] === currentYear.value &&
+        l.ngayLam[1] === m &&
+        l.ngayLam[2] === day
+      );
     }
     if (typeof l.ngayLam === "string") {
       return l.ngayLam === dateString;
@@ -802,7 +1105,12 @@ const groupShiftsByNhanVien = (events) => {
 
     grouped[nvId].danhSachCa.push({
       idPhanCong: item.id,
-      idCa: item.idCaLam || item.caLam?.id,
+      idCa:
+        item.idCaLam ||
+        item.caLam?.id ||
+        (typeof item.lichLamViec?.idCaLam === "object"
+          ? item.lichLamViec?.idCaLam?.id
+          : item.lichLamViec?.idCaLam),
       tenCa: item.tenCa || item.caLam?.tenCa,
       gioBatDau: item.gioBatDau,
       gioKetThuc: item.gioKetThuc,
@@ -818,8 +1126,12 @@ const filteredNhanVienList = computed(() => {
   return listNhanVien.value.filter((nv) => {
     const nhanVienSearch =
       !searchNv.value ||
-      (nv.tenNhanVien || "").toLowerCase().includes(searchNv.value.toLowerCase()) ||
-      ((nv.maNhanVien || "").toLowerCase().includes(searchNv.value.toLowerCase()));
+      (nv.tenNhanVien || "")
+        .toLowerCase()
+        .includes(searchNv.value.toLowerCase()) ||
+      (nv.maNhanVien || "")
+        .toLowerCase()
+        .includes(searchNv.value.toLowerCase());
 
     const koPhaiAdmin = nv.idQuyenHan !== 1;
     return nhanVienSearch && koPhaiAdmin;
@@ -855,8 +1167,10 @@ const selectNhanVien = (nv) => {
   showNvDropdown.value = false;
 };
 
-const handleBlurNvModal = () => setTimeout(() => (showNvModalDropdown.value = false), 200);
-const handleBlurCaModal = () => setTimeout(() => (showCaModalDropdown.value = false), 200);
+const handleBlurNvModal = () =>
+  setTimeout(() => (showNvModalDropdown.value = false), 200);
+const handleBlurCaModal = () =>
+  setTimeout(() => (showCaModalDropdown.value = false), 200);
 
 const handleBlurNv = () => {
   setTimeout(() => {
@@ -864,15 +1178,17 @@ const handleBlurNv = () => {
   }, 200);
 };
 
-const formatTime = (arr) => {
-  if (Array.isArray(arr)) return `${arr[0]}:${arr[1] < 10 ? "0" + arr[1] : arr[1]}`;
-  if (typeof arr === "string") return arr.substring(0, 5);
-  return "";
-};
+const formatDate = (value) => {
+  if (Array.isArray(value)) {
+    return `${String(value[2]).padStart(2, "0")}/${String(value[1]).padStart(2, "0")}/${value[0]}`;
+  }
 
-const formatDate = (arr) => {
-  if (Array.isArray(arr)) return `${arr[2]}/${arr[1]}/${arr[0]}`;
-  return arr;
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [y, m, d] = value.split("-");
+    return `${d}/${m}/${y}`;
+  }
+
+  return value || "";
 };
 
 const convertArrayDateToString = (arrDate) => {
@@ -932,7 +1248,12 @@ const openModal = (item) => {
     } else {
       selectedCas.value = [
         {
-          id: item.idCaLam || item.caLam?.id,
+          id:
+            item.idCaLam ||
+            item.caLam?.id ||
+            (typeof item.lichLamViec?.idCaLam === "object"
+              ? item.lichLamViec?.idCaLam?.id
+              : item.lichLamViec?.idCaLam),
           tenCa: item.tenCa || item.caLam?.tenCa,
         },
       ];
@@ -949,7 +1270,7 @@ const openModal = (item) => {
     form.idNhanVien = null;
     form.idCaLam = null;
     form.ghiChu = "";
-    form.ngayLam = new Date().toISOString().split("T")[0];
+    form.ngayLam = formatDateInputLocal(new Date());
     selectedNhanViens.value = [];
     selectedCas.value = [];
     searchNvModal.value = "";
@@ -995,7 +1316,9 @@ const handleSubmit = async () => {
       let oldPhanCongIds = [];
 
       if (editingItem.value.danhSachCa) {
-        oldPhanCongIds = editingItem.value.danhSachCa.map((ca) => ca.idPhanCong).filter((id) => id);
+        oldPhanCongIds = editingItem.value.danhSachCa
+          .map((ca) => ca.idPhanCong)
+          .filter((id) => id);
       } else {
         oldPhanCongIds = [editingItem.value.id].filter((id) => id);
       }
@@ -1009,18 +1332,27 @@ const handleSubmit = async () => {
       }
     }
 
-    const targetNvs = isEditing.value ? [{ id: form.idNhanVien }] : selectedNhanViens.value;
+    const targetNvs = isEditing.value
+      ? [{ id: form.idNhanVien }]
+      : selectedNhanViens.value;
 
     for (const ca of selectedCas.value) {
       const existingLich = await checkLichLamViec({
-        idCaLam: ca.id,
-        ngayLam: form.ngayLam,
+        ca: ca.id,
+        ngay: form.ngayLam,
       });
 
       let idLichHienTai = null;
 
-      if (existingLich && (Array.isArray(existingLich) ? existingLich.length > 0 : existingLich.id)) {
-        idLichHienTai = Array.isArray(existingLich) ? existingLich[0].id : existingLich.id;
+      if (
+        existingLich &&
+        (Array.isArray(existingLich)
+          ? existingLich.length > 0
+          : existingLich.id)
+      ) {
+        idLichHienTai = Array.isArray(existingLich)
+          ? existingLich[0].id
+          : existingLich.id;
       } else {
         const resLich = await createLich({
           idCaLam: ca.id,
@@ -1067,19 +1399,16 @@ const handleSubmit = async () => {
 const loadData = async () => {
   try {
     const res = await getAllPhanCong();
-    const data = Array.isArray(res) ? res : res.content || [];
-    lichNhanVienList.value = data;
-    console.log("Dữ liệu 1 bản ghi mẫu:", data[0]);
+    lichNhanVienList.value = toArray(res);
   } catch (e) {
     console.error(e);
   }
 };
 
 const loadthemLich = async () => {
-  const nv = await getAllNhanVien();
-  const ca = await getAllCaLam();
-  listNhanVien.value = Array.isArray(nv) ? nv : [];
-  listCa.value = Array.isArray(ca) ? ca : [];
+  const [nvRes, caRes] = await Promise.all([getAllNhanVien(), getAllCaLam()]);
+  listNhanVien.value = toArray(nvRes);
+  listCa.value = toArray(caRes);
   await loadData();
 };
 
@@ -1091,14 +1420,18 @@ const filterLichList = computed(() => {
   }
 
   if (filterDate.value) {
-    data = data.filter((l) => convertArrayDateToString(l.ngayLam) === filterDate.value);
+    data = data.filter(
+      (l) => convertArrayDateToString(l.ngayLam) === filterDate.value,
+    );
   }
 
   return data;
 });
 
 const deletePhanCong = async (id) => {
-  const confirmDelete = window.confirm("Bạn có chắc chắn muốn xóa phân công này không?");
+  const confirmDelete = window.confirm(
+    "Bạn có chắc chắn muốn xóa phân công này không?",
+  );
   if (!confirmDelete) return;
 
   try {
@@ -1166,11 +1499,30 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   margin-top: 15px;
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-end;
   flex-wrap: wrap;
+  gap: 16px;
 }
 
-.btn-add {
+.filters-bar {
+  display: flex;
+  gap: 20px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.btn-add,
+.btn-import,
+.btn-template {
   background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%);
   box-shadow: 0 10px 18px rgba(255, 77, 79, 0.16);
   color: white;
@@ -1182,6 +1534,14 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   display: flex;
   gap: 8px;
   align-items: center;
+  transition: all 0.2s ease;
+}
+
+.btn-add:hover,
+.btn-import:hover,
+.btn-template:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px rgba(255, 77, 79, 0.22);
 }
 
 .btn-date {
@@ -1195,12 +1555,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   font-size: 14px;
 }
 
-.filters-bar {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 24px;
-}
-
 .filter-group {
   display: flex;
   align-items: center;
@@ -1209,72 +1563,6 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   color: rgba(17, 24, 39, 0.78);
   font-weight: 600;
   white-space: nowrap;
-}
-
-.import-body {
-  margin-top: 15px;
-  background: #f9fafb;
-  padding: 20px;
-  border-radius: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.import-description {
-  margin: 0;
-  color: #6b7280;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.import-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.btn-import,
-.btn-download {
-  padding: 10px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s ease;
-}
-
-.btn-import {
-  background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%);
-  color: white;
-  box-shadow: 0 4px 6px rgba(255, 77, 79, 0.2);
-  color: white;
-}
-
-.btn-download {
-  background: white;
-  color: #3b82f6;
-  border: 1px solid #3b82f6;
-}
-
-.btn-download:hover {
-  background: #eff6ff;
-}
-
-.file-input-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.input-group {
-  display: flex;
-  gap: 10px;
-  margin-top: 5px;
 }
 
 .table-header-row {
@@ -1472,6 +1760,9 @@ td {
   border-bottom: 1px solid #e5e7eb;
   padding: 5px;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
 }
 
 .cal-cell:nth-child(7n) {
@@ -1495,32 +1786,6 @@ td {
   padding-right: 5px;
 }
 
-.cal-events {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.banglich-chip {
-  background: #0ea5e9;
-  color: white;
-  font-size: 11px;
-  padding: 4px 8px;
-  border-radius: 20px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  margin-bottom: 2px;
-  transition: all 0.2s;
-}
-
-.banglich-chip:hover {
-  background: #0284c7;
-  transform: translateY(-1px);
-}
-
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -1534,7 +1799,7 @@ td {
   z-index: 1000;
 }
 
-.modal-content {
+.modal-content.form-modal {
   background: white;
   width: 500px;
   border-radius: 8px;
@@ -1587,14 +1852,6 @@ td {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-}
-
-.btn-cancel {
-  background: #f3f4f6;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 4px;
-  cursor: pointer;
 }
 
 .btn-save {
@@ -1658,16 +1915,6 @@ td {
   cursor: default;
 }
 
-.column-layout {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-}
-
-.mt-10 {
-  margin-top: 10px;
-}
-
 .fw-bold {
   font-weight: 600;
 }
@@ -1718,61 +1965,6 @@ td {
 .float-right {
   float: right;
   color: #10b981;
-}
-
-.avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 12px;
-  border: 1px solid rgba(17, 24, 39, 0.14);
-  background: #fff;
-  overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.avatar-fallback {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(17, 24, 39, 0.04);
-  color: rgba(17, 24, 39, 0.78);
-  font-weight: 500;
-  font-size: 13px;
-}
-
-.btn-quick-add {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background-color: #ecfdf5;
-  color: #10b981;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s;
-}
-
-.btn-quick-add:hover {
-  background-color: #d1fae5;
-  transform: scale(1.1);
-}
-
-.btn-quick-add i {
-  font-size: 14px;
 }
 
 .cal-events-container {
@@ -1838,13 +2030,6 @@ td {
 .add-new-btn:hover .circle-add {
   background-color: #ff4d4f;
   color: white;
-}
-
-.cal-cell {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  min-height: 100px;
 }
 
 .event-item.add-new-btn {
@@ -2043,12 +2228,6 @@ td {
   font-size: 12px;
 }
 
-.avatar-circle.small {
-  width: 32px;
-  height: 32px;
-  font-size: 14px;
-}
-
 .add-full-btn {
   color: #9ca3af;
   font-style: italic;
@@ -2074,20 +2253,8 @@ td {
   flex: 1;
 }
 
-.border-color-0 {
+.border-color-4 {
   border-left-color: #ef4444 !important;
-}
-
-.border-color-1 {
-  border-left-color: #10b981 !important;
-}
-
-.border-color-2 {
-  border-left-color: #3b82f6 !important;
-}
-
-.border-color-3 {
-  border-left-color: #f59e0b !important;
 }
 
 @keyframes fadeIn {
@@ -2098,6 +2265,21 @@ td {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 992px) {
+  .toolbar-body {
+    align-items: stretch;
+  }
+
+  .filters-bar,
+  .toolbar-actions {
+    width: 100%;
+  }
+
+  .toolbar-actions {
+    justify-content: flex-start;
   }
 }
 </style>

@@ -1,8 +1,9 @@
+<!-- File: src/pages/lich_lam_viec/LichSuHoatDong.vue -->
 <template>
   <div class="ss-page ss-font">
     <div class="ss-head">
       <div class="ss-head-left">
-        <div class="ss-title">LỊCH SỬ GIAO CA & KẾT TOÁN</div>
+        <div class="ss-title">LỊCH SỬ HOẠT ĐỘNG</div>
         <div class="ss-subtitle">Theo dõi lịch sử đóng/mở ca và dòng tiền của nhân viên</div>
       </div>
     </div>

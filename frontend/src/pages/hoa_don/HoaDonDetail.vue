@@ -4,9 +4,17 @@
   <div
     v-if="toast.show"
     :class="`position-fixed top-0 end-0 m-3 alert alert-${toast.type} shadow`"
-    style="z-index:9999; min-width:260px; border-radius:10px;"
+    style="z-index: 9999; min-width: 260px; border-radius: 10px"
   >
-    <i :class="`bi bi-${toast.type === 'success' ? 'check-circle-fill' : 'x-circle-fill'} me-2`"></i>
+    <i
+      :class="`bi bi-${
+        toast.type === 'success'
+          ? 'check-circle-fill'
+          : toast.type === 'warning'
+            ? 'exclamation-triangle-fill'
+            : 'x-circle-fill'
+      } me-2`"
+    ></i>
     {{ toast.msg }}
   </div>
 
@@ -21,7 +29,6 @@
           {{ selectedHD.ngayTao }}
         </div>
 
-        <!-- ✅ Nhìn nhanh: tạo bởi + cập nhật gần nhất -->
         <div class="text-muted small mt-1">
           Tạo bởi: <b>{{ thongTinTaoBoiText }}</b>
           <span class="mx-1">|</span>
@@ -40,7 +47,6 @@
         <!-- TRẠNG THÁI -->
         <div class="card ss-card mb-4">
           <div class="card-body">
-            <!-- HEADER + BUTTON -->
             <div class="d-flex justify-content-between align-items-center mb-3">
               <h6 class="fw-bold mb-0">
                 <i class="bi bi-truck me-1"></i>
@@ -53,7 +59,6 @@
               </button>
             </div>
 
-            <!-- TIMELINE -->
             <div
               class="ss-status mt-3"
               :class="{ 'ss-status-single': trangThaiHienThi.length <= 1 }"
@@ -63,8 +68,12 @@
                 :key="st.value"
                 class="ss-step"
                 :class="{
-                  done: st.value < trangThaiHienTaiDungDeHienThi && trangThaiHienTaiDungDeHienThi <= 5,
-                  active: st.value === trangThaiHienTaiDungDeHienThi && trangThaiHienTaiDungDeHienThi <= 5,
+                  done:
+                    st.value < trangThaiHienTaiDungDeHienThi &&
+                    trangThaiHienTaiDungDeHienThi <= 5,
+                  active:
+                    st.value === trangThaiHienTaiDungDeHienThi &&
+                    trangThaiHienTaiDungDeHienThi <= 5,
                   cancelled: selectedHD.trangThai === 6 && st.value === 1,
                   'request-cancel': selectedHD.trangThai === 7 && st.value === 1,
                   'cancelled-step': selectedHD.trangThai === 6 && st.value === 6,
@@ -76,9 +85,11 @@
 
                 <span>{{ st.label }}</span>
 
-                <!-- ✅ Ai thao tác + thời gian cho từng mốc (nếu có) -->
                 <div
-                  v-if="st.value <= trangThaiHienTaiDungDeHienThi && metaTrangThai(st.value)"
+                  v-if="
+                    st.value <= trangThaiHienTaiDungDeHienThi &&
+                    metaTrangThai(st.value)
+                  "
                   class="ss-step-meta"
                 >
                   <div class="ss-step-time" :title="metaTrangThai(st.value)?.thoiGian">
@@ -90,11 +101,22 @@
                 </div>
               </div>
             </div>
-            <div v-if="selectedHD.trangThai === 6" class="alert alert-danger text-center py-2 mt-2 mb-0" style="font-size:0.9rem;">
+
+            <div
+              v-if="selectedHD.trangThai === 6"
+              class="alert alert-danger text-center py-2 mt-2 mb-0"
+              style="font-size: 0.9rem"
+            >
               <i class="bi bi-x-circle-fill me-1"></i> Đơn hàng đã bị hủy
             </div>
-            <div v-if="selectedHD.trangThai === 7" class="alert alert-warning text-center py-2 mt-2 mb-0" style="font-size:0.9rem;">
-              <i class="bi bi-exclamation-triangle-fill me-1"></i> Khách hàng yêu cầu hủy — đang chờ xác nhận
+
+            <div
+              v-if="selectedHD.trangThai === 7"
+              class="alert alert-warning text-center py-2 mt-2 mb-0"
+              style="font-size: 0.9rem"
+            >
+              <i class="bi bi-exclamation-triangle-fill me-1"></i>
+              Khách hàng yêu cầu hủy — đang chờ xác nhận
             </div>
           </div>
         </div>
@@ -176,34 +198,25 @@
               </thead>
 
               <tbody>
-                <tr v-for="(sp, index) in selectedHD.sanPham" :key="sp.id" class="text-center">
+                <tr
+                  v-for="(sp, index) in selectedHD.sanPham"
+                  :key="sp.id"
+                  class="text-center"
+                >
                   <td>{{ index + 1 }}</td>
-
-                  <td class="fw-medium">
-                    {{ sp.maSanPham }}
-                  </td>
-
-                  <td class="text-start">
-                    {{ sp.tenSanPham }}
-                  </td>
-
+                  <td class="fw-medium">{{ sp.maSanPham }}</td>
+                  <td class="text-start">{{ sp.tenSanPham }}</td>
                   <td>{{ sp.size }}</td>
-
                   <td>{{ sp.mauSac }}</td>
-
                   <td>{{ sp.soLuong }}</td>
-
                   <td>{{ sp.donGia.toLocaleString("vi-VN") }} đ</td>
-
                   <td class="text-danger fw-medium">
                     {{ sp.thanhTien.toLocaleString("vi-VN") }} đ
                   </td>
                 </tr>
 
                 <tr v-if="!selectedHD.sanPham || selectedHD.sanPham.length === 0">
-                  <td colspan="8" class="text-center text-muted">
-                    Không có sản phẩm
-                  </td>
+                  <td colspan="8" class="text-center text-muted">Không có sản phẩm</td>
                 </tr>
               </tbody>
             </table>
@@ -227,9 +240,7 @@
 
               <div class="ss-money">
                 <span>Giảm giá</span>
-                <b class="text-success">
-                  - {{ hoaDon.giamGia.toLocaleString() }} đ
-                </b>
+                <b class="text-success">- {{ hoaDon.giamGia.toLocaleString() }} đ</b>
               </div>
 
               <div class="ss-money">
@@ -265,9 +276,7 @@
                 <div class="fw-bold">{{ item.loai }}</div>
 
                 <div class="text-end">
-                  <div class="fw-bold text-danger">
-                    {{ item.soTien.toLocaleString() }} đ
-                  </div>
+                  <div class="fw-bold text-danger">{{ item.soTien.toLocaleString() }} đ</div>
 
                   <div class="text-muted small">
                     {{ item.thoiGian }}
@@ -279,34 +288,60 @@
             </div>
           </div>
 
-          <!-- YÊU CẦU HỦY: Admin cần xác nhận hoặc từ chối -->
-          <div v-if="selectedHD.trangThai === 7" class="card ss-card mt-3 border-danger">
+          <!-- YÊU CẦU HỦY -->
+          <div
+            v-if="laAdmin() && selectedHD.trangThai === 7"
+            class="card ss-card mt-3 border-danger"
+          >
             <div class="card-body">
               <h6 class="fw-bold mb-2 text-danger">
                 <i class="bi bi-exclamation-triangle me-1"></i> Khách hàng yêu cầu hủy đơn
               </h6>
-              <p class="text-muted small mb-3">Xem lịch sử thao tác để biết lý do yêu cầu hủy.</p>
+              <p class="text-muted small mb-3">
+                Xem lịch sử thao tác để biết lý do yêu cầu hủy.
+              </p>
               <div class="d-flex gap-2">
-                <button class="btn btn-danger flex-fill" :disabled="huyLoading" @click="xacNhanHuyTheoYeuCau">
-                  <span v-if="huyLoading" class="spinner-border spinner-border-sm me-1"></span>
+                <button
+                  class="btn btn-danger flex-fill"
+                  :disabled="huyLoading"
+                  @click="checkQuyenAdmin(xacNhanHuyTheoYeuCau)"
+                >
+                  <span
+                    v-if="huyLoading"
+                    class="spinner-border spinner-border-sm me-1"
+                  ></span>
                   <i v-else class="bi bi-check-circle me-1"></i> Xác nhận hủy
                 </button>
-                <button class="btn btn-outline-secondary flex-fill" @click="showTuChoiHuyModal = true">
+
+                <button
+                  class="btn btn-outline-secondary flex-fill"
+                  @click="showTuChoiHuyModal = true"
+                >
                   <i class="bi bi-x-circle me-1"></i> Từ chối hủy
                 </button>
               </div>
             </div>
           </div>
 
-          <!-- HOÀN PHÍ: Admin xác nhận đã hoàn tiền cho khách -->
-          <div v-if="selectedHD.daHoanPhi === false" class="card ss-card mt-3 border-warning">
+          <!-- HOÀN PHÍ -->
+          <div
+            v-if="laAdmin() && selectedHD.daHoanPhi === false"
+            class="card ss-card mt-3 border-warning"
+          >
             <div class="card-body">
               <h6 class="fw-bold mb-2 text-warning">
                 <i class="bi bi-cash-coin me-1"></i> Đơn hàng cần hoàn phí
               </h6>
               <p class="text-muted small mb-3">Xác nhận đã hoàn tiền cho khách hàng.</p>
-              <button class="btn btn-warning w-100" :disabled="hoanPhiLoading" @click="xacNhanHoanPhi">
-                <span v-if="hoanPhiLoading" class="spinner-border spinner-border-sm me-1"></span>
+              <button
+                class="btn btn-warning w-100"
+                :disabled="hoanPhiLoading"
+                @click="checkQuyenAdmin(xacNhanHoanPhi)"
+              >
+                <span
+                  v-if="hoanPhiLoading"
+                  class="spinner-border spinner-border-sm me-1"
+                ></span>
                 <i v-else class="bi bi-check-circle me-1"></i> Xác nhận đã hoàn phí
               </button>
             </div>
@@ -317,7 +352,6 @@
             <i class="bi bi-printer me-1"></i> In hóa đơn
           </button>
 
-          <!-- ✅ CHẶN NHÂN VIÊN CHƯA MỞ CA -->
           <button
             class="btn btn-warning w-100"
             type="button"
@@ -362,7 +396,8 @@
                 Thông tin khách hàng
               </button>
             </li>
-            <li class="nav-item">
+
+            <li v-if="!isTaiQuay" class="nav-item">
               <button
                 class="nav-link"
                 type="button"
@@ -388,7 +423,6 @@
 
               <div class="col-md-6">
                 <label class="form-label">Trạng thái</label>
-
                 <select class="form-select" v-model.number="form.trangThai">
                   <option v-for="st in danhSachTrangThaiHopLe" :key="st.value" :value="st.value">
                     {{ st.label }}
@@ -417,38 +451,79 @@
             </div>
           </div>
 
-          <!-- TAB THÔNG TIN GIAO HÀNG -->
           <div v-if="tab === 'giaohang'">
             <div class="row g-3">
               <div class="col-12">
                 <label class="form-label">Địa chỉ cụ thể</label>
-                <input class="form-control" v-model="form.diaChiCuThe" placeholder="Số nhà, ngõ, đường..." />
+                <input
+                  class="form-control"
+                  v-model="form.diaChiCuThe"
+                  placeholder="Số nhà, ngõ, đường..."
+                />
               </div>
+
               <div class="col-md-4">
                 <label class="form-label">Tỉnh/Thành phố</label>
                 <select class="form-select" v-model="addressCodes.city" @change="onCityChange">
                   <option value="">Chọn Tỉnh/Thành</option>
-                  <option v-for="p in provinces" :key="p.code" :value="p.code">{{ p.name }}</option>
+                  <option v-for="p in provinces" :key="p.code" :value="p.code">
+                    {{ p.name }}
+                  </option>
                 </select>
               </div>
+
               <div class="col-md-4">
                 <label class="form-label">Quận/Huyện</label>
-                <select class="form-select" v-model="addressCodes.district" @change="onDistrictChange" :disabled="!addressCodes.city">
+                <select
+                  class="form-select"
+                  v-model="addressCodes.district"
+                  @change="onDistrictChange"
+                  :disabled="!addressCodes.city"
+                >
                   <option value="">Chọn Quận/Huyện</option>
-                  <option v-for="d in districts" :key="d.code" :value="d.code">{{ d.name }}</option>
+                  <option v-for="d in districts" :key="d.code" :value="d.code">
+                    {{ d.name }}
+                  </option>
                 </select>
               </div>
+
               <div class="col-md-4">
                 <label class="form-label">Xã/Phường</label>
-                <select class="form-select" v-model="addressCodes.ward" @change="onWardChange" :disabled="!addressCodes.district">
+                <select
+                  class="form-select"
+                  v-model="addressCodes.ward"
+                  @change="onWardChange"
+                  :disabled="!addressCodes.district"
+                >
                   <option value="">Chọn Xã/Phường</option>
-                  <option v-for="w in wards" :key="w.code" :value="w.code">{{ w.name }}</option>
+                  <option v-for="w in wards" :key="w.code" :value="w.code">
+                    {{ w.name }}
+                  </option>
                 </select>
               </div>
-              <div v-if="addressNames.city || addressNames.district || addressNames.ward || form.diaChiCuThe" class="col-12">
+
+              <div
+                v-if="
+                  addressNames.city ||
+                  addressNames.district ||
+                  addressNames.ward ||
+                  form.diaChiCuThe
+                "
+                class="col-12"
+              >
                 <div class="text-muted small mt-1">
                   <i class="bi bi-geo-alt me-1"></i>
-                  Địa chỉ mới: <b>{{ [form.diaChiCuThe, addressNames.ward, addressNames.district, addressNames.city].filter(Boolean).join(', ') || '—' }}</b>
+                  Địa chỉ mới:
+                  <b>{{
+                    [
+                      form.diaChiCuThe,
+                      addressNames.ward,
+                      addressNames.district,
+                      addressNames.city,
+                    ]
+                      .filter(Boolean)
+                      .join(", ") || "—"
+                  }}</b>
                 </div>
               </div>
             </div>
@@ -458,12 +533,7 @@
         <div class="modal-footer">
           <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Hủy</button>
 
-          <!-- ✅ CHẶN NHÂN VIÊN CHƯA MỞ CA -->
-          <button
-            class="btn btn-success"
-            type="button"
-            @click="checkQuyenThaoTac(tab === 'giaohang' || tab === 'khachhang' ? updateThongTinGiaoHang : updateHoaDon)"
-          >
+          <button class="btn btn-success" type="button" @click="checkQuyenThaoTac(saveEditModal)">
             Lưu
           </button>
         </div>
@@ -483,9 +553,7 @@
         <div class="modal-body">
           <div class="d-flex justify-content-between mb-3">
             <span>Tổng tiền hàng</span>
-            <b class="text-danger">
-              {{ hoaDon.canThanhToan.toLocaleString() }} đ
-            </b>
+            <b class="text-danger">{{ hoaDon.canThanhToan.toLocaleString() }} đ</b>
           </div>
 
           <div class="text-center mb-3">
@@ -535,12 +603,9 @@
 
           <div class="d-flex justify-content-between mb-3">
             <span>Tiền thiếu</span>
-            <b class="text-danger">
-              {{ tienThieuThanhToan.toLocaleString() }} đ
-            </b>
+            <b class="text-danger">{{ tienThieuThanhToan.toLocaleString() }} đ</b>
           </div>
 
-          <!-- ✅ CHẶN NHÂN VIÊN CHƯA MỞ CA -->
           <button class="btn btn-primary" type="button" @click="checkQuyenThaoTac(xacNhanThanhToan)">
             Xác nhận thanh toán
           </button>
@@ -549,24 +614,43 @@
     </div>
   </div>
 
-  <!-- MODAL TỪ CHỐI HỦY (Admin) -->
-  <div v-if="showTuChoiHuyModal" class="modal d-block" style="background: rgba(0,0,0,0.5);" @click.self="showTuChoiHuyModal = false">
+  <!-- MODAL TỪ CHỐI HỦY -->
+  <div
+    v-if="showTuChoiHuyModal"
+    class="modal d-block"
+    style="background: rgba(0, 0, 0, 0.5)"
+    @click.self="showTuChoiHuyModal = false"
+  >
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content">
         <div class="modal-header">
           <h5 class="modal-title">Từ chối yêu cầu hủy đơn</h5>
           <button type="button" class="btn-close" @click="showTuChoiHuyModal = false"></button>
         </div>
+
         <div class="modal-body">
-          <p class="text-muted">Từ chối yêu cầu hủy đơn <strong>{{ selectedHD.maHD }}</strong>? Đơn sẽ về lại trạng thái Chờ xác nhận.</p>
+          <p class="text-muted">
+            Từ chối yêu cầu hủy đơn <strong>{{ selectedHD.maHD }}</strong
+            >? Đơn sẽ về lại trạng thái Chờ xác nhận.
+          </p>
+
           <div class="mb-3">
             <label class="form-label small fw-semibold">Lý do từ chối (tùy chọn)</label>
-            <textarea v-model="tuChoiLyDo" class="form-control form-control-sm" rows="2" placeholder="Nhập lý do..."></textarea>
+            <textarea
+              v-model="tuChoiLyDo"
+              class="form-control form-control-sm"
+              rows="2"
+              placeholder="Nhập lý do..."
+            ></textarea>
           </div>
         </div>
+
         <div class="modal-footer">
-          <button class="btn btn-secondary btn-sm" @click="showTuChoiHuyModal = false">Đóng</button>
-          <button class="btn btn-primary btn-sm" :disabled="tuChoiLoading" @click="tuChoiHuy">
+          <button class="btn btn-secondary btn-sm" @click="showTuChoiHuyModal = false">
+            Đóng
+          </button>
+
+          <button class="btn btn-primary btn-sm" :disabled="tuChoiLoading" @click="checkQuyenAdmin(tuChoiHuy)">
             <span v-if="tuChoiLoading" class="spinner-border spinner-border-sm me-1"></span>
             Xác nhận từ chối
           </button>
@@ -618,10 +702,10 @@
 <script setup>
 import { ref, watch, computed, onMounted, onBeforeUnmount, reactive } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import axios from "axios";
 import { Modal } from "bootstrap";
 import Swal from "sweetalert2";
 import vnAddressService from "@/services/vnAddressService";
+import apiClient from "@/services/apiClient";
 
 const props = defineProps({
   id: { type: [String, Number], required: false },
@@ -669,6 +753,10 @@ const getUserRole = () => {
 };
 
 const laNhanVien = () => getUserRole() === "NHAN_VIEN";
+const laAdmin = () => {
+  const role = getUserRole();
+  return role === "ADMIN" || role === "QUAN_LY" || role === "MANAGER";
+};
 
 const coCaLamDangHoatDong = () => {
   return sessionStorage.getItem("ss_has_active_shift") === "true";
@@ -677,6 +765,23 @@ const coCaLamDangHoatDong = () => {
 const duocThaoTac = () => {
   if (!laNhanVien()) return true;
   return coCaLamDangHoatDong();
+};
+
+const showToastTimer = ref(null);
+const toast = reactive({ show: false, type: "success", msg: "" });
+
+const showToast = (msg, type = "success") => {
+  toast.msg = msg;
+  toast.type = type;
+  toast.show = true;
+
+  if (showToastTimer.value) {
+    clearTimeout(showToastTimer.value);
+  }
+
+  showToastTimer.value = setTimeout(() => {
+    toast.show = false;
+  }, 3000);
 };
 
 const checkQuyenThaoTac = async (callback) => {
@@ -696,25 +801,32 @@ const checkQuyenThaoTac = async (callback) => {
   return true;
 };
 
+const checkQuyenAdmin = async (callback) => {
+  if (!laAdmin()) {
+    await Swal.fire({
+      icon: "error",
+      title: "Không có quyền thao tác",
+      text: "Chỉ Admin/Quản lý mới được thực hiện thao tác này!",
+      confirmButtonColor: "#6366f1",
+    });
+    return false;
+  }
+
+  return checkQuyenThaoTac(callback);
+};
+
 const tab = ref("donhang");
 
 // Address refs for delivery tab
 const provinces = ref([]);
 const districts = ref([]);
 const wards = ref([]);
-const addressCodes = reactive({ city: '', district: '', ward: '' });
-const addressNames = reactive({ city: '', district: '', ward: '' });
+const addressCodes = reactive({ city: "", district: "", ward: "" });
+const addressNames = reactive({ city: "", district: "", ward: "" });
 
-// Toast notification
-const toast = reactive({ show: false, type: 'success', msg: '' });
-const showToast = (msg, type = 'success') => {
-  toast.msg = msg; toast.type = type; toast.show = true;
-  setTimeout(() => { toast.show = false; }, 3000);
-};
-
-// Cancel request refs
+// Cancel / refund refs
 const showTuChoiHuyModal = ref(false);
-const tuChoiLyDo = ref('');
+const tuChoiLyDo = ref("");
 const tuChoiLoading = ref(false);
 const huyLoading = ref(false);
 const hoanPhiLoading = ref(false);
@@ -734,9 +846,8 @@ let modal = null;
 const route = useRoute();
 const router = useRouter();
 
-const API_HD = "http://localhost:8080/api/admin/hoa-don";
-/** ✅ nếu API nhân viên của bạn khác, đổi lại ở đây */
-const API_NV = "http://localhost:8080/api/admin/nhan-vien";
+const API_HD = "/api/admin/hoa-don";
+const API_NV = "/api/admin/nhan-vien";
 
 const trangThaiList = [
   { value: 1, label: "Chờ xác nhận", icon: "bi-hourglass" },
@@ -753,6 +864,7 @@ const selectedHD = ref({
   sanPham: [],
   nguoiTaoId: null,
   nguoiCapNhatId: null,
+  daHoanPhi: null,
 });
 
 const hoaDonIdHienTai = computed(() => {
@@ -775,12 +887,18 @@ const isTaiQuay = computed(() => {
 
 const trangThaiHienTaiDungDeHienThi = computed(() => {
   const t = Number(selectedHD.value?.trangThai ?? 1);
+
+  if (t === 6 || t === 7) return t;
   if (isTaiQuay.value) return t >= 5 ? 5 : 1;
   return t;
 });
 
 const danhSachTrangThaiHopLe = computed(() => {
-  const current = trangThaiHienTaiDungDeHienThi.value;
+  const current = Number(trangThaiHienTaiDungDeHienThi.value);
+
+  if (current === 6 || current === 7) {
+    return trangThaiList.filter((st) => st.value === current);
+  }
 
   if (isTaiQuay.value) {
     const ds = trangThaiList.filter((st) => st.value === 1 || st.value === 5);
@@ -810,7 +928,7 @@ const danhSachTrangThaiHopLe = computed(() => {
 });
 
 /* =========================================================
- * ✅ LẤY NHÂN VIÊN ĐANG ĐĂNG NHẬP (CHỐT: KHÔNG ĐỂ REQUEST THIẾU HEADER)
+ * ✅ LẤY NHÂN VIÊN / TOKEN ĐĂNG NHẬP
  * ========================================================= */
 
 const base64UrlDecode = (str) => {
@@ -884,27 +1002,10 @@ const dinhDangNguoiHienThi = (maNv, tenTaiKhoan) => {
   return "";
 };
 
-const layTokenTuAxiosAuthorization = () => {
-  try {
-    const auth =
-      axios?.defaults?.headers?.common?.Authorization ||
-      axios?.defaults?.headers?.common?.authorization ||
-      null;
-
-    if (!auth || typeof auth !== "string") return null;
-    const m = auth.match(/Bearer\s+(.+)$/i);
-    if (m?.[1] && m[1].includes(".")) return m[1].trim();
-    if (auth.includes(".") && auth.split(".").length >= 2) return auth.trim();
-    return null;
-  } catch (e) {
-    return null;
-  }
-};
-
 const layDanhSachJwtTrongStorage = () => {
   const out = [];
 
-  const pushFrom = (store, storeName) => {
+  const pushFrom = (store) => {
     try {
       for (let i = 0; i < store.length; i++) {
         const k = store.key(i);
@@ -912,13 +1013,13 @@ const layDanhSachJwtTrongStorage = () => {
         if (!v || typeof v !== "string") continue;
         if (!v.includes(".")) continue;
         if (v.split(".").length < 2) continue;
-        out.push({ token: v, key: k, store: storeName });
+        out.push({ token: v, key: k });
       }
     } catch (e) {}
   };
 
-  pushFrom(localStorage, "localStorage");
-  pushFrom(sessionStorage, "sessionStorage");
+  pushFrom(localStorage);
+  pushFrom(sessionStorage);
   return out;
 };
 
@@ -974,9 +1075,6 @@ const chonTokenMoiNhat = (candidates) => {
 };
 
 const timTokenTrongStorage = () => {
-  const tAxios = layTokenTuAxiosAuthorization();
-  if (tAxios) return tAxios;
-
   const list = layDanhSachJwtTrongStorage();
   return chonTokenMoiNhat(list);
 };
@@ -991,6 +1089,8 @@ const timUserObjTrongStorage = () => {
     "auth_user",
     "profile",
     "me",
+    "nguoiDung",
+    "ss_nguoi_ban",
   ];
 
   const tryParse = (raw) => {
@@ -1031,6 +1131,8 @@ const timUserObjTrongStorage = () => {
       obj?.taiKhoan ??
       obj?.account ??
       obj?.sub ??
+      obj?.hoTen ??
+      obj?.ten ??
       null;
 
     return hit !== null && hit !== undefined;
@@ -1143,13 +1245,18 @@ const layThongTinDangNhap = () => {
     idNhanVien: id || null,
     maNhanVien: ma || null,
     tenTaiKhoan: tenTaiKhoan || "",
+    token: token || null,
   };
 };
 
 const taoConfigHeaderNhanVien = () => {
   const info = layThongTinDangNhap();
-
+  const token = info?.token || timTokenTrongStorage();
   const headers = {};
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   if (info?.idNhanVien) {
     headers["X-Nhan-Vien-Id"] = String(info.idNhanVien);
@@ -1173,7 +1280,6 @@ const tienKhachDua = ref(0);
 const tienKhachDuaHienThi = ref("");
 const lichSuThanhToan = ref([]);
 const lichSuThaoTac = ref([]);
-
 const mapNhanVienTaiKhoan = ref({});
 
 const moModalLichSu = () => {
@@ -1245,7 +1351,7 @@ const layThongTinNhanVien = async (id) => {
   if (mapNhanVienTaiKhoan.value[id]) return mapNhanVienTaiKhoan.value[id];
 
   try {
-    const { data } = await axios.get(`${API_NV}/${id}`);
+    const { data } = await apiClient.get(`${API_NV}/${id}`, taoConfigHeaderNhanVien());
 
     const ma =
       data?.maNhanVien ||
@@ -1264,7 +1370,7 @@ const layThongTinNhanVien = async (id) => {
       data?.account ||
       "";
 
-    const out = { maNhanVien: ma, tenTaiKhoan: tenTaiKhoan };
+    const out = { maNhanVien: ma, tenTaiKhoan };
     mapNhanVienTaiKhoan.value[id] = out;
     return out;
   } catch (e) {
@@ -1299,10 +1405,10 @@ const ganTenTaiKhoanChoLichSu = async () => {
   const buildNguoi = (x) => {
     const id = x?.nguoiId ?? null;
     const info = id ? mapNhanVienTaiKhoan.value[id] : null;
-
     const parsed = tachThongTinNguoiTuChuoi(x?.nguoiThaoTacRaw || x?.nguoiThaoTac || "");
 
-    const ma = info?.maNhanVien || parsed?.maNhanVien || (id ? `NV${String(id).padStart(5, "0")}` : null);
+    const ma =
+      info?.maNhanVien || parsed?.maNhanVien || (id ? `NV${String(id).padStart(5, "0")}` : null);
     const tk = info?.tenTaiKhoan || parsed?.tenTaiKhoan || "";
 
     return dinhDangNguoiHienThi(ma, tk);
@@ -1390,18 +1496,18 @@ const chuanHoaItemLichSuThaoTac = (x) => {
     x?.thoiGian
       ? new Date(x.thoiGian).toLocaleString("vi-VN")
       : x?.thoiGianText
-      ? x.thoiGianText
-      : x?.ngayTao
-      ? new Date(x.ngayTao).toLocaleString("vi-VN")
-      : "—";
+        ? x.thoiGianText
+        : x?.ngayTao
+          ? new Date(x.ngayTao).toLocaleString("vi-VN")
+          : "—";
 
   return {
     thoiGian: thoiGianText,
     noiDung: x?.noiDung || x?.ghiChu || x?.moTa || x?.hanhDong || "—",
-    trangThaiMoi: trangThaiMoi,
+    trangThaiMoi,
     nguoiThaoTacRaw: x?.nguoiThaoTac || x?.nguoi || x?.tenNguoiThaoTac || "",
     nguoiThaoTac: "",
-    nguoiId: nguoiId,
+    nguoiId,
   };
 };
 
@@ -1412,10 +1518,10 @@ const chuanHoaItemLichSuThanhToan = (x) => {
     x?.thoiGian
       ? new Date(x.thoiGian).toLocaleString("vi-VN")
       : x?.thoiGianText
-      ? x.thoiGianText
-      : x?.ngayTao
-      ? new Date(x.ngayTao).toLocaleString("vi-VN")
-      : "—";
+        ? x.thoiGianText
+        : x?.ngayTao
+          ? new Date(x.ngayTao).toLocaleString("vi-VN")
+          : "—";
 
   return {
     loai: x?.loai || x?.tenPhuongThuc || x?.phuongThuc || "Thanh toán",
@@ -1423,14 +1529,14 @@ const chuanHoaItemLichSuThanhToan = (x) => {
     thoiGian: thoiGianText,
     nguoiThaoTacRaw: x?.nguoiThaoTac || x?.nguoi || x?.tenNguoiThaoTac || "",
     nguoiThaoTac: "",
-    nguoiId: nguoiId,
+    nguoiId,
     ghiChu: x?.ghiChu || "",
   };
 };
 
 const taiLichSuThaoTacTuBE = async (id) => {
   try {
-    const { data } = await axios.get(`${API_HD}/${id}/lich-su-thao-tac`);
+    const { data } = await apiClient.get(`${API_HD}/${id}/lich-su-thao-tac`, taoConfigHeaderNhanVien());
     if (!Array.isArray(data)) return [];
     return sapXepLichSuGiamDan(data.map(chuanHoaItemLichSuThaoTac));
   } catch (e) {
@@ -1440,7 +1546,7 @@ const taiLichSuThaoTacTuBE = async (id) => {
 
 const taiLichSuThanhToanTuBE = async (id) => {
   try {
-    const { data } = await axios.get(`${API_HD}/${id}/lich-su-thanh-toan`);
+    const { data } = await apiClient.get(`${API_HD}/${id}/lich-su-thanh-toan`, taoConfigHeaderNhanVien());
     if (!Array.isArray(data)) return [];
     return sapXepLichSuGiamDan(data.map(chuanHoaItemLichSuThanhToan));
   } catch (e) {
@@ -1480,27 +1586,50 @@ const boSungLichSuMacDinhTuHoaDon = (arr, dataHoaDon) => {
 };
 
 /* =========================
- * ✅ MODAL
+ * ✅ MODAL + UPDATE
  * ========================= */
+
+const tachDiaChiCuThe = (diaChi) => {
+  const parts = String(diaChi || "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+  return parts[0] || "";
+};
+
+const layPhanHanhChinhCu = (diaChi) => {
+  const parts = String(diaChi || "")
+    .split(",")
+    .map((x) => x.trim())
+    .filter(Boolean);
+
+  if (parts.length <= 1) return "";
+  return parts.slice(1).join(", ");
+};
 
 const moModalSua = async () => {
   tab.value = "donhang";
+
   form.value = {
     maHD: selectedHD.value.maHD,
     ngayTao: selectedHD.value.ngayTao,
-    trangThai: trangThaiHienTaiDungDeHienThi.value,
+    trangThai: Number(trangThaiHienTaiDungDeHienThi.value),
     tenKhachHang: selectedHD.value.tenKhachHang,
     sdt: selectedHD.value.sdt,
     email: selectedHD.value.email,
-    diaChiCuThe: selectedHD.value.diaChi?.split(',')[0]?.trim() || '',
+    diaChiCuThe: tachDiaChiCuThe(selectedHD.value.diaChi),
   };
 
-  // Reset address codes
-  addressCodes.city = ''; addressCodes.district = ''; addressCodes.ward = '';
-  addressNames.city = ''; addressNames.district = ''; addressNames.ward = '';
-  districts.value = []; wards.value = [];
+  addressCodes.city = "";
+  addressCodes.district = "";
+  addressCodes.ward = "";
+  addressNames.city = "";
+  addressNames.district = "";
+  addressNames.ward = "";
+  districts.value = [];
+  wards.value = [];
 
-  // Load provinces nếu chưa có
   if (!provinces.value.length) {
     provinces.value = await vnAddressService.getProvinces();
   }
@@ -1508,6 +1637,13 @@ const moModalSua = async () => {
   const el = document.getElementById("modalEdit");
   modal = Modal.getOrCreateInstance(el);
   modal.show();
+};
+
+const saveEditModal = async () => {
+  if (tab.value === "donhang") {
+    return updateHoaDon();
+  }
+  return updateThongTinKhachHangVaGiaoHang();
 };
 
 const updateHoaDon = async () => {
@@ -1519,11 +1655,11 @@ const updateHoaDon = async () => {
     const current = Number(selectedHD.value?.trangThai ?? 1);
 
     if (next === current) {
-      alert("Trạng thái không thay đổi!");
+      showToast("Trạng thái không thay đổi!", "warning");
       return;
     }
 
-    await axios.put(
+    await apiClient.put(
       `${API_HD}/${id}/trang-thai`,
       {
         trangThai: next,
@@ -1532,41 +1668,61 @@ const updateHoaDon = async () => {
       taoConfigHeaderNhanVien()
     );
 
-    alert("Lưu thay đổi thành công!");
     await loadChiTiet(id);
     modal?.hide();
+    showToast("Lưu thay đổi thành công!", "success");
   } catch (error) {
     console.error("Update error:", error);
-    alert("Lỗi khi cập nhật: " + (error.response?.data?.message || error.message));
+    showToast(error?.response?.data?.message || "Lỗi khi cập nhật trạng thái", "danger");
   }
 };
 
-const updateThongTinGiaoHang = async () => {
+const updateThongTinKhachHangVaGiaoHang = async () => {
   try {
     const id = hoaDonIdHienTai.value;
     if (!id) return;
 
-    // Build địa chỉ từ cascading dropdowns
-    const diaChi = vnAddressService.buildAddressText({
-      detail: form.value.diaChiCuThe,
-      wardName: addressNames.ward,
-      districtName: addressNames.district,
-      provinceName: addressNames.city,
-    }) || selectedHD.value.diaChi;
+    let diaChiMoi = selectedHD.value.diaChi || "";
 
-    await axios.put(`${API_HD}/${id}/thong-tin-giao-hang`, {
-      tenKhachHang: form.value.tenKhachHang,
-      soDienThoaiKhachHang: form.value.sdt,
-      emailKhachHang: form.value.email,
-      diaChiKhachHang: diaChi,
-    });
+    const coChonDiaChiMoi =
+      !!addressNames.city || !!addressNames.district || !!addressNames.ward;
+
+    if (coChonDiaChiMoi) {
+      diaChiMoi =
+        vnAddressService.buildAddressText({
+          detail: form.value.diaChiCuThe,
+          wardName: addressNames.ward,
+          districtName: addressNames.district,
+          provinceName: addressNames.city,
+        }) || selectedHD.value.diaChi;
+    } else if (tab.value === "giaohang") {
+      const chiTietMoi = String(form.value.diaChiCuThe || "").trim();
+      const phanHanhChinhCu = layPhanHanhChinhCu(selectedHD.value.diaChi);
+
+      if (chiTietMoi && phanHanhChinhCu) {
+        diaChiMoi = `${chiTietMoi}, ${phanHanhChinhCu}`;
+      } else if (chiTietMoi) {
+        diaChiMoi = chiTietMoi;
+      }
+    }
+
+    await apiClient.put(
+      `${API_HD}/${id}/thong-tin-giao-hang`,
+      {
+        tenKhachHang: form.value.tenKhachHang,
+        soDienThoaiKhachHang: form.value.sdt,
+        emailKhachHang: form.value.email,
+        diaChiKhachHang: diaChiMoi,
+      },
+      taoConfigHeaderNhanVien()
+    );
 
     await loadChiTiet(id);
     modal?.hide();
-    showToast('Lưu thay đổi thành công!');
+    showToast("Lưu thay đổi thành công!", "success");
   } catch (error) {
     console.error("Update error:", error);
-    showToast(error.response?.data?.message || 'Lỗi khi cập nhật', 'danger');
+    showToast(error?.response?.data?.message || "Lỗi khi cập nhật thông tin", "danger");
   }
 };
 
@@ -1575,9 +1731,9 @@ const updateThongTinGiaoHang = async () => {
  * ========================= */
 
 const hoaDon = computed(() => {
-  const tongTien = selectedHD.value.tongTien ?? 0;
-  const giamGia = selectedHD.value.giamGia ?? 0;
-  const phiVanChuyen = selectedHD.value.phiVanChuyen ?? 0;
+  const tongTien = Number(selectedHD.value.tongTien ?? 0);
+  const giamGia = Number(selectedHD.value.giamGia ?? 0);
+  const phiVanChuyen = Number(selectedHD.value.phiVanChuyen ?? 0);
 
   return {
     tongTien,
@@ -1596,8 +1752,8 @@ const tienThieuThanhToan = computed(() => {
 });
 
 const formatTienMat = () => {
-  let raw = tienKhachDuaHienThi.value.replace(/\D/g, "");
-  tienKhachDua.value = Number(raw);
+  let raw = String(tienKhachDuaHienThi.value || "").replace(/\D/g, "");
+  tienKhachDua.value = Number(raw || 0);
   tienKhachDuaHienThi.value = raw.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
@@ -1607,11 +1763,11 @@ const xacNhanThanhToan = async () => {
 
   if (phuongThuc.value === "TM") {
     if (!tienKhachDua.value || tienKhachDua.value <= 0) {
-      alert("Vui lòng nhập số tiền hợp lệ!");
+      showToast("Vui lòng nhập số tiền hợp lệ!", "warning");
       return;
     }
     if (tienKhachDua.value < Number(hoaDon.value.canThanhToan || 0)) {
-      alert("Tiền khách đưa chưa đủ để thanh toán!");
+      showToast("Tiền khách đưa chưa đủ để thanh toán!", "warning");
       return;
     }
   }
@@ -1621,22 +1777,25 @@ const xacNhanThanhToan = async () => {
 
     if (isTaiQuay.value) {
       if (phuongThuc.value === "TM") {
-        await axios.put(
+        await apiClient.put(
           `${API_HD}/${id}/confirm-tai-quay-tien-mat`,
           { ghiChu: note },
           taoConfigHeaderNhanVien()
         );
       } else {
-        await axios.put(
+        await apiClient.put(
           `${API_HD}/${id}/confirm-tai-quay-chuyen-khoan`,
           { ghiChu: note },
           taoConfigHeaderNhanVien()
         );
       }
     } else {
-      const trangThaiSauThanhToan = Math.min(5, Number(selectedHD.value.trangThai || 1) + 1);
+      const trangThaiSauThanhToan = Math.min(
+        5,
+        Number(selectedHD.value.trangThai || 1) + 1
+      );
 
-      await axios.put(
+      await apiClient.put(
         `${API_HD}/${id}/trang-thai`,
         {
           trangThai: trangThaiSauThanhToan,
@@ -1646,7 +1805,6 @@ const xacNhanThanhToan = async () => {
       );
     }
 
-    alert("Thanh toán thành công!");
     await loadChiTiet(id);
 
     tienKhachDua.value = 0;
@@ -1658,34 +1816,35 @@ const xacNhanThanhToan = async () => {
 
     const el = document.getElementById("modalThanhToan");
     Modal.getInstance(el)?.hide();
+
+    showToast("Thanh toán thành công!", "success");
   } catch (error) {
     console.error(error);
-    alert("Lỗi khi xác nhận thanh toán!");
+    showToast(error?.response?.data?.message || "Lỗi khi xác nhận thanh toán!", "danger");
   }
 };
 
 /* =========================
- * ✅ HIỂN THỊ TIMELINE
+ * ✅ TIMELINE + STATUS 6/7
  * ========================= */
+
 const trangThaiHienThi = computed(() => {
   const current = Number(trangThaiHienTaiDungDeHienThi.value || 1);
+
+  if (current === 6) {
+    return trangThaiList.filter((st) => st.value === 1 || st.value === 6);
+  }
+
+  if (current === 7) {
+    return trangThaiList.filter((st) => st.value === 1 || st.value === 7);
+  }
 
   if (isTaiQuay.value) {
     if (current >= 5) return trangThaiList.filter((st) => st.value === 1 || st.value === 5);
     return trangThaiList.filter((st) => st.value === 1);
   }
 
-  // For status 6 (cancelled), show only step 1 and step 6
-  if (selectedHD.value.trangThai === 6) {
-    return trangThaiList.filter((st) => st.value === 1 || st.value === 6);
-  }
-
-  // For status 7 (request-cancel), show only step 1 and step 7
-  if (selectedHD.value.trangThai === 7) {
-    return trangThaiList.filter((st) => st.value === 1 || st.value === 7);
-  }
-
-  return trangThaiList.filter((st) => st.value <= current);
+  return trangThaiList.filter((st) => st.value <= current && st.value <= 5);
 });
 
 const metaTheoTrangThai = computed(() => {
@@ -1719,46 +1878,55 @@ const metaTheoTrangThai = computed(() => {
 const metaTrangThai = (value) => metaTheoTrangThai.value?.[value] || null;
 
 const getStepIcon = (st) => {
-  if (st.value === 1 && selectedHD.value.trangThai === 6) return 'bi-hourglass';
-  if (st.value === 1 && selectedHD.value.trangThai === 7) return 'bi-hourglass';
-  if (st.value === 6 && selectedHD.value.trangThai === 6) return 'bi-x-circle-fill';
+  if (st.value === 1 && selectedHD.value.trangThai === 6) return "bi-hourglass";
+  if (st.value === 1 && selectedHD.value.trangThai === 7) return "bi-hourglass";
+  if (st.value === 6 && selectedHD.value.trangThai === 6) return "bi-x-circle-fill";
   return st.icon;
 };
 
-const getCurrentNhanVienId = () => {
-  try {
-    const raw = localStorage.getItem("user") || sessionStorage.getItem("user")
-      || localStorage.getItem("nguoiDung") || sessionStorage.getItem("nguoiDung");
-    const u = JSON.parse(raw || 'null');
-    return u?.id || null;
-  } catch { return null; }
-};
+/* =========================
+ * ✅ HỦY / TỪ CHỐI HỦY / HOÀN PHÍ
+ * ========================= */
 
 const xacNhanHuyTheoYeuCau = async () => {
-  if (!confirm('Xác nhận hủy đơn hàng theo yêu cầu của khách?')) return;
+  if (!confirm("Xác nhận hủy đơn hàng theo yêu cầu của khách?")) return;
+
   huyLoading.value = true;
   try {
     const id = hoaDonIdHienTai.value;
-    await axios.post(`${API_HD}/${id}/xac-nhan-huy-theo-yeu-cau`, { nhanVienId: getCurrentNhanVienId() });
+
+    await apiClient.post(
+      `${API_HD}/${id}/xac-nhan-huy-theo-yeu-cau`,
+      {},
+      taoConfigHeaderNhanVien()
+    );
+
     await loadChiTiet(id);
-    showToast('Đã xác nhận hủy đơn hàng!');
+    showToast("Đã xác nhận hủy đơn hàng!", "success");
   } catch (err) {
-    showToast(err.response?.data?.message || 'Không thể xác nhận hủy đơn', 'danger');
+    showToast(err?.response?.data?.message || "Không thể xác nhận hủy đơn", "danger");
   } finally {
     huyLoading.value = false;
   }
 };
 
 const xacNhanHoanPhi = async () => {
-  if (!confirm('Xác nhận đã hoàn tiền cho khách hàng?')) return;
+  if (!confirm("Xác nhận đã hoàn tiền cho khách hàng?")) return;
+
   hoanPhiLoading.value = true;
   try {
     const id = hoaDonIdHienTai.value;
-    await axios.post(`${API_HD}/${id}/xac-nhan-hoan-phi`, { nhanVienId: getCurrentNhanVienId() });
+
+    await apiClient.post(
+      `${API_HD}/${id}/xac-nhan-hoan-phi`,
+      {},
+      taoConfigHeaderNhanVien()
+    );
+
     await loadChiTiet(id);
-    showToast('Đã xác nhận hoàn phí!');
+    showToast("Đã xác nhận hoàn phí!", "success");
   } catch (err) {
-    showToast(err.response?.data?.message || 'Không thể xác nhận hoàn phí', 'danger');
+    showToast(err?.response?.data?.message || "Không thể xác nhận hoàn phí", "danger");
   } finally {
     hoanPhiLoading.value = false;
   }
@@ -1768,42 +1936,67 @@ const tuChoiHuy = async () => {
   tuChoiLoading.value = true;
   try {
     const id = hoaDonIdHienTai.value;
-    await axios.post(`${API_HD}/${id}/tu-choi-huy`, {
-      nhanVienId: getCurrentNhanVienId(),
-      lyDo: tuChoiLyDo.value || null,
-    });
+
+    await apiClient.post(
+      `${API_HD}/${id}/tu-choi-huy`,
+      {
+        lyDo: tuChoiLyDo.value || null,
+      },
+      taoConfigHeaderNhanVien()
+    );
+
     showTuChoiHuyModal.value = false;
-    tuChoiLyDo.value = '';
+    tuChoiLyDo.value = "";
     await loadChiTiet(id);
-    showToast('Đã từ chối yêu cầu hủy đơn!');
+    showToast("Đã từ chối yêu cầu hủy đơn!", "success");
   } catch (err) {
-    showToast(err.response?.data?.message || 'Không thể từ chối yêu cầu hủy', 'danger');
+    showToast(err?.response?.data?.message || "Không thể từ chối yêu cầu hủy", "danger");
   } finally {
     tuChoiLoading.value = false;
   }
 };
 
+/* =========================
+ * ✅ ADDRESS SERVICE
+ * ========================= */
+
 const onCityChange = async () => {
-  addressCodes.district = ''; addressCodes.ward = '';
-  districts.value = []; wards.value = [];
-  const p = provinces.value.find(x => x.code == addressCodes.city);
-  addressNames.city = p?.name || '';
-  addressNames.district = ''; addressNames.ward = '';
-  if (addressCodes.city) districts.value = await vnAddressService.getDistricts(addressCodes.city);
+  addressCodes.district = "";
+  addressCodes.ward = "";
+  districts.value = [];
+  wards.value = [];
+
+  const p = provinces.value.find((x) => x.code == addressCodes.city);
+  addressNames.city = p?.name || "";
+  addressNames.district = "";
+  addressNames.ward = "";
+
+  if (addressCodes.city) {
+    districts.value = await vnAddressService.getDistricts(addressCodes.city);
+  }
 };
 
 const onDistrictChange = async () => {
-  addressCodes.ward = ''; wards.value = [];
-  const d = districts.value.find(x => x.code == addressCodes.district);
-  addressNames.district = d?.name || '';
-  addressNames.ward = '';
-  if (addressCodes.district) wards.value = await vnAddressService.getWards(addressCodes.district);
+  addressCodes.ward = "";
+  wards.value = [];
+
+  const d = districts.value.find((x) => x.code == addressCodes.district);
+  addressNames.district = d?.name || "";
+  addressNames.ward = "";
+
+  if (addressCodes.district) {
+    wards.value = await vnAddressService.getWards(addressCodes.district);
+  }
 };
 
 const onWardChange = () => {
-  const w = wards.value.find(x => x.code == addressCodes.ward);
-  addressNames.ward = w?.name || '';
+  const w = wards.value.find((x) => x.code == addressCodes.ward);
+  addressNames.ward = w?.name || "";
 };
+
+/* =========================
+ * ✅ HEADER INFO
+ * ========================= */
 
 const thongTinTaoBoiText = computed(() => {
   const arr = [...(lichSuThaoTac.value || [])].sort((a, b) => {
@@ -1847,8 +2040,12 @@ const thongTinCapNhatGanNhatText = computed(() => {
   return `${last.thoiGian}${whoText}`;
 });
 
+/* =========================
+ * ✅ LOAD DATA
+ * ========================= */
+
 const loadChiTiet = async (id) => {
-  const { data } = await axios.get(`${API_HD}/${id}`);
+  const { data } = await apiClient.get(`${API_HD}/${id}`, taoConfigHeaderNhanVien());
 
   selectedHD.value = {
     maHD: data.maHoaDon,
@@ -1862,11 +2059,11 @@ const loadChiTiet = async (id) => {
     ghiChu: data.ghiChu ?? "",
     loaiDon: data.loaiDon,
 
-    tongTien: data.tongTien ?? 0,
-    giamGia: data.tongTienGiam ?? 0,
-    phiVanChuyen: data.phiVanChuyen ?? 0,
+    tongTien: Number(data.tongTien ?? 0),
+    giamGia: Number(data.tongTienGiam ?? 0),
+    phiVanChuyen: Number(data.phiVanChuyen ?? 0),
 
-    trangThai: data.trangThaiHienTai ?? 1,
+    trangThai: Number(data.trangThaiHienTai ?? 1),
     sanPham: Array.isArray(data.chiTietHoaDon)
       ? data.chiTietHoaDon.map((sp) => ({
           id: sp.id,
@@ -1874,15 +2071,15 @@ const loadChiTiet = async (id) => {
           tenSanPham: sp.tenSanPham || "Không xác định",
           size: sp.kichCo || "—",
           mauSac: sp.mauSac || "—",
-          soLuong: sp.soLuong ?? 0,
-          donGia: sp.donGia ?? 0,
-          thanhTien: (sp.soLuong ?? 0) * (sp.donGia ?? 0),
+          soLuong: Number(sp.soLuong ?? 0),
+          donGia: Number(sp.donGia ?? 0),
+          thanhTien: Number(sp.soLuong ?? 0) * Number(sp.donGia ?? 0),
         }))
       : [],
 
     nguoiTaoId: data.nguoiTao ?? data.nguoi_tao ?? null,
     nguoiCapNhatId: data.nguoiCapNhat ?? data.nguoi_cap_nhat ?? null,
-    daHoanPhi: data.daHoanPhi,
+    daHoanPhi: data.daHoanPhi ?? null,
   };
 
   const [lsThaoTacBE, lsThanhToanBE] = await Promise.all([
@@ -2022,6 +2219,10 @@ onBeforeUnmount(() => {
       fn();
     } catch (e) {}
   });
+
+  if (showToastTimer.value) {
+    clearTimeout(showToastTimer.value);
+  }
 });
 </script>
 
@@ -2051,6 +2252,7 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   align-items: center;
 }
+
 .order-header h5 {
   font-size: 20px;
   font-weight: 500 !important;
@@ -2058,6 +2260,7 @@ onBeforeUnmount(() => {
   margin: 0;
   color: rgba(17, 24, 39, 0.9);
 }
+
 .order-header .small {
   font-size: 13px;
   color: rgba(17, 24, 39, 0.55) !important;
@@ -2069,10 +2272,12 @@ onBeforeUnmount(() => {
   box-shadow: 0 10px 26px rgba(17, 24, 39, 0.06);
   transition: all 0.25s ease;
 }
+
 .ss-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 30px rgba(17, 24, 39, 0.08);
 }
+
 .ss-card .card-body {
   position: relative;
   padding-bottom: 60px;
@@ -2106,13 +2311,14 @@ onBeforeUnmount(() => {
   z-index: 0;
 }
 
-/* ✅ nếu chỉ có 1 icon thì căn giữa + ẩn line */
 .ss-status.ss-status-single {
   justify-content: center;
 }
+
 .ss-status.ss-status-single::before {
   display: none;
 }
+
 .ss-status.ss-status-single .ss-step {
   flex: 0 0 auto;
   width: 180px;
@@ -2125,6 +2331,7 @@ onBeforeUnmount(() => {
   flex: 1;
   min-width: 0;
 }
+
 .ss-icon {
   width: 64px;
   height: 64px;
@@ -2138,6 +2345,7 @@ onBeforeUnmount(() => {
   margin: auto;
   transition: all 0.3s ease;
 }
+
 .ss-step span {
   display: block;
   margin-top: 10px;
@@ -2146,40 +2354,53 @@ onBeforeUnmount(() => {
   font-weight: 400;
 }
 
-/* ✅ MÀU ĐỎ */
 .ss-step.done .ss-icon {
   border-color: #dc3545;
   background: #dc3545;
   color: #fff;
 }
+
 .ss-step.active .ss-icon {
   border-color: #dc3545;
   color: #dc3545;
   background: #fff5f5;
 }
+
 .ss-step.done span,
 .ss-step.active span {
   color: #dc3545;
   font-weight: 400 !important;
 }
+
 .ss-step.cancelled .ss-icon {
   border-color: #dc3545;
   background: #fee2e2;
   color: #dc3545;
 }
-.ss-step.cancelled span { color: #dc3545; }
+
+.ss-step.cancelled span {
+  color: #dc3545;
+}
+
 .ss-step.cancelled-step .ss-icon {
   border-color: #dc3545;
   background: #dc3545;
   color: #fff;
 }
-.ss-step.cancelled-step span { color: #dc3545; }
+
+.ss-step.cancelled-step span {
+  color: #dc3545;
+}
+
 .ss-step.request-cancel .ss-icon {
   border-color: #f97316;
   background: #fff7ed;
   color: #f97316;
 }
-.ss-step.request-cancel span { color: #f97316; }
+
+.ss-step.request-cancel span {
+  color: #f97316;
+}
 
 .ss-step-meta {
   margin: 6px auto 0;
@@ -2189,6 +2410,7 @@ onBeforeUnmount(() => {
   gap: 2px;
   max-width: 160px;
 }
+
 .ss-step-time,
 .ss-step-user {
   max-width: 160px;
@@ -2207,9 +2429,11 @@ onBeforeUnmount(() => {
   border-bottom: 1px dashed #eee;
   font-size: 13px;
 }
+
 .ss-info:last-child {
   border-bottom: none;
 }
+
 .ss-info span {
   color: rgba(17, 24, 39, 0.55);
 }
@@ -2220,6 +2444,7 @@ onBeforeUnmount(() => {
   font-size: 13px;
   color: rgba(17, 24, 39, 0.82);
 }
+
 .table thead th {
   background: #f8f9fa;
   font-size: 13px;
@@ -2228,12 +2453,15 @@ onBeforeUnmount(() => {
   border-bottom: none;
   font-weight: 500;
 }
+
 .table tbody td {
   font-weight: 400;
 }
+
 .table tbody tr:hover {
   background: rgba(17, 24, 39, 0.03);
 }
+
 .table .text-danger {
   font-weight: 400 !important;
 }
@@ -2245,6 +2473,7 @@ onBeforeUnmount(() => {
   font-size: 13px;
   color: rgba(17, 24, 39, 0.82);
 }
+
 .ss-total {
   display: flex;
   justify-content: space-between;
@@ -2260,10 +2489,12 @@ button.btn {
   line-height: 1;
   transition: all 0.25s ease;
 }
+
 button.btn-primary {
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   border: none;
 }
+
 button.btn-warning {
   background: linear-gradient(135deg, #f59e0b, #f97316);
   border: none;
@@ -2274,6 +2505,7 @@ button.btn-warning {
   position: sticky;
   top: 90px;
 }
+
 @media (max-width: 992px) {
   .sticky-summary {
     position: static;
@@ -2291,6 +2523,7 @@ button.btn-warning {
     flex-direction: column;
     gap: 25px;
   }
+
   .ss-status::before {
     display: none;
   }
@@ -2314,12 +2547,14 @@ button.btn-warning {
   border-radius: 16px;
   overflow: hidden;
 }
+
 .history-body {
   max-height: 400px;
   overflow-y: auto;
   position: relative;
   padding-left: 30px;
 }
+
 .history-body::before {
   content: "";
   position: absolute;
@@ -2329,10 +2564,12 @@ button.btn-warning {
   width: 2px;
   background: rgba(220, 53, 69, 0.25);
 }
+
 .history-item {
   position: relative;
   margin-bottom: 20px;
 }
+
 .history-dot {
   position: absolute;
   left: -17px;
@@ -2342,21 +2579,25 @@ button.btn-warning {
   background: #dc3545;
   border-radius: 50%;
 }
+
 .history-content {
   background: #f9fafb;
   padding: 10px 14px;
   border-radius: 10px;
 }
+
 .history-time {
   font-size: 11px;
   color: rgba(17, 24, 39, 0.55);
   margin-bottom: 4px;
 }
+
 .history-user {
   font-size: 12px;
   color: rgba(17, 24, 39, 0.72);
   margin-bottom: 6px;
 }
+
 .history-text {
   font-size: 13px;
 }

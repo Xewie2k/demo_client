@@ -1,3 +1,4 @@
+<!-- File: src/pages/lich_lam_viec/GiaoCa.vue -->
 <template>
   <div class="giao-ca-container">
     <div v-if="loading" class="loading-overlay">

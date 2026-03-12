@@ -475,19 +475,19 @@ public class ClientOrderService {
         // ✅ FIX BUG: Xác định phương thức thanh toán (ID) từ loaiThanhToan (0/1) hoặc idPhuongThucThanhToan
         Integer ptttId = req.getIdPhuongThucThanhToan();
         Integer loaiThanhToan = req.getLoaiThanhToan(); // 0: COD, 1: VNPay/Chuyển khoản
-        
+
         // 🔍 DEBUG LOG
         System.out.println("=== CREATE ORDER DEBUG ===");
         System.out.println("loaiThanhToan: " + loaiThanhToan);
         System.out.println("idPhuongThucThanhToan: " + ptttId);
-        
+
         if (ptttId == null) {
             List<PhuongThucThanhToan> allPttt = phuongThucThanhToanRepo.findAllByXoaMemFalseAndTrangThaiTrueOrderByIdDesc();
             System.out.println("Danh sách phương thức thanh toán:");
             for (PhuongThucThanhToan p : allPttt) {
                 System.out.println("  - ID: " + p.getId() + ", Name: " + p.getTenPhuongThucThanhToan());
             }
-            
+
             if (loaiThanhToan == null || loaiThanhToan == 0) {
                 // Fallback: COD/Tiền mặt (mặc định)
                 for (PhuongThucThanhToan p : allPttt) {
