@@ -25,7 +25,7 @@ public interface DiaChiKhachHangRepository extends JpaRepository<DiaChiKhachHang
          where d.idKhachHang = :idKhachHang
            and d.xoaMem = false
            and d.macDinh = true
-           and d.id <> :idKeep
+           and (:idKeep is null or d.id <> :idKeep)
     """)
     int unsetDefaultOthers(@Param("idKhachHang") Integer idKhachHang, @Param("idKeep") Integer idKeep);
 }

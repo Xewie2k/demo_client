@@ -214,7 +214,10 @@
                     <div>
                       <div class="fw-bold">{{ v.maPhieuGiamGia }}</div>
                       <div class="small text-secondary">{{ v.tenPhieuGiamGia }}</div>
-                      <small class="text-danger fw-bold" style="font-size: 11px;">Giảm {{ v.giaTriGiamGia ? Number(v.giaTriGiamGia) + '%' : formatPrice(v.soTienGiamToiDa) }}</small>
+                      <small class="text-danger fw-bold" style="font-size: 11px;">
+                        Giảm {{ !v.loaiPhieuGiamGia ? (Number(v.giaTriGiamGia) + '%') : formatPrice(v.giaTriGiamGia) }}
+                        <span v-if="!v.loaiPhieuGiamGia && v.soTienGiamToiDa"> (Tối đa {{ formatPrice(v.soTienGiamToiDa) }})</span>
+                      </small>
                       <div class="small text-muted" style="font-size: 10px;">Đơn tối thiểu: {{ formatPrice(v.hoaDonToiThieu) }}</div>
                       <div v-if="getBestVoucher() && getBestVoucher().id === v.id" class="small text-success fw-bold mt-1" style="font-size: 11px;">
                         <i class="bi bi-star-fill me-1"></i>Phiếu giảm giá tốt nhất
@@ -282,6 +285,13 @@ const addressCodes = reactive({
     district: '',
     ward: ''
 });
+
+const normalizeName = (name) => {
+    if (!name) return '';
+    return name
+        .replace(/^(Tỉnh|Thành phố|Thành Phố|Quận|Huyện|Thị xã|Thị Xã|Thị trấn|Thị Trấn|Xã|Phường)\s+/i, '')
+        .trim().toLowerCase();
+};
 
 const loadProvinces = async () => {
     try {
@@ -357,8 +367,8 @@ const fillAddressFromSaved = async (addr) => {
     if (!addr) return;
     form.diaChi = addr.diaChiCuThe || '';
 
-    // Match province by name
-    const matchedProvince = provinces.value.find(p => p.name === addr.thanhPho);
+    // Match province by normalized name (handles "Thành phố Hà Nội" vs "Hà Nội")
+    const matchedProvince = provinces.value.find(p => normalizeName(p.name) === normalizeName(addr.thanhPho));
     if (matchedProvince) {
         addressCodes.city = matchedProvince.code;
         address.city = matchedProvince.name;
@@ -367,8 +377,8 @@ const fillAddressFromSaved = async (addr) => {
             districts.value = (res.data || []).map(d => ({ code: d.districtId, name: d.districtName }));
         } catch (e) { districts.value = []; }
 
-        // Match district by name
-        const matchedDistrict = districts.value.find(d => d.name === addr.quan);
+        // Match district by normalized name
+        const matchedDistrict = districts.value.find(d => normalizeName(d.name) === normalizeName(addr.quan));
         if (matchedDistrict) {
             addressCodes.district = matchedDistrict.code;
             address.district = matchedDistrict.name;
@@ -377,8 +387,8 @@ const fillAddressFromSaved = async (addr) => {
                 wards.value = (res.data || []).map(w => ({ code: w.wardCode, name: w.wardName }));
             } catch (e) { wards.value = []; }
 
-            // Match ward by name
-            const matchedWard = wards.value.find(w => w.name === addr.phuong);
+            // Match ward by normalized name
+            const matchedWard = wards.value.find(w => normalizeName(w.name) === normalizeName(addr.phuong));
             if (matchedWard) {
                 addressCodes.ward = matchedWard.code;
                 address.ward = matchedWard.name;
@@ -428,19 +438,21 @@ const shippingFee = ref(0); // 0 khi chưa chọn địa chỉ; tính từ GHN A
 const discountAmount = computed(() => {
   if (!selectedVoucher.value) return 0;
   const voucher = selectedVoucher.value;
-  
+
   if (itemsPrice.value < voucher.hoaDonToiThieu) return 0;
 
   let discount = 0;
-  if (voucher.giaTriGiamGia && voucher.giaTriGiamGia > 0) {
-      discount = itemsPrice.value * (voucher.giaTriGiamGia / 100);
-      if (discount > voucher.soTienGiamToiDa) discount = voucher.soTienGiamToiDa;
+  if (!voucher.loaiPhieuGiamGia) {
+      // Percentage voucher (loaiPhieuGiamGia = false/null)
+      discount = itemsPrice.value * (Number(voucher.giaTriGiamGia) / 100);
+      if (voucher.soTienGiamToiDa && discount > voucher.soTienGiamToiDa)
+          discount = Number(voucher.soTienGiamToiDa);
   } else {
-      discount = voucher.soTienGiamToiDa;
+      // Fixed amount voucher (loaiPhieuGiamGia = true)
+      discount = Number(voucher.giaTriGiamGia) || 0;
   }
-  
-  if (discount > itemsPrice.value) return itemsPrice.value;
-  return discount;
+
+  return Math.min(discount, itemsPrice.value);
 });
 
 const finalPrice = computed(() => {
@@ -460,33 +472,27 @@ const fetchVouchers = async () => {
     }
 };
 
+const calcVoucherDiscount = (voucher) => {
+    if (!voucher || itemsPrice.value < voucher.hoaDonToiThieu) return 0;
+    let discount = 0;
+    if (!voucher.loaiPhieuGiamGia) {
+        // Percentage
+        discount = itemsPrice.value * (Number(voucher.giaTriGiamGia) / 100);
+        if (voucher.soTienGiamToiDa && discount > voucher.soTienGiamToiDa)
+            discount = Number(voucher.soTienGiamToiDa);
+    } else {
+        // Fixed
+        discount = Number(voucher.giaTriGiamGia) || 0;
+    }
+    return Math.min(discount, itemsPrice.value);
+};
+
 const getBestVoucher = () => {
     const eligible = vouchers.value.filter(v => itemsPrice.value >= v.hoaDonToiThieu);
-    
     if (eligible.length === 0) return null;
-    
-    return eligible.reduce((best, current) => {
-        let bestDiscount = 0;
-        let currentDiscount = 0;
-        
-        // Calculate discount for best voucher
-        if (best.giaTriGiamGia && best.giaTriGiamGia > 0) {
-            bestDiscount = itemsPrice.value * (best.giaTriGiamGia / 100);
-            if (bestDiscount > best.soTienGiamToiDa) bestDiscount = best.soTienGiamToiDa;
-        } else {
-            bestDiscount = best.soTienGiamToiDa;
-        }
-        
-        // Calculate discount for current voucher
-        if (current.giaTriGiamGia && current.giaTriGiamGia > 0) {
-            currentDiscount = itemsPrice.value * (current.giaTriGiamGia / 100);
-            if (currentDiscount > current.soTienGiamToiDa) currentDiscount = current.soTienGiamToiDa;
-        } else {
-            currentDiscount = current.soTienGiamToiDa;
-        }
-        
-        return currentDiscount > bestDiscount ? current : best;
-    });
+    return eligible.reduce((best, current) =>
+        calcVoucherDiscount(current) > calcVoucherDiscount(best) ? current : best
+    );
 };
 
 const applyVoucher = () => {
@@ -506,17 +512,14 @@ const applyVoucher = () => {
 };
 
 onMounted(async () => {
-  fetchVouchers();
-  await loadProvinces();
-  
+  await Promise.all([fetchVouchers(), loadProvinces()]);
+
   // Auto-select best voucher when page loads
-  setTimeout(() => {
-    const best = getBestVoucher();
-    if (best) {
-      selectedVoucher.value = best;
-      tempSelectedVoucher.value = best;
-    }
-  }, 500);
+  const best = getBestVoucher();
+  if (best) {
+    selectedVoucher.value = best;
+    tempSelectedVoucher.value = best;
+  }
   
   if (isLoggedIn.value && customer.value) {
     form.tenKhachHang = customer.value.hoTen || '';
