@@ -84,6 +84,7 @@ public class DotGiamGiaService {
 
         if (req.getTenDotGiamGia() != null) db.setTenDotGiamGia(req.getTenDotGiamGia());
         if (req.getGiaTriGiamGia() != null) db.setGiaTriGiamGia(req.getGiaTriGiamGia());
+        if (req.getSoTienGiamToiDa() != null) db.setSoTienGiamToiDa(req.getSoTienGiamToiDa());
         if (req.getNgayBatDau() != null) db.setNgayBatDau(req.getNgayBatDau());
         if (req.getNgayKetThuc() != null) db.setNgayKetThuc(req.getNgayKetThuc());
         if (req.getMucUuTien() != null) db.setMucUuTien(req.getMucUuTien());
@@ -134,6 +135,10 @@ public class DotGiamGiaService {
         // ✅ vì chốt %: 0..100
         if (e.getGiaTriGiamGia().compareTo(new BigDecimal("100")) > 0)
             throw new BadRequestEx("Giảm % phải nằm trong 0..100");
+
+        if (e.getSoTienGiamToiDa() == null) {
+            e.setSoTienGiamToiDa(BigDecimal.ZERO); // Không giới hạn hoặc giới hạn = 0 tùy logic của bạn
+        }
     }
 
     private DotGiamGiaResponse toResponse(DotGiamGia e) {

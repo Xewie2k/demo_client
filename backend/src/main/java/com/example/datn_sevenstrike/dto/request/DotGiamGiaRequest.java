@@ -16,6 +16,7 @@ public class DotGiamGiaRequest {
 
     private Boolean loaiGiamGia;              // DB chốt: chỉ % => luôn false (0)
     private BigDecimal giaTriGiamGia;
+    private BigDecimal soTienGiamToiDa;
 
     private LocalDate ngayBatDau;
     private LocalDate ngayKetThuc;

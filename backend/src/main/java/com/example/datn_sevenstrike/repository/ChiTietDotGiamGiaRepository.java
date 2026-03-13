@@ -29,9 +29,6 @@ public interface ChiTietDotGiamGiaRepository extends JpaRepository<ChiTietDotGia
 
     // =========================
     // POS: lấy "đợt giảm giá tốt nhất" cho CTSP (đang active, đúng ngày)
-    // Rule chọn tốt nhất:
-    // muc_uu_tien DESC -> % giảm áp dụng DESC -> dgg.id DESC -> ctdgg.id DESC
-    // % giảm áp dụng = COALESCE(ct.gia_tri_giam_rieng, dot.gia_tri_giam_gia)
     // =========================
 
     interface BestDotGiamGiaView {
@@ -50,8 +47,8 @@ public interface ChiTietDotGiamGiaRepository extends JpaRepository<ChiTietDotGia
         BigDecimal getGiaTriGiamGiaDot();
         BigDecimal getGiaTriGiamRieng();
 
-        BigDecimal getGiaTriGiamApDung(); // % giảm áp dụng
-        BigDecimal getSoTienGiamToiDa();  // max tiền giảm / 1 SP (nullable)
+        BigDecimal getGiaTriGiamApDung();
+        BigDecimal getSoTienGiamToiDa();  // Lấy giới hạn tối đa từ bảng dot_giam_gia
         default BigDecimal getGiaTriGiam() {
             return getGiaTriGiamApDung();
         }
@@ -71,7 +68,7 @@ public interface ChiTietDotGiamGiaRepository extends JpaRepository<ChiTietDotGia
                 dgg.gia_tri_giam_gia as giaTriGiamGiaDot,
                 ctdgg.gia_tri_giam_rieng as giaTriGiamRieng,
                 coalesce(ctdgg.gia_tri_giam_rieng, dgg.gia_tri_giam_gia) as giaTriGiamApDung,
-                ctdgg.so_tien_giam_toi_da_rieng as soTienGiamToiDa,
+                dgg.so_tien_giam_toi_da as soTienGiamToiDa, -- SỬA Ở ĐÂY: Lấy từ bảng dgg thay vì ctdgg
                 row_number() over (
                     partition by ctdgg.id_chi_tiet_san_pham
                     order by
@@ -124,7 +121,7 @@ public interface ChiTietDotGiamGiaRepository extends JpaRepository<ChiTietDotGia
             dgg.gia_tri_giam_gia as giaTriGiamGiaDot,
             ctdgg.gia_tri_giam_rieng as giaTriGiamRieng,
             coalesce(ctdgg.gia_tri_giam_rieng, dgg.gia_tri_giam_gia) as giaTriGiamApDung,
-            ctdgg.so_tien_giam_toi_da_rieng as soTienGiamToiDa
+            dgg.so_tien_giam_toi_da as soTienGiamToiDa -- SỬA Ở ĐÂY: Lấy từ bảng dgg thay vì ctdgg
         from chi_tiet_dot_giam_gia ctdgg
         join dot_giam_gia dgg
           on dgg.id = ctdgg.id_dot_giam_gia

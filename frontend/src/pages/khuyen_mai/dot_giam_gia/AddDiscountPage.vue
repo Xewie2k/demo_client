@@ -61,6 +61,18 @@
           </div>
 
           <div class="form-group">
+            <label class="label">Giảm tối đa (VND):</label>
+            <input
+              v-model.number="formData.soTienGiamToiDa"
+              type="number"
+              class="form-control"
+              placeholder="Nhập số tiền tối đa..."
+              min="0"
+              :disabled="isLoading"
+            />
+          </div>
+
+          <div class="form-group">
             <label class="label">Ngày bắt đầu: <span class="text-red">*</span></label>
             <input
               v-model="formData.ngayBatDau"
@@ -725,6 +737,7 @@ const formData = reactive({
   tenDotGiamGia: "",
   loaiGiamGia: false, // ✅ mặc định %
   giaTriGiamGia: null,
+  soTienGiamToiDa: null,
   ngayBatDau: "",
   ngayKetThuc: "",
   trangThai: true,

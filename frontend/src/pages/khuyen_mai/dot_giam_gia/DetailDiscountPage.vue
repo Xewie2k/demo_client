@@ -65,6 +65,18 @@
           </div>
 
           <div class="form-group">
+            <label class="label">Giảm tối đa (VND):</label>
+            <input
+              v-model.number="formData.soTienGiamToiDa"
+              type="number"
+              class="form-control"
+              placeholder="Nhập số tiền tối đa..."
+              :disabled="isEnded"
+              min="0"
+            />
+          </div>
+
+          <div class="form-group">
             <label class="label">Mức ưu tiên:</label>
             <input
               v-model.number="formData.mucUuTien"
@@ -465,6 +477,7 @@ const formData = reactive({
   tenDotGiamGia: "",
   loaiGiamGia: false,
   giaTriGiamGia: null,
+  soTienGiamToiDa: null,
   ngayBatDau: "",
   ngayKetThuc: "",
   mucUuTien: 0,
@@ -727,7 +740,18 @@ const getHienThiGiaTheoDot = (variant) => {
     return { hasDiscount: false, originalPrice: price, finalPrice: price, badge: null };
   }
 
-  const discountAmount = (price * val) / 100;
+  // 1. Tính số tiền giảm theo %
+  let discountAmount = (price * val) / 100;
+  
+  // 2. Lấy giới hạn tối đa
+  const maxTien = Number(formData.soTienGiamToiDa ?? 0);
+
+  // 3. Nếu có giới hạn và tiền giảm vượt quá giới hạn -> ép về bằng giới hạn
+  if (maxTien > 0 && discountAmount > maxTien) {
+    discountAmount = maxTien;
+  }
+
+  // 4. Tính giá cuối
   const finalPrice = Math.max(0, price - discountAmount);
 
   const badge = `-${Math.round(val)}%`;

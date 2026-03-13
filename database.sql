@@ -302,6 +302,7 @@ create table dbo.dot_giam_gia (
 
     loai_giam_gia bit not null default 0, -- % (0)
     gia_tri_giam_gia decimal(18,2) not null check (gia_tri_giam_gia >= 0),
+    so_tien_giam_toi_da decimal(18,2) null check (so_tien_giam_toi_da >= 0),
 
     ngay_bat_dau date not null,
     ngay_ket_thuc date not null,
