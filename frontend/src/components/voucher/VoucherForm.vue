@@ -73,6 +73,18 @@
       />
     </div>
 
+    <div v-if="modelValue.hinhThucGiam === true" class="col-md-6">
+      <label class="form-label fw-bold small">Số tiền giảm tối đa (VNĐ)</label>
+      <input
+        :value="formatDisplay(modelValue.soTienGiamToiDa)"
+        @input="handleMoneyInput('soTienGiamToiDa', $event.target.value)"
+        :disabled="disabled"
+        type="text"
+        class="form-control rounded-3"
+        placeholder="Để trống = không giới hạn"
+      />
+    </div>
+
     <div class="col-md-6">
       <div class="d-flex justify-content-between align-items-center">
         <label class="form-label fw-bold small mb-0">Số lượng sử dụng</label>
