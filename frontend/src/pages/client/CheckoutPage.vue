@@ -80,8 +80,29 @@
                  <div class="form-check p-3 border rounded bg-light">
                    <input class="form-check-input" type="radio" name="paymentMethod" id="vnpay" value="VNPAY" v-model="paymentMethod">
                    <label class="form-check-label w-100 fw-bold d-flex justify-content-between align-items-center" for="vnpay">
-                      <span>Thanh toán ngay (VNPAY)</span>
-                      <img src="@/assets/images/logo/vnpay-logo-vinadesign-25-12-59-16.jpg" height="24" alt="VNPAY">
+                      <span>Thanh toán qua VNPAY</span>
+                      <img src="@/assets/images/logo/vnpay-logo-vinadesign-25-12-59-16.jpg" height="28" alt="VNPAY">
+                   </label>
+                </div>
+                <div class="form-check p-3 border rounded bg-light">
+                   <input class="form-check-input" type="radio" name="paymentMethod" id="momo" value="MOMO" v-model="paymentMethod">
+                   <label class="form-check-label w-100 fw-bold d-flex justify-content-between align-items-center" for="momo">
+                      <span>Thanh toán qua MoMo</span>
+                      <img src="@/assets/images/logo/MOMO-Logo-App.png" height="28" alt="MoMo">
+                   </label>
+                </div>
+                <div class="form-check p-3 border rounded bg-light">
+                   <input class="form-check-input" type="radio" name="paymentMethod" id="zalopay" value="ZALOPAY" v-model="paymentMethod">
+                   <label class="form-check-label w-100 fw-bold d-flex justify-content-between align-items-center" for="zalopay">
+                      <span>Thanh toán qua ZaloPay</span>
+                      <img src="@/assets/images/logo/Zalo.png" height="28" alt="ZaloPay">
+                   </label>
+                </div>
+                <div class="form-check p-3 border rounded bg-light">
+                   <input class="form-check-input" type="radio" name="paymentMethod" id="vietqr" value="VIETQR" v-model="paymentMethod">
+                   <label class="form-check-label w-100 fw-bold d-flex justify-content-between align-items-center" for="vietqr">
+                      <span>Chuyển khoản VietQR</span>
+                      <img src="@/assets/images/logo/VietQR.png" height="15" alt="VietQR">
                    </label>
                 </div>
              </div>
@@ -240,6 +261,49 @@
       </div>
     </div>
 
+    <!-- VietQR Modal -->
+    <div class="modal fade" id="vietqrModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header border-0">
+            <h5 class="modal-title fw-bold">Quét mã QR để thanh toán</h5>
+          </div>
+          <div class="modal-body text-center">
+            <div v-if="vietqrData">
+              <img :src="vietqrData.qrImageUrl" class="img-fluid rounded mb-3" style="max-width: 280px;" alt="QR Code">
+              <div class="alert alert-info text-start p-3 mb-3" style="font-size:14px;">
+                <div class="fw-bold mb-2">Thông tin chuyển khoản:</div>
+                <div>Ngân hàng: <strong>{{ vietqrData.bankId }}</strong></div>
+                <div>Số tài khoản: <strong>{{ vietqrData.accountNo }}</strong></div>
+                <div>Chủ tài khoản: <strong>{{ vietqrData.accountName }}</strong></div>
+                <div>Số tiền: <strong class="text-danger">{{ formatPrice(vietqrData.amount) }}</strong></div>
+                <div>Nội dung CK: <strong>{{ vietqrData.memo }}</strong></div>
+              </div>
+              <div class="text-muted small mb-3">
+                Vui lòng chuyển khoản đúng nội dung để đơn hàng được xử lý nhanh nhất.
+              </div>
+              <div v-if="vietqrCountdown > 0" class="badge bg-warning text-dark fs-6 mb-2">
+                Hết hạn sau: {{ Math.floor(vietqrCountdown / 60) }}:{{ String(vietqrCountdown % 60).padStart(2, '0') }}
+              </div>
+              <div v-else class="text-danger small fw-bold mb-2">Mã QR đã hết hạn.</div>
+            </div>
+            <div v-else class="py-4">
+              <div class="spinner-border text-primary" role="status"></div>
+            </div>
+          </div>
+          <div class="modal-footer border-0">
+            <button type="button" class="btn btn-secondary rounded-1" @click="cancelVietQR">Hủy</button>
+            <button type="button" class="btn text-white rounded-1 fw-bold"
+                    style="background-color: var(--ss-accent); border:none;"
+                    @click="confirmVietQRTransfer"
+                    :disabled="!vietqrData">
+              Tôi đã chuyển khoản
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
@@ -250,6 +314,7 @@ import { useCart } from '@/services/cart';
 import { useClientAuth } from '@/services/authClient';
 import apiClient from '@/services/apiClient';
 import Swal from 'sweetalert2';
+import { Modal } from 'bootstrap';
 
 const { cart, clearCart } = useCart();
 const { customer, isLoggedIn } = useClientAuth();
@@ -261,6 +326,13 @@ const tempSelectedVoucher = ref(null); // For modal selection before applying
 const paymentMethod = ref('COD');
 const savedAddresses = ref([]);
 const tempSelectedAddress = ref(null);
+
+// VietQR state
+const vietqrData = ref(null);
+const vietqrCountdown = ref(0);
+let vietqrTimer = null;
+let vietqrOrderData = null;
+let vietqrFinalPrice = 0;
 
 const form = reactive({
   tenKhachHang: '',
@@ -546,7 +618,7 @@ const submitOrder = async () => {
         Swal.fire('Lỗi', 'Vui lòng điền đầy đủ thông tin giao hàng.', 'error');
         return;
     }
-    
+
     if (displayItems.value.length === 0) {
         Swal.fire('Lỗi', 'Không có sản phẩm để thanh toán.', 'error');
         return;
@@ -555,7 +627,10 @@ const submitOrder = async () => {
     loading.value = true;
     try {
         const fullAddress = `${form.diaChi}, ${address.ward}, ${address.district}, ${address.city}`;
-        
+
+        const loaiThanhToanMap = { COD: 0, VNPAY: 1, MOMO: 2, ZALOPAY: 3, VIETQR: 4 };
+        const loaiThanhToan = loaiThanhToanMap[paymentMethod.value] ?? 0;
+
         const payload = {
             ...form,
             diaChi: fullAddress,
@@ -565,39 +640,88 @@ const submitOrder = async () => {
                 idChiTietSanPham: item.variantId,
                 soLuong: item.quantity
             })),
-            loaiThanhToan: paymentMethod.value === 'VNPAY' ? 1 : 0,  // 0=COD, 1=VNPay/Banking
+            loaiThanhToan,
             ghnToDistrictId: addressCodes.district || null,
             ghnToWardCode: addressCodes.ward ? String(addressCodes.ward) : null
         };
-        
-        // Assume backend creates order and returns Order Object (id, total, etc)
+
         const res = await apiClient.post('/api/client/orders', payload);
         const orderData = res.data;
+        const totalToShow = Math.round(finalPrice.value);
 
         if (paymentMethod.value === 'VNPAY') {
-            const paymentPayload = {
-                amount: Math.round(finalPrice.value),
+            const payRes = await apiClient.post('/api/payment/create_payment', {
+                amount: totalToShow,
                 orderInfo: `Thanh toan don hang ${orderData.id}`,
-                returnUrl: null // Dùng URL mặc định từ backend config
-            };
-
-            const payRes = await apiClient.post('/api/payment/create_payment', paymentPayload);
-            if (payRes.data && payRes.data.paymentUrl) {
+                returnUrl: null
+            });
+            if (payRes.data?.paymentUrl) {
                 removeOrderedItems();
-                // Lưu maHoaDon vào sessionStorage để hiển thị ở trang thành công
                 sessionStorage.setItem('order_maHoaDon', orderData.maHoaDon || '');
                 window.location.href = payRes.data.paymentUrl;
             } else {
-                 throw new Error("Không lấy được link thanh toán");
+                throw new Error("Không lấy được link thanh toán VNPay");
+            }
+
+        } else if (paymentMethod.value === 'MOMO') {
+            const payRes = await apiClient.post('/api/payment/momo/create', {
+                amount: totalToShow,
+                orderId: orderData.id
+            });
+            if (payRes.data?.paymentUrl) {
+                removeOrderedItems();
+                sessionStorage.setItem('order_maHoaDon', orderData.maHoaDon || '');
+                window.location.href = payRes.data.paymentUrl;
+            } else {
+                throw new Error("Không lấy được link thanh toán MoMo");
+            }
+
+        } else if (paymentMethod.value === 'ZALOPAY') {
+            const payRes = await apiClient.post('/api/payment/zalopay/create', {
+                amount: totalToShow,
+                orderId: orderData.id
+            });
+            if (payRes.data?.paymentUrl) {
+                removeOrderedItems();
+                sessionStorage.setItem('order_maHoaDon', orderData.maHoaDon || '');
+                window.location.href = payRes.data.paymentUrl;
+            } else {
+                throw new Error("Không lấy được link thanh toán ZaloPay");
+            }
+
+        } else if (paymentMethod.value === 'VIETQR') {
+            const qrRes = await apiClient.post('/api/payment/vietqr/generate', {
+                amount: totalToShow,
+                orderId: orderData.id
+            });
+            if (qrRes.data) {
+                vietqrData.value = qrRes.data;
+                vietqrOrderData  = orderData;
+                vietqrFinalPrice = totalToShow;
+
+                // Start 15-minute countdown
+                vietqrCountdown.value = 15 * 60;
+                vietqrTimer = setInterval(() => {
+                    if (vietqrCountdown.value > 0) {
+                        vietqrCountdown.value--;
+                    } else {
+                        clearInterval(vietqrTimer);
+                    }
+                }, 1000);
+
+                const modalEl = document.getElementById('vietqrModal');
+                const modal = new Modal(modalEl);
+                modal.show();
+            } else {
+                throw new Error("Không tạo được mã QR VietQR");
             }
 
         } else {
-            // COD — capture total BEFORE clearing cart (cart clear would reset finalPrice to 0)
-            const totalToShow = Math.round(finalPrice.value);
+            // COD
             removeOrderedItems();
             router.push({ name: 'client-order-success', query: { id: orderData.id, maHoaDon: orderData.maHoaDon, tongTien: totalToShow } });
         }
-        
+
     } catch (err) {
         console.error(err);
         Swal.fire('Lỗi', 'Có lỗi xảy ra: ' + (err.userMessage || err.message), 'error');
@@ -606,16 +730,33 @@ const submitOrder = async () => {
     }
 };
 
-const removeOrderedItems = () => {
-    // Remove only checkout items from cart
-    const ids = displayItems.value.map(i => i.variantId);
-    ids.forEach(id => {
-        // We need a way to remove specific item from cart service without clearing all if partial
-        // using removeFromCart imported
-        // But logic is complex if we import the function. 
-        // For now, assuming full cart or just clearing all if simple.
+const confirmVietQRTransfer = () => {
+    if (vietqrTimer) clearInterval(vietqrTimer);
+    vietqrCountdown.value = 0;
+
+    const modalEl = document.getElementById('vietqrModal');
+    const modal = Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+
+    removeOrderedItems();
+    sessionStorage.setItem('order_maHoaDon', vietqrOrderData?.maHoaDon || '');
+    router.push({
+        name: 'client-order-success',
+        query: { id: vietqrOrderData?.id, maHoaDon: vietqrOrderData?.maHoaDon, tongTien: vietqrFinalPrice }
     });
-    // Simplified:
+};
+
+const cancelVietQR = () => {
+    if (vietqrTimer) clearInterval(vietqrTimer);
+    vietqrCountdown.value = 0;
+    vietqrData.value = null;
+
+    const modalEl = document.getElementById('vietqrModal');
+    const modal = Modal.getInstance(modalEl);
+    if (modal) modal.hide();
+};
+
+const removeOrderedItems = () => {
     clearCart();
     sessionStorage.removeItem('checkout_items');
 };

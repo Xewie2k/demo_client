@@ -519,6 +519,39 @@ public class ClientOrderService {
                     }
                     throw new BadRequestEx("Hệ thống chưa cấu hình phương thức thanh toán VNPAY/Chuyển khoán. Vui lòng liên hệ Admin.");
                 }
+            } else if (loaiThanhToan == 2) {
+                // Momo
+                for (PhuongThucThanhToan p : allPttt) {
+                    if (p.getTenPhuongThucThanhToan().toUpperCase().contains("MOMO")) {
+                        ptttId = p.getId();
+                        break;
+                    }
+                }
+                if (ptttId == null) {
+                    throw new BadRequestEx("Hệ thống chưa cấu hình phương thức thanh toán MOMO. Vui lòng liên hệ Admin.");
+                }
+            } else if (loaiThanhToan == 3) {
+                // Zalopay
+                for (PhuongThucThanhToan p : allPttt) {
+                    if (p.getTenPhuongThucThanhToan().toUpperCase().contains("ZALOPAY")) {
+                        ptttId = p.getId();
+                        break;
+                    }
+                }
+                if (ptttId == null) {
+                    throw new BadRequestEx("Hệ thống chưa cấu hình phương thức thanh toán ZALOPAY. Vui lòng liên hệ Admin.");
+                }
+            } else if (loaiThanhToan == 4) {
+                // VietQR
+                for (PhuongThucThanhToan p : allPttt) {
+                    if (p.getTenPhuongThucThanhToan().toUpperCase().contains("VIETQR")) {
+                        ptttId = p.getId();
+                        break;
+                    }
+                }
+                if (ptttId == null) {
+                    throw new BadRequestEx("Hệ thống chưa cấu hình phương thức thanh toán VIETQR. Vui lòng liên hệ Admin.");
+                }
             }
         }
 
@@ -580,6 +613,28 @@ public class ClientOrderService {
                 .maHoaDon(hd.getMaHoaDon())
                 .message("Đặt hàng thành công")
                 .build();
+    }
+
+    @Transactional
+    public void cancelOrderOnPaymentFailure(Integer hoaDonId) {
+        if (hoaDonId == null) return;
+        HoaDon hd = hoaDonRepo.findById(hoaDonId).orElse(null);
+        if (hd == null || hd.getTrangThaiHienTai() != 1) return;
+
+        hd.setTrangThaiHienTai(6); // DA_HUY
+        hd.setNgayCapNhat(LocalDateTime.now());
+        hoaDonRepo.save(hd);
+
+        if (hd.getIdPhieuGiamGia() != null) {
+            phieuRepo.restoreOne(hd.getIdPhieuGiamGia());
+        }
+
+        List<GiaoDichThanhToan> gds = giaoDichThanhToanRepo.findAllByIdHoaDon(hoaDonId);
+        for (GiaoDichThanhToan gd : gds) {
+            gd.setTrangThai("that_bai");
+            gd.setThoiGianCapNhat(LocalDateTime.now());
+        }
+        giaoDichThanhToanRepo.saveAll(gds);
     }
 
     private ProductClientDTO mapToProductClientDTO(SanPham sp) {
@@ -832,7 +887,8 @@ public class ClientOrderService {
                 PhuongThucThanhToan pt = phuongThucThanhToanRepo.findById(gd.getIdPhuongThucThanhToan()).orElse(null);
                 if (pt != null && pt.getTenPhuongThucThanhToan() != null) {
                     String name = pt.getTenPhuongThucThanhToan().toLowerCase();
-                    if (name.contains("chuyển khoản") || name.contains("vnpay") || name.contains("banking")) {
+                    if (name.contains("chuyển khoản") || name.contains("vnpay") || name.contains("banking")
+                            || name.contains("momo") || name.contains("zalopay") || name.contains("vietqr")) {
                         return true;
                     }
                 }
