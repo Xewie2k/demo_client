@@ -103,6 +103,7 @@
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { useClientAuth } from '@/services/authClient';
+import Swal from 'sweetalert2';
 
 const router = useRouter();
 const { register } = useClientAuth();
@@ -157,6 +158,14 @@ const handleRegister = async () => {
   loading.value = true;
   try {
     await register(form);
+    await Swal.fire({
+      icon: 'success',
+      title: 'Đăng ký thành công!',
+      text: 'Chào mừng bạn đến với SevenStrike',
+      confirmButtonColor: '#d33',
+      timer: 2000,
+      timerProgressBar: true,
+    });
     router.push('/client');
   } catch (err) {
     errorMsg.value = err.userMessage || err.response?.data || 'Đăng ký thất bại!';

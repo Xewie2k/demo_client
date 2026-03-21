@@ -22,9 +22,6 @@ public class DiaChiKhachHang {
     @Column(name = "ten_dia_chi", nullable = false, length = 255)
     private String tenDiaChi;
 
-    @Column(name = "so_dien_thoai", length = 15)
-    private String soDienThoai;
-
     @Column(name = "thanh_pho", length = 255)
     private String thanhPho;
 

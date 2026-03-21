@@ -5,7 +5,9 @@ import com.example.datn_sevenstrike.dto.response.DiaChiKhachHangResponse;
 import com.example.datn_sevenstrike.entity.DiaChiKhachHang;
 import com.example.datn_sevenstrike.exception.BadRequestEx;
 import com.example.datn_sevenstrike.exception.NotFoundEx;
+import com.example.datn_sevenstrike.entity.KhachHang;
 import com.example.datn_sevenstrike.repository.DiaChiKhachHangRepository;
+import com.example.datn_sevenstrike.repository.KhachHangRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
@@ -17,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DiaChiKhachHangService {
 
     private final DiaChiKhachHangRepository repo;
+    private final KhachHangRepository khachHangRepo;
     private final ModelMapper mapper;
 
     public List<DiaChiKhachHangResponse> all() {
@@ -54,6 +57,15 @@ public class DiaChiKhachHangService {
 
         DiaChiKhachHang saved = repo.save(e);
 
+        // Cập nhật SĐT vào bảng khach_hang
+        if (req.getSoDienThoai() != null && !req.getSoDienThoai().isBlank()) {
+            KhachHang kh = khachHangRepo.findByIdAndXoaMemFalse(saved.getIdKhachHang()).orElse(null);
+            if (kh != null) {
+                kh.setSoDienThoai(req.getSoDienThoai().trim());
+                khachHangRepo.save(kh);
+            }
+        }
+
         return toResponse(saved);
     }
 
@@ -66,7 +78,6 @@ public class DiaChiKhachHangService {
 
         // ✅ KHÔNG cho đổi idKhachHang khi update (tránh lạc địa chỉ sang KH khác)
         if (req.getTenDiaChi() != null) db.setTenDiaChi(req.getTenDiaChi());
-        if (req.getSoDienThoai() != null) db.setSoDienThoai(req.getSoDienThoai());
         if (req.getThanhPho() != null) db.setThanhPho(req.getThanhPho());
         if (req.getQuan() != null) db.setQuan(req.getQuan());
         if (req.getPhuong() != null) db.setPhuong(req.getPhuong());
@@ -88,6 +99,15 @@ public class DiaChiKhachHangService {
         validateByDb(db);
 
         DiaChiKhachHang saved = repo.save(db);
+
+        // Cập nhật SĐT vào bảng khach_hang
+        if (req.getSoDienThoai() != null && !req.getSoDienThoai().isBlank()) {
+            KhachHang kh = khachHangRepo.findByIdAndXoaMemFalse(saved.getIdKhachHang()).orElse(null);
+            if (kh != null) {
+                kh.setSoDienThoai(req.getSoDienThoai().trim());
+                khachHangRepo.save(kh);
+            }
+        }
 
         return toResponse(saved);
     }
@@ -124,7 +144,6 @@ public class DiaChiKhachHangService {
 
     private void trimSafe(DiaChiKhachHang e) {
         if (e.getTenDiaChi() != null) e.setTenDiaChi(e.getTenDiaChi().trim());
-        if (e.getSoDienThoai() != null) e.setSoDienThoai(e.getSoDienThoai().trim());
         if (e.getThanhPho() != null) e.setThanhPho(e.getThanhPho().trim());
         if (e.getQuan() != null) e.setQuan(e.getQuan().trim());
         if (e.getPhuong() != null) e.setPhuong(e.getPhuong().trim());
@@ -132,6 +151,12 @@ public class DiaChiKhachHangService {
     }
 
     private DiaChiKhachHangResponse toResponse(DiaChiKhachHang e) {
-        return mapper.map(e, DiaChiKhachHangResponse.class);
+        DiaChiKhachHangResponse res = mapper.map(e, DiaChiKhachHangResponse.class);
+        // Lấy SĐT từ bảng khach_hang
+        KhachHang kh = khachHangRepo.findByIdAndXoaMemFalse(e.getIdKhachHang()).orElse(null);
+        if (kh != null) {
+            res.setSoDienThoai(kh.getSoDienThoai());
+        }
+        return res;
     }
 }
