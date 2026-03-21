@@ -40,7 +40,7 @@
             <div class="col-md-6">
               <label class="form-label small fw-semibold text-secondary">Giới tính</label>
               <select class="form-select" v-model="form.gioiTinh">
-                <option :value="null">-- Chọn --</option>
+                <option :value="null">Không tiết lộ</option>
                 <option :value="true">Nam</option>
                 <option :value="false">Nữ</option>
               </select>
@@ -114,10 +114,23 @@ const fetchProfile = async () => {
   }
 };
 
+const PHONE_VN = /^0[0-9]{9}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_RE  = /^[\p{L}\s]+$/u;
+
 const saveProfile = async () => {
-  saving.value = true;
   successMsg.value = '';
   errorMsg.value = '';
+  const ten = form.tenKhachHang?.trim() ?? "";
+  if (!ten) return (errorMsg.value = 'Họ tên không được để trống.');
+  if (!NAME_RE.test(ten)) return (errorMsg.value = 'Họ tên không hợp lệ, không được chứa số hoặc ký tự đặc biệt.');
+  const email = form.email?.trim() ?? "";
+  if (!email) return (errorMsg.value = 'Email không được để trống.');
+  if (!EMAIL_RE.test(email)) return (errorMsg.value = 'Email không đúng định dạng.');
+  if (form.soDienThoai?.trim() && !PHONE_VN.test(form.soDienThoai.trim()))
+    return (errorMsg.value = 'Số điện thoại phải bắt đầu bằng 0 và gồm đúng 10 chữ số.');
+
+  saving.value = true;
   try {
     const res = await apiClient.put(`/api/client/account/profile/${customer.value.id}`, form);
     profile.value = res.data;

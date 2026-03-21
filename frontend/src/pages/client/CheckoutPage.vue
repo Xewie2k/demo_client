@@ -613,11 +613,34 @@ onMounted(async () => {
   }
 });
 
+const PHONE_VN = /^0[0-9]{9}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_RE  = /^[\p{L}\s]+$/u;
+
 const submitOrder = async () => {
-    if (!form.tenKhachHang || !form.soDienThoai || !form.email || !form.diaChi || !address.city) {
-        Swal.fire('Lỗi', 'Vui lòng điền đầy đủ thông tin giao hàng.', 'error');
-        return;
-    }
+    const ten = form.tenKhachHang?.trim() ?? "";
+    if (!ten) return Swal.fire("Thông báo", "Vui lòng nhập họ tên người nhận.", "warning");
+    if (ten.length < 2 || ten.length > 50) return Swal.fire("Thông báo", "Họ tên phải từ 2 đến 50 ký tự.", "warning");
+    if (!NAME_RE.test(ten)) return Swal.fire("Thông báo", "Họ tên không được chứa số hoặc ký tự đặc biệt.", "warning");
+
+    const sdt = form.soDienThoai?.trim() ?? "";
+    if (!sdt) return Swal.fire("Thông báo", "Vui lòng nhập số điện thoại.", "warning");
+    if (!PHONE_VN.test(sdt)) return Swal.fire("Thông báo", "Số điện thoại phải bắt đầu bằng 0 và gồm đúng 10 chữ số.", "warning");
+
+    const email = form.email?.trim() ?? "";
+    if (!email) return Swal.fire("Thông báo", "Vui lòng nhập email.", "warning");
+    if (!EMAIL_RE.test(email)) return Swal.fire("Thông báo", "Email không đúng định dạng.", "warning");
+
+    const dia = form.diaChi?.trim() ?? "";
+    if (!dia) return Swal.fire("Thông báo", "Vui lòng nhập địa chỉ cụ thể.", "warning");
+    if (dia.length < 5) return Swal.fire("Thông báo", "Địa chỉ cụ thể phải ít nhất 5 ký tự.", "warning");
+
+    if (!address.city) return Swal.fire("Thông báo", "Vui lòng chọn Tỉnh/Thành phố.", "warning");
+    if (!address.district) return Swal.fire("Thông báo", "Vui lòng chọn Quận/Huyện.", "warning");
+    if (!address.ward) return Swal.fire("Thông báo", "Vui lòng chọn Phường/Xã.", "warning");
+
+    if (form.ghiChu && form.ghiChu.length > 255)
+        return Swal.fire("Thông báo", "Ghi chú không được vượt quá 255 ký tự.", "warning");
 
     if (displayItems.value.length === 0) {
         Swal.fire('Lỗi', 'Không có sản phẩm để thanh toán.', 'error');

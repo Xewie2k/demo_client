@@ -66,6 +66,7 @@ public class DiaChiKhachHangService {
 
         // ✅ KHÔNG cho đổi idKhachHang khi update (tránh lạc địa chỉ sang KH khác)
         if (req.getTenDiaChi() != null) db.setTenDiaChi(req.getTenDiaChi());
+        if (req.getSoDienThoai() != null) db.setSoDienThoai(req.getSoDienThoai());
         if (req.getThanhPho() != null) db.setThanhPho(req.getThanhPho());
         if (req.getQuan() != null) db.setQuan(req.getQuan());
         if (req.getPhuong() != null) db.setPhuong(req.getPhuong());
@@ -123,6 +124,7 @@ public class DiaChiKhachHangService {
 
     private void trimSafe(DiaChiKhachHang e) {
         if (e.getTenDiaChi() != null) e.setTenDiaChi(e.getTenDiaChi().trim());
+        if (e.getSoDienThoai() != null) e.setSoDienThoai(e.getSoDienThoai().trim());
         if (e.getThanhPho() != null) e.setThanhPho(e.getThanhPho().trim());
         if (e.getQuan() != null) e.setQuan(e.getQuan().trim());
         if (e.getPhuong() != null) e.setPhuong(e.getPhuong().trim());

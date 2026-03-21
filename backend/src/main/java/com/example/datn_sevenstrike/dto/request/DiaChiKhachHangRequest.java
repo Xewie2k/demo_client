@@ -12,6 +12,7 @@ public class DiaChiKhachHangRequest {
     private Integer idKhachHang;
 
     private String tenDiaChi;
+    private String soDienThoai;
     private String thanhPho;
     private String quan;
     private String phuong;

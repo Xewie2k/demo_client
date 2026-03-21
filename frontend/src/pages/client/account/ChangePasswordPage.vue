@@ -84,10 +84,12 @@ const handleChangePassword = async () => {
   successMsg.value = '';
   errorMsg.value = '';
 
-  if (form.matKhauMoi !== confirmPassword.value) {
-    errorMsg.value = 'Mật khẩu xác nhận không khớp!';
-    return;
-  }
+  if (!form.matKhauCu?.trim()) return (errorMsg.value = 'Vui lòng nhập mật khẩu hiện tại.');
+  if (!form.matKhauMoi?.trim()) return (errorMsg.value = 'Vui lòng nhập mật khẩu mới.');
+  if (form.matKhauMoi.length < 6) return (errorMsg.value = 'Mật khẩu mới phải có ít nhất 6 ký tự.');
+  if (form.matKhauMoi === form.matKhauCu) return (errorMsg.value = 'Mật khẩu mới không được trùng với mật khẩu hiện tại.');
+  if (!confirmPassword.value?.trim()) return (errorMsg.value = 'Vui lòng nhập xác nhận mật khẩu mới.');
+  if (form.matKhauMoi !== confirmPassword.value) return (errorMsg.value = 'Mật khẩu xác nhận không khớp!');
 
   saving.value = true;
   try {

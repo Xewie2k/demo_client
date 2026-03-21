@@ -25,6 +25,13 @@
               </div>
             </div>
             <div class="mb-3">
+              <label class="form-label small fw-semibold text-secondary">Tên tài khoản <span class="text-danger">*</span></label>
+              <div class="input-group">
+                <span class="input-group-text bg-light border-end-0"><i class="bi bi-at text-muted"></i></span>
+                <input type="text" class="form-control border-start-0 ps-0" v-model="form.tenTaiKhoan" required placeholder="vd: nguyen_van_a (ít nhất 4 ký tự)">
+              </div>
+            </div>
+            <div class="mb-3">
               <label class="form-label small fw-semibold text-secondary">Email <span class="text-danger">*</span></label>
               <div class="input-group">
                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
@@ -101,6 +108,7 @@ import logoUrl from '@/assets/images/logo/Logo_SevenStrike.png';
 
 const form = reactive({
   tenKhachHang: '',
+  tenTaiKhoan: '',
   email: '',
   soDienThoai: '',
   matKhau: '',
@@ -110,13 +118,37 @@ const loading = ref(false);
 const errorMsg = ref('');
 const showPassword = ref(false);
 
+const PHONE_VN = /^0[0-9]{9}$/;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const NAME_RE  = /^[\p{L}\s]+$/u;
+const USERNAME_RE = /^\w{4,}$/;
+
 const handleRegister = async () => {
   errorMsg.value = '';
 
-  if (form.matKhau !== confirmPassword.value) {
-    errorMsg.value = 'Mật khẩu xác nhận không khớp!';
-    return;
-  }
+  const ten = form.tenKhachHang?.trim() ?? "";
+  if (!ten) return (errorMsg.value = 'Vui lòng nhập họ và tên.');
+  if (!NAME_RE.test(ten)) return (errorMsg.value = 'Họ tên chỉ được chứa chữ cái, không được chứa số hoặc ký tự đặc biệt.');
+
+  const tenTaiKhoan = form.tenTaiKhoan?.trim() ?? "";
+  if (!tenTaiKhoan) return (errorMsg.value = 'Vui lòng nhập tên tài khoản.');
+  if (!USERNAME_RE.test(tenTaiKhoan))
+    return (errorMsg.value = 'Tên tài khoản chỉ gồm chữ cái, số, dấu gạch dưới và ít nhất 4 ký tự.');
+
+  const email = form.email?.trim() ?? "";
+  if (!email) return (errorMsg.value = 'Vui lòng nhập email.');
+  if (!EMAIL_RE.test(email)) return (errorMsg.value = 'Email không đúng định dạng (VD: abc@gmail.com).');
+
+  if (form.soDienThoai?.trim() && !PHONE_VN.test(form.soDienThoai.trim()))
+    return (errorMsg.value = 'Số điện thoại phải bắt đầu bằng 0 và gồm đúng 10 chữ số.');
+
+  if (!form.matKhau || form.matKhau.length < 6)
+    return (errorMsg.value = 'Mật khẩu phải có ít nhất 6 ký tự.');
+
+  if (!confirmPassword.value)
+    return (errorMsg.value = 'Vui lòng nhập xác nhận mật khẩu.');
+  if (form.matKhau !== confirmPassword.value)
+    return (errorMsg.value = 'Mật khẩu xác nhận không khớp!');
 
   loading.value = true;
   try {

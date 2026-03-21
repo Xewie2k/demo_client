@@ -18,4 +18,8 @@ public interface DotGiamGiaRepository extends JpaRepository<DotGiamGia, Integer>
     List<DotGiamGia> findAllByXoaMemFalseAndTrangThaiTrueOrderByIdDesc();
 
     Optional<DotGiamGia> findByIdAndXoaMemFalse(Integer id);
+
+    boolean existsByTenDotGiamGiaIgnoreCaseAndXoaMemFalse(String tenDotGiamGia);
+
+    boolean existsByTenDotGiamGiaIgnoreCaseAndXoaMemFalseAndIdNot(String tenDotGiamGia, Integer id);
 }

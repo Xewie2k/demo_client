@@ -50,8 +50,12 @@
           <div class="modal-body">
             <div v-if="modalError" class="alert alert-danger py-2 small">{{ modalError }}</div>
             <div class="mb-3">
-              <label class="form-label small fw-bold">Tên địa chỉ <span class="text-danger">*</span></label>
-              <input type="text" class="form-control" v-model="addrForm.tenDiaChi" placeholder="Ví dụ: Nhà, Công ty..." required>
+              <label class="form-label small fw-bold">Tên người nhận <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" v-model="addrForm.tenDiaChi" placeholder="Nhập tên người nhận..." required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label small fw-bold">Số điện thoại <span class="text-danger">*</span></label>
+              <input type="tel" class="form-control" v-model="addrForm.soDienThoai" placeholder="0xxxxxxxxx" required>
             </div>
             <div class="mb-3">
               <label class="form-label small fw-bold">Tỉnh/Thành phố</label>
@@ -102,6 +106,10 @@ import apiClient from '@/services/apiClient';
 import { useClientAuth } from '@/services/authClient';
 import axios from 'axios';
 import { Modal } from 'bootstrap';
+import Swal from 'sweetalert2';
+
+const PHONE_VN = /^0[0-9]{9}$/;
+const NAME_RE  = /^[\p{L}\s]+$/u;
 
 const { customer } = useClientAuth();
 const loading = ref(true);
@@ -114,6 +122,7 @@ let bsModal = null;
 
 const addrForm = reactive({
   tenDiaChi: '',
+  soDienThoai: '',
   thanhPho: '',
   quan: '',
   phuong: '',
@@ -182,6 +191,7 @@ const onWardChange = () => {
 
 const resetForm = () => {
   addrForm.tenDiaChi = '';
+  addrForm.soDienThoai = '';
   addrForm.thanhPho = '';
   addrForm.quan = '';
   addrForm.phuong = '';
@@ -212,6 +222,7 @@ const openEditModal = async (addr) => {
   resetForm();
   editingId.value = addr.id;
   addrForm.tenDiaChi = addr.tenDiaChi || '';
+  addrForm.soDienThoai = addr.soDienThoai || '';
   addrForm.thanhPho = addr.thanhPho || '';
   addrForm.quan = addr.quan || '';
   addrForm.phuong = addr.phuong || '';
@@ -252,8 +263,23 @@ const openEditModal = async (addr) => {
 };
 
 const saveAddress = async () => {
-  modalSaving.value = true;
   modalError.value = '';
+  const ten = addrForm.tenDiaChi?.trim() ?? "";
+  if (!ten) return (modalError.value = 'Vui lòng nhập tên người nhận.');
+  if (!NAME_RE.test(ten)) return (modalError.value = 'Tên không được chứa số hoặc ký tự đặc biệt.');
+
+  const sdt = addrForm.soDienThoai?.trim() ?? "";
+  if (!sdt) return (modalError.value = 'Vui lòng nhập số điện thoại.');
+  if (!PHONE_VN.test(sdt)) return (modalError.value = 'Số điện thoại phải bắt đầu bằng 0 và gồm đúng 10 chữ số.');
+
+  const dia = addrForm.diaChiCuThe?.trim() ?? "";
+  if (!dia || dia.length < 5) return (modalError.value = 'Địa chỉ cụ thể phải ít nhất 5 ký tự.');
+
+  if (!addrCodes.city) return (modalError.value = 'Vui lòng chọn Tỉnh/Thành phố.');
+  if (!addrCodes.district) return (modalError.value = 'Vui lòng chọn Quận/Huyện.');
+  if (!addrCodes.ward) return (modalError.value = 'Vui lòng chọn Phường/Xã.');
+
+  modalSaving.value = true;
   try {
     const payload = { ...addrForm, idKhachHang: customer.value.id };
     if (editingId.value) {
@@ -287,17 +313,26 @@ const setDefault = async (id) => {
     loading.value = true;
     await fetchAddresses();
   } catch (err) {
-    alert(err.userMessage || 'Đặt mặc định thất bại!');
+    Swal.fire('Lỗi', err.userMessage || 'Đặt mặc định thất bại!', 'error');
   }
 };
 
 const deleteAddress = async (id) => {
-  if (!confirm('Bạn có chắc muốn xóa địa chỉ này?')) return;
+  const result = await Swal.fire({
+    title: 'Xác nhận xóa',
+    text: 'Bạn có chắc muốn xóa địa chỉ này?',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Xóa',
+    cancelButtonText: 'Hủy',
+    confirmButtonColor: '#d33',
+  });
+  if (!result.isConfirmed) return;
   try {
     await apiClient.delete(`/api/client/account/addresses/${id}`);
     addresses.value = addresses.value.filter(a => a.id !== id);
   } catch (err) {
-    alert(err.userMessage || 'Xóa thất bại!');
+    Swal.fire('Lỗi', err.userMessage || 'Xóa thất bại!', 'error');
   }
 };
 

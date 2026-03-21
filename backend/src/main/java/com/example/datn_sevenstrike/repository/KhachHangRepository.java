@@ -20,6 +20,8 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, Integer> {
     // ✅ AuthService dùng
     Optional<KhachHang> findByTenTaiKhoanAndXoaMemFalse(String tenTaiKhoan);
 
+    Optional<KhachHang> findByEmailAndXoaMemFalse(String email);
+
     // ✅ Validate trùng (nếu DB có unique filtered theo xoa_mem)
     boolean existsByTenTaiKhoanAndXoaMemFalse(String tenTaiKhoan);
 

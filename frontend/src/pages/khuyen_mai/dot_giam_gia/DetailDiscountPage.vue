@@ -400,6 +400,7 @@
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { discountService } from "@/services/khuyen_mai/dot_giam_gia/discountService.js";
+import Swal from "sweetalert2";
 
 const route = useRoute();
 const router = useRouter();
@@ -772,10 +773,18 @@ const toggleAllVariants = (e) => {
   }
 };
 
-const removeAll = () => {
-  if (confirm("Bạn có chắc muốn bỏ chọn tất cả sản phẩm?")) {
+const removeAll = async () => {
+  const result = await Swal.fire({
+    title: "Xác nhận",
+    text: "Bạn có chắc muốn bỏ chọn tất cả sản phẩm?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: "Xác nhận",
+    cancelButtonText: "Hủy",
+  });
+  if (result.isConfirmed) {
     selectedVariantIds.value = [];
-    alert("Danh sách sản phẩm đã được làm trống.");
+    Swal.fire("Thông báo", "Danh sách sản phẩm đã được làm trống.", "info");
   }
 };
 
@@ -783,14 +792,35 @@ const clearDetailFilters = () => {
   Object.keys(detailFilters).forEach((k) => (detailFilters[k] = ""));
 };
 
+const hasSpecialChar = (val) => /[@#$!&*=+|\\/<>?";:`~\[\]{}^]/.test(val ?? "");
+
 const submitUpdate = async () => {
-  if (!formData.tenDotGiamGia || !formData.ngayBatDau || !formData.ngayKetThuc) {
-    alert("Vui lòng nhập đủ thông tin đợt giảm giá");
+  const ten = formData.tenDotGiamGia?.trim() ?? "";
+  if (!ten) {
+    Swal.fire("Thông báo", "Vui lòng nhập tên đợt giảm giá.", "warning");
+    return;
+  }
+  if (ten.length < 5 || ten.length > 100) {
+    Swal.fire("Thông báo", "Tên đợt giảm giá phải có từ 5 đến 100 ký tự.", "warning");
+    return;
+  }
+  if (hasSpecialChar(ten)) {
+    Swal.fire("Thông báo", "Tên đợt giảm giá không được chứa ký tự đặc biệt.", "warning");
+    return;
+  }
+  if (!formData.ngayBatDau || !formData.ngayKetThuc) {
+    Swal.fire("Thông báo", "Vui lòng nhập đủ thông tin đợt giảm giá.", "warning");
+    return;
+  }
+  const giaTriNum = Number(formData.giaTriGiamGia);
+  if (formData.giaTriGiamGia === null || formData.giaTriGiamGia === "" || Number.isNaN(giaTriNum) || giaTriNum < 1 || giaTriNum > 100) {
+    Swal.fire("Thông báo", "Giá trị giảm phải nằm trong khoảng 1 - 100 (%).", "warning");
     return;
   }
 
   if (selectedVariantIds.value.length === 0) {
-    if (!confirm("Đợt giảm giá này chưa chọn sản phẩm nào. Bạn có chắc muốn lưu không?")) return;
+    Swal.fire("Thông báo", "Vui lòng chọn ít nhất một sản phẩm áp dụng.", "warning");
+    return;
   }
 
   const payload = { ...formData, idChiTietSanPhams: selectedVariantIds.value };
@@ -798,25 +828,34 @@ const submitUpdate = async () => {
   try {
     isLoading.value = true;
     await discountService.update(discountId, payload);
-    alert("Cập nhật đợt giảm giá thành công!");
+    await Swal.fire("Thành công", "Cập nhật đợt giảm giá thành công!", "success");
     goBack();
   } catch (e) {
-    alert("Lỗi cập nhật: " + (e.response?.data?.message || e.message));
+    Swal.fire("Lỗi", "Lỗi cập nhật: " + (e.response?.data?.message || e.message), "error");
   } finally {
     isLoading.value = false;
   }
 };
 
 const softDelete = async () => {
-  if (!confirm("Bạn muốn xóa đợt giảm giá này? Hành động này không thể hoàn tác!")) return;
+  const result = await Swal.fire({
+    title: "Xác nhận xóa",
+    text: "Bạn muốn xóa đợt giảm giá này? Hành động này không thể hoàn tác!",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Xóa",
+    cancelButtonText: "Hủy",
+    confirmButtonColor: "#d33",
+  });
+  if (!result.isConfirmed) return;
 
   try {
     isLoading.value = true;
     await discountService.delete(discountId);
-    alert("Đợt giảm giá đã được xóa thành công.");
+    await Swal.fire("Thành công", "Đợt giảm giá đã được xóa thành công.", "success");
     goBack();
   } catch (e) {
-    alert("Lỗi xóa: " + (e.response?.data?.message || e.message));
+    Swal.fire("Lỗi", "Lỗi xóa: " + (e.response?.data?.message || e.message), "error");
   } finally {
     isLoading.value = false;
   }
@@ -877,7 +916,7 @@ const loadData = async () => {
     }
   } catch (e) {
     console.error("Lỗi tải dữ liệu chi tiết: ", e);
-    alert("Lỗi: Không thể tải dữ liệu đợt giảm giá.");
+    Swal.fire("Lỗi", "Không thể tải dữ liệu đợt giảm giá.", "error");
   } finally {
     isLoading.value = false;
   }

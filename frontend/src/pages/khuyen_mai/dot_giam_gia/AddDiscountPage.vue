@@ -34,6 +34,15 @@
               placeholder="Nhập tên đợt..."
               :disabled="isLoading"
             />
+            <div
+              class="hint"
+              v-if="formData.tenDotGiamGia?.trim().length > 0 && (formData.tenDotGiamGia.trim().length < 5 || formData.tenDotGiamGia.trim().length > 100)"
+            >
+              Tên đợt giảm giá phải có từ 5 đến 100 ký tự.
+            </div>
+            <div class="hint" v-if="hasSpecialChar(formData.tenDotGiamGia)">
+              Tên đợt giảm giá không được chứa ký tự đặc biệt.
+            </div>
           </div>
 
           <!-- ✅ BỎ PHẦN CHỌN LOẠI GIẢM (mặc định giảm theo %) -->
@@ -676,6 +685,7 @@
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { discountService } from "@/services/khuyen_mai/dot_giam_gia/discountService";
 import { useRouter } from "vue-router";
+import Swal from "sweetalert2";
 
 const router = useRouter();
 
@@ -1307,8 +1317,13 @@ const dateError = computed(() => {
   return "";
 });
 
+const hasSpecialChar = (val) => /[@#$!&*=+|\\/<>?";:`~\[\]{}^]/.test(val ?? "");
+
 const canSubmit = computed(() => {
-  if (!formData.tenDotGiamGia?.trim()) return false;
+  const ten = formData.tenDotGiamGia?.trim() ?? "";
+  if (!ten) return false;
+  if (ten.length < 5 || ten.length > 100) return false;
+  if (hasSpecialChar(ten)) return false;
   if (!formData.ngayBatDau || !formData.ngayKetThuc) return false;
   if (dateError.value) return false;
   if (formData.giaTriGiamGia === null || formData.giaTriGiamGia === "") return false;
@@ -1319,12 +1334,13 @@ const canSubmit = computed(() => {
 
 const submitCreate = async () => {
   if (!canSubmit.value) {
-    alert("Vui lòng nhập đúng và đủ thông tin bắt buộc (tên, ngày, % giảm 1-100).");
+    Swal.fire("Thông báo", "Vui lòng nhập đúng và đủ thông tin bắt buộc (tên, ngày, % giảm 1-100).", "warning");
     return;
   }
 
   if (selectedVariantIds.value.length === 0) {
-    if (!confirm("Bạn chưa chọn sản phẩm nào. Tiếp tục tạo?")) return;
+    Swal.fire("Thông báo", "Vui lòng chọn ít nhất một sản phẩm áp dụng.", "warning");
+    return;
   }
 
   const payload = { ...formData, idChiTietSanPhams: selectedVariantIds.value };
@@ -1332,10 +1348,10 @@ const submitCreate = async () => {
   try {
     isLoading.value = true;
     await discountService.createDiscountComposite(payload);
-    alert("Tạo đợt giảm giá thành công!");
+    await Swal.fire("Thành công", "Tạo đợt giảm giá thành công!", "success");
     router.push("/admin/giam-gia/dot");
   } catch (e) {
-    alert("Lỗi tạo mới: " + (e.response?.data?.message || e.message));
+    Swal.fire("Lỗi", "Lỗi tạo mới: " + (e.response?.data?.message || e.message), "error");
   } finally {
     isLoading.value = false;
   }
@@ -1366,7 +1382,7 @@ const loadData = async () => {
     rawVariants.value = arr;
   } catch (e) {
     console.error("Lỗi tải dữ liệu sản phẩm: ", e);
-    alert("Lỗi: Không thể tải danh sách sản phẩm.");
+    Swal.fire("Lỗi", "Không thể tải danh sách sản phẩm.", "error");
   } finally {
     isLoading.value = false;
   }
