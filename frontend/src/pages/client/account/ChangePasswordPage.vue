@@ -46,11 +46,14 @@
           <div class="input-group">
             <span class="input-group-text bg-light border-end-0"><i class="bi bi-shield-lock text-muted"></i></span>
             <input
-              :type="showNew ? 'text' : 'password'"
-              class="form-control border-start-0 ps-0"
+              :type="showConfirm ? 'text' : 'password'"
+              class="form-control border-start-0 border-end-0 ps-0"
               v-model="confirmPassword"
               required
             >
+            <button class="btn btn-outline-secondary border-start-0" type="button" @click="showConfirm = !showConfirm" tabindex="-1">
+              <i :class="showConfirm ? 'bi bi-eye-slash' : 'bi bi-eye'" class="text-muted"></i>
+            </button>
           </div>
         </div>
         <button type="submit" class="btn text-white px-4" style="background-color: var(--ss-accent);" :disabled="saving">
@@ -74,6 +77,7 @@ const errorMsg = ref('');
 const confirmPassword = ref('');
 const showOld = ref(false);
 const showNew = ref(false);
+const showConfirm = ref(false);
 
 const form = reactive({
   matKhauCu: '',

@@ -67,12 +67,15 @@
               <div class="input-group">
                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-shield-lock text-muted"></i></span>
                 <input
-                  :type="showPassword ? 'text' : 'password'"
-                  class="form-control border-start-0 ps-0"
+                  :type="showConfirm ? 'text' : 'password'"
+                  class="form-control border-start-0 border-end-0 ps-0"
                   v-model="confirmPassword"
                   required
                   placeholder="Nhập lại mật khẩu"
                 >
+                <button class="btn btn-outline-secondary border-start-0" type="button" @click="showConfirm = !showConfirm" tabindex="-1">
+                  <i :class="showConfirm ? 'bi bi-eye-slash' : 'bi bi-eye'" class="text-muted"></i>
+                </button>
               </div>
             </div>
             <button
@@ -117,6 +120,7 @@ const confirmPassword = ref('');
 const loading = ref(false);
 const errorMsg = ref('');
 const showPassword = ref(false);
+const showConfirm = ref(false);
 
 const PHONE_VN = /^0[0-9]{9}$/;
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
