@@ -257,7 +257,7 @@
             </div>
           </div>
 
-          <div class="card ss-card mt-3">
+          <div class="card ss-card mt-3" v-if="!anLichSuThanhToanCOD">
             <div class="card-body payment-history-card">
               <h6 class="fw-bold mb-3">
                 <i class="bi bi-clock-history me-1"></i>
@@ -877,12 +877,18 @@ const loaiDonText = computed(() => {
   const type = selectedHD.value?.loaiDon;
   if (type === 1 || type === "1" || type === true) return "Giao hàng";
   if (type === 0 || type === "0" || type === false) return "Tại quầy";
-  return "Không xác định";
+  return "Online";
 });
 
 const isTaiQuay = computed(() => {
   const type = selectedHD.value?.loaiDon;
   return type === 0 || type === "0" || type === false;
+});
+
+const anLichSuThanhToanCOD = computed(() => {
+  const loaiTT = selectedHD.value?.loaiThanhToan;
+  const trangThai = Number(selectedHD.value?.trangThai ?? 1);
+  return loaiTT === 0 && trangThai >= 1 && trangThai <= 4;
 });
 
 const trangThaiHienTaiDungDeHienThi = computed(() => {
@@ -2058,6 +2064,7 @@ const loadChiTiet = async (id) => {
     diaChi: data.diaChiKhachHang ?? "",
     ghiChu: data.ghiChu ?? "",
     loaiDon: data.loaiDon,
+    loaiThanhToan: data.loaiThanhToan ?? null,
 
     tongTien: Number(data.tongTien ?? 0),
     giamGia: Number(data.tongTienGiam ?? 0),
