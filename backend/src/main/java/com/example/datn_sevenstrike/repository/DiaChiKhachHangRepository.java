@@ -3,7 +3,9 @@ package com.example.datn_sevenstrike.repository;
 import com.example.datn_sevenstrike.entity.DiaChiKhachHang;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.jpa.repository.*;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
@@ -27,5 +29,6 @@ public interface DiaChiKhachHangRepository extends JpaRepository<DiaChiKhachHang
            and d.macDinh = true
            and (:idKeep is null or d.id <> :idKeep)
     """)
-    int unsetDefaultOthers(@Param("idKhachHang") Integer idKhachHang, @Param("idKeep") Integer idKeep);
+    int unsetDefaultOthers(@Param("idKhachHang") Integer idKhachHang,
+                           @Param("idKeep") Integer idKeep);
 }

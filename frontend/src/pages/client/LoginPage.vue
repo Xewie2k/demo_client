@@ -18,7 +18,7 @@
 
           <form @submit.prevent="handleLogin">
             <div class="mb-3">
-              <label class="form-label small fw-semibold text-secondary">Tài khoản/Email</label>
+              <label class="form-label small fw-semibold text-secondary">Email / Tên tài khoản</label>
               <div class="input-group">
                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-person text-muted"></i></span>
                 <input
@@ -26,7 +26,7 @@
                   class="form-control border-start-0 ps-0"
                   v-model="username"
                   required
-                  placeholder="Nhập tài khoản hoặc email"
+                  placeholder="Nhập email hoặc tên tài khoản"
                   autofocus
                 >
               </div>
@@ -72,7 +72,6 @@
 import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useClientAuth } from '@/services/authClient';
-import Swal from 'sweetalert2';
 
 const router = useRouter();
 const route = useRoute();
@@ -87,21 +86,10 @@ const errorMsg = ref('');
 const showPassword = ref(false);
 
 const handleLogin = async () => {
-  errorMsg.value = '';
-  const identifier = username.value?.trim() ?? "";
-  if (!identifier) return (errorMsg.value = 'Vui lòng nhập tài khoản hoặc email.');
-  if (!password.value?.trim()) return (errorMsg.value = 'Vui lòng nhập mật khẩu.');
-
   loading.value = true;
+  errorMsg.value = '';
   try {
-    const result = await login(username.value, password.value);
-    await Swal.fire({
-      icon: 'success',
-      title: 'Đăng nhập thành công',
-      text: `Xin chào ${result?.hoTen || 'bạn'}!`,
-      timer: 1200,
-      showConfirmButton: false,
-    });
+    await login(username.value, password.value);
     const redirect = route.query.redirect || '/client';
     router.push(redirect);
   } catch (err) {

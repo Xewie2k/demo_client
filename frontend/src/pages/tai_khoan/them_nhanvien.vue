@@ -208,6 +208,11 @@ const onPickFile = (e) => {
     return;
   }
 
+  if (file.size > 5 * 1024 * 1024) {
+    alert("Ảnh vượt quá 5MB.");
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = () => {
     form.value.anhNhanVien = reader.result;
@@ -231,8 +236,8 @@ const removeVietnameseTones = (str) => {
 const buildUsername = (fullName) => {
   if (!fullName) return "";
   const noTone = removeVietnameseTones(fullName.trim().toLowerCase());
-  const parts = noTone.split(/\s+/);
-  const lastName = parts[parts.length - 1];
+  const parts = noTone.split(/\s+/).filter(Boolean);
+  const lastName = parts[parts.length - 1] || "";
   const initials = parts.slice(0, parts.length - 1).map((x) => x[0]).join("");
   return lastName + initials;
 };
@@ -390,11 +395,42 @@ onBeforeUnmount(() => {
 });
 
 const validate = () => {
-  if (!form.value.tenNhanVien) return "Chưa nhập tên nhân viên";
-  if (!form.value.email) return "Chưa nhập email";
-  if (!form.value.soDienThoai) return "Chưa nhập số điện thoại";
-  if (!form.value.idQuyenHan) return "Chưa chọn quyền hạn";
-  if (!addr.value.tinhCode || !addr.value.huyenCode || !addr.value.xaCode) return "Chưa chọn địa chỉ đầy đủ";
+  const tenNhanVien = String(form.value.tenNhanVien || "").trim();
+  const email = String(form.value.email || "").trim();
+  const soDienThoai = String(form.value.soDienThoai || "").trim();
+  const diaChiCuThe = String(form.value.diaChiCuThe || "").trim();
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneRegex = /^0(?:3|5|7|8|9)\d{8}$/;
+
+  if (!tenNhanVien || tenNhanVien.length < 5 || tenNhanVien.length > 100) {
+    return "Tên nhân viên không được để trống và phải từ 5 - 100 ký tự";
+  }
+
+  if (!email || email.length < 5 || email.length > 100 || !emailRegex.test(email)) {
+    return "Email không được để trống, độ dài từ 5 - 100 ký tự và phải đúng định dạng";
+  }
+
+  if (!soDienThoai || !phoneRegex.test(soDienThoai)) {
+    return "Số điện thoại không được để trống và phải đúng định dạng (10 số, bắt đầu bằng 03, 05, 07, 08, 09)";
+  }
+
+  if (!form.value.ngaySinh) {
+    return "Ngày sinh không được để trống";
+  }
+
+  if (!form.value.idQuyenHan) {
+    return "Quyền hạn không được để trống";
+  }
+
+  if (!addr.value.tinhCode || !addr.value.huyenCode || !addr.value.xaCode) {
+    return "Vui lòng chọn đầy đủ Tỉnh/Thành, Quận/Huyện, Xã/Phường";
+  }
+
+  if (!diaChiCuThe || diaChiCuThe.length < 5 || diaChiCuThe.length > 255) {
+    return "Địa chỉ cụ thể không được để trống và phải từ 5 - 255 ký tự";
+  }
+
   return "";
 };
 
@@ -413,6 +449,11 @@ const submit = async () => {
 
     const payload = {
       ...form.value,
+      tenNhanVien: String(form.value.tenNhanVien || "").trim(),
+      email: String(form.value.email || "").trim(),
+      soDienThoai: String(form.value.soDienThoai || "").trim(),
+      diaChiCuThe: String(form.value.diaChiCuThe || "").trim(),
+      ghiChu: String(form.value.ghiChu || "").trim() || null,
       idQuyenHan: Number(form.value.idQuyenHan),
       thanhPho: findName(provinces.value, addr.value.tinhCode),
       quan: findName(districts.value, addr.value.huyenCode),

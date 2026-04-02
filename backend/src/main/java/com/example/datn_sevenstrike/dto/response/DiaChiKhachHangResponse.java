@@ -14,7 +14,6 @@ public class DiaChiKhachHangResponse {
 
     private String maDiaChi;
     private String tenDiaChi;
-    private String soDienThoai;
 
     private String thanhPho;
     private String quan;

@@ -110,7 +110,6 @@
           <!-- TABLE -->
           <div class="table-responsive ss-kh-table-wrap">
             <table class="table table-hover align-middle mb-0 ss-kh-table">
-              <!-- ✅ chia đều cột + tránh tràn (bỏ cột "Gửi mail") -->
               <colgroup>
                 <col style="width: 40px" />
                 <col style="width: 14.2%" />
@@ -255,7 +254,6 @@
               </div>
             </div>
 
-            <!-- ✅ NÚT HỦY + TẠO MỚI/CẬP NHẬT -->
             <div class="d-flex justify-content-end gap-2 mt-3">
               <button @click="goBack" class="btn ss-btn-outline px-4 rounded-3" type="button" :disabled="isSaving || isSendingMail">
                 Hủy
@@ -308,7 +306,7 @@ const isSendingMail = ref(false);
 // filter
 const keywordTen = ref("");
 const keywordSdt = ref("");
-const filterTrangThai = ref(""); // "" | VIP | THUONG_XUYEN | MOI
+const filterTrangThai = ref("");
 
 // paging
 const pageNo = ref(1);
@@ -319,10 +317,10 @@ const form = ref({
   maPhieuGiamGia: "",
   tenPhieuGiamGia: "",
   moTa: "",
-  loaiPhieuGiamGia: false,
-  hinhThucGiam: false,
+  loaiPhieuGiamGia: false, // false = công khai, true = cá nhân
+  hinhThucGiam: false,     // false = VND, true = %
   giaTriGiamGia: 0,
-  soTienGiamToiDa: 0,
+  soTienGiamToiDa: null,
   soLuongSuDung: 0,
   hoaDonToiThieu: 0,
   ngayBatDau: new Date().toISOString().split("T")[0],
@@ -365,7 +363,6 @@ const formatTien = (v) => {
   return n.toLocaleString("vi-VN") + " ₫";
 };
 
-// map trạng thái khách hàng để lọc (không hiển thị cột trạng thái)
 const getLoaiKhachHangKey = (kh) => {
   const raw =
     getField(kh, ["trangThai", "loaiKhachHang", "phanLoai", "xepLoai", "capDo", "hang"], "") ||
@@ -384,7 +381,6 @@ const getLoaiKhachHangKey = (kh) => {
   return "MOI";
 };
 
-// chọn
 const selectedSet = computed(() => new Set(normalizeCustomerIds(selectedCustomerIds.value)));
 const isSelected = (id) => selectedSet.value.has(Number(id));
 
@@ -399,7 +395,6 @@ const toggleOne = (id, checked) => {
   }
 };
 
-// filter + paging
 const filteredCustomers = computed(() => {
   const ten = (keywordTen.value || "").trim().toLowerCase();
   const sdt = (keywordSdt.value || "").trim().toLowerCase();
@@ -446,12 +441,12 @@ const startIndex = computed(() => {
   if (totalItems.value === 0) return 0;
   return (pageNo.value - 1) * pageSize.value + 1;
 });
+
 const endIndex = computed(() => {
   if (totalItems.value === 0) return 0;
   return Math.min(pageNo.value * pageSize.value, totalItems.value);
 });
 
-// ✅ select all trong trang hiện tại
 const isAllPageChecked = computed(() => {
   if (pagedCustomers.value.length === 0) return false;
   return pagedCustomers.value.every((x) => isSelected(x.id));
@@ -501,7 +496,6 @@ const clearFilter = () => {
   filterTrangThai.value = "";
 };
 
-// selected list
 const selectedCustomers = computed(() => {
   const ids = normalizeCustomerIds(selectedCustomerIds.value);
   const map = new Map((customers.value || []).map((x) => [Number(x.id), x]));
@@ -515,13 +509,11 @@ const selectedCustomers = computed(() => {
   });
 });
 
-// ========================= THỐNG KÊ 3 CỘT =========================
 const loadThongKeForCustomers = async (list) => {
   const arr = Array.isArray(list) ? list : [];
   const ids = normalizeCustomerIds(arr.map((x) => x.id));
   if (ids.length === 0) return;
 
-  // ✅ gọi theo từng KH (ít KH thì ổn, khỏi cần batch)
   await Promise.all(
     ids.map(async (id) => {
       try {
@@ -531,18 +523,16 @@ const loadThongKeForCustomers = async (list) => {
         const idx = arr.findIndex((x) => Number(x.id) === Number(id));
         if (idx < 0) return;
 
-        // BE trả BigDecimal có thể là string => để nguyên, formatTien sẽ Number(...) được
         arr[idx].tongChiTieu = data.tongChiTieu ?? 0;
         arr[idx].soDonHang = data.soDonHang ?? 0;
         arr[idx].donHangGanNhat = data.donHangGanNhat ?? null;
       } catch {
-        // ignore để không phá UI
+        // ignore
       }
     })
   );
 };
 
-// ========================= GỬI MAIL (AUTO SAU KHI LƯU) =========================
 const sendVoucherMail = async (voucherId, ids) => {
   const uniqueIds = normalizeCustomerIds(ids);
   const res = await axios.post(`${API_BASE}/phieu-giam-gia/${voucherId}/gui-mail`, {
@@ -555,7 +545,6 @@ const sendVoucherMail = async (voucherId, ids) => {
   return { guiThanhCong, boQua };
 };
 
-// ====== LOAD DATA ======
 const reloadCustomers = async () => {
   loadingCustomers.value = true;
   try {
@@ -563,7 +552,6 @@ const reloadCustomers = async () => {
     const list = Array.isArray(cRes.data) ? cRes.data : cRes.data?.content || [];
     customers.value = list;
 
-    // ✅ bơm 3 cột thống kê
     await loadThongKeForCustomers(customers.value);
   } catch (e) {
     console.error("Lỗi load khách hàng:", e);
@@ -583,7 +571,7 @@ const loadData = async () => {
     const data = vRes.data || {};
 
     const loaiCaNhan = data.loaiPhieuGiamGia === true || Number(data.loaiPhieuGiamGia) === 1;
-    const isPercent = Number(data.giaTriGiamGia || 0) > 0;
+    const isPercent = data.soTienGiamToiDa !== null && data.soTienGiamToiDa !== undefined;
 
     form.value = {
       ...form.value,
@@ -592,7 +580,7 @@ const loadData = async () => {
       loaiPhieuGiamGia: loaiCaNhan,
       hinhThucGiam: isPercent,
       giaTriGiamGia: Number(data.giaTriGiamGia || 0),
-      soTienGiamToiDa: Number(data.soTienGiamToiDa || 0),
+      soTienGiamToiDa: isPercent ? Number(data.soTienGiamToiDa || 0) : null,
       soLuongSuDung: Number(data.soLuongSuDung || 0),
       hoaDonToiThieu: Number(data.hoaDonToiThieu || 0),
       trangThai: data.trangThai === true || Number(data.trangThai) === 1,
@@ -610,7 +598,6 @@ const loadData = async () => {
   }
 };
 
-// ====== SAVE ======
 const handleSave = async () => {
   if (isLocked.value) return;
 
@@ -621,8 +608,16 @@ const handleSave = async () => {
   if (!form.value.ngayBatDau || !form.value.ngayKetThuc) {
     return Swal.fire("Thông báo", "Vui lòng chọn đủ ngày bắt đầu/kết thúc", "warning");
   }
+
   if (new Date(form.value.ngayKetThuc) < new Date(form.value.ngayBatDau)) {
     return Swal.fire("Thông báo", "Ngày kết thúc phải >= ngày bắt đầu", "warning");
+  }
+
+  if (form.value.hinhThucGiam) {
+    const soTienGiamToiDa = Number(form.value.soTienGiamToiDa || 0);
+    if (!Number.isFinite(soTienGiamToiDa) || soTienGiamToiDa <= 0) {
+      return Swal.fire("Thông báo", "Vui lòng nhập số tiền giảm tối đa cho phiếu giảm %", "warning");
+    }
   }
 
   const uniqueCustomerIds = normalizeCustomerIds(selectedCustomerIds.value);
@@ -637,7 +632,7 @@ const handleSave = async () => {
       moTa: (form.value.moTa || "").trim(),
       loaiPhieuGiamGia: !!form.value.loaiPhieuGiamGia,
       giaTriGiamGia: Number(form.value.giaTriGiamGia || 0),
-      soTienGiamToiDa: Number(form.value.soTienGiamToiDa || 0),
+      soTienGiamToiDa: form.value.hinhThucGiam ? Number(form.value.soTienGiamToiDa || 0) : null,
       hoaDonToiThieu: Number(form.value.hoaDonToiThieu || 0),
       soLuongSuDung: form.value.loaiPhieuGiamGia
         ? uniqueCustomerIds.length
@@ -662,7 +657,6 @@ const handleSave = async () => {
 
     if (savedId) form.value.id = savedId;
 
-    // ✅ AUTO GỬI MAIL cho phiếu cá nhân (BE đã xử lý chống trùng + cho phép gửi lại nếu voucher thay đổi)
     if (form.value.loaiPhieuGiamGia && savedId) {
       isSendingMail.value = true;
       try {
@@ -695,7 +689,6 @@ const handleSave = async () => {
   }
 };
 
-// ====== DELETE ======
 const handleDelete = async () => {
   const result = await Swal.fire({
     title: "Xác nhận xóa?",
@@ -716,7 +709,6 @@ const handleDelete = async () => {
   }
 };
 
-// đổi công khai <-> cá nhân
 watch(
   () => form.value.loaiPhieuGiamGia,
   (isCaNhan) => {
@@ -727,11 +719,23 @@ watch(
   }
 );
 
+watch(
+  () => form.value.hinhThucGiam,
+  (isPercent) => {
+    if (isPercent) {
+      if (form.value.soTienGiamToiDa == null) {
+        form.value.soTienGiamToiDa = 0;
+      }
+    } else {
+      form.value.soTienGiamToiDa = null;
+    }
+  }
+);
+
 onMounted(loadData);
 </script>
 
 <style scoped>
-/* lock */
 .locked-content {
   opacity: 0.6;
   pointer-events: none;
@@ -743,13 +747,11 @@ onMounted(loadData);
   pointer-events: auto;
 }
 
-/* title */
 .ss-page-title {
   font-weight: 500;
   letter-spacing: 0.5px;
 }
 
-/* shared */
 .ss-muted {
   color: rgba(17, 24, 39, 0.7);
   font-weight: 400;
@@ -761,7 +763,6 @@ onMounted(loadData);
   text-overflow: ellipsis;
 }
 
-/* buttons */
 .ss-btn-outline {
   background: #fff;
   color: #111827;
@@ -790,7 +791,6 @@ onMounted(loadData);
   border-radius: 10px;
 }
 
-/* filter inputs */
 .ss-kh-filter .ss-input {
   width: 210px;
   max-width: 100%;
@@ -809,7 +809,6 @@ onMounted(loadData);
   width: 90px;
 }
 
-/* table compact + not bold */
 .ss-kh-table-wrap {
   border: 1px solid rgba(17, 24, 39, 0.08);
   border-radius: 12px;
@@ -831,7 +830,6 @@ onMounted(loadData);
   font-weight: 400;
 }
 
-/* pagination gọn như mẫu */
 .ss-pagination .page-link {
   min-width: 36px;
   height: 36px;
@@ -850,7 +848,6 @@ onMounted(loadData);
   color: #fff;
 }
 
-/* selected list */
 .ss-selected-title {
   display: inline-flex;
   padding: 8px 12px;

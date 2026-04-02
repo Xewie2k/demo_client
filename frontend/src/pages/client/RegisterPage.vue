@@ -25,13 +25,6 @@
               </div>
             </div>
             <div class="mb-3">
-              <label class="form-label small fw-semibold text-secondary">Tên tài khoản <span class="text-danger">*</span></label>
-              <div class="input-group">
-                <span class="input-group-text bg-light border-end-0"><i class="bi bi-at text-muted"></i></span>
-                <input type="text" class="form-control border-start-0 ps-0" v-model="form.tenTaiKhoan" required placeholder="vd: nguyen_van_a (ít nhất 4 ký tự)">
-              </div>
-            </div>
-            <div class="mb-3">
               <label class="form-label small fw-semibold text-secondary">Email <span class="text-danger">*</span></label>
               <div class="input-group">
                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope text-muted"></i></span>
@@ -67,15 +60,12 @@
               <div class="input-group">
                 <span class="input-group-text bg-light border-end-0"><i class="bi bi-shield-lock text-muted"></i></span>
                 <input
-                  :type="showConfirm ? 'text' : 'password'"
-                  class="form-control border-start-0 border-end-0 ps-0"
+                  :type="showPassword ? 'text' : 'password'"
+                  class="form-control border-start-0 ps-0"
                   v-model="confirmPassword"
                   required
                   placeholder="Nhập lại mật khẩu"
                 >
-                <button class="btn btn-outline-secondary border-start-0" type="button" @click="showConfirm = !showConfirm" tabindex="-1">
-                  <i :class="showConfirm ? 'bi bi-eye-slash' : 'bi bi-eye'" class="text-muted"></i>
-                </button>
               </div>
             </div>
             <button
@@ -103,7 +93,6 @@
 import { ref, reactive } from 'vue';
 import { useRouter } from 'vue-router';
 import { useClientAuth } from '@/services/authClient';
-import Swal from 'sweetalert2';
 
 const router = useRouter();
 const { register } = useClientAuth();
@@ -112,7 +101,6 @@ import logoUrl from '@/assets/images/logo/Logo_SevenStrike.png';
 
 const form = reactive({
   tenKhachHang: '',
-  tenTaiKhoan: '',
   email: '',
   soDienThoai: '',
   matKhau: '',
@@ -121,51 +109,18 @@ const confirmPassword = ref('');
 const loading = ref(false);
 const errorMsg = ref('');
 const showPassword = ref(false);
-const showConfirm = ref(false);
-
-const PHONE_VN = /^0[0-9]{9}$/;
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const NAME_RE  = /^[\p{L}\s]+$/u;
-const USERNAME_RE = /^\w{4,}$/;
 
 const handleRegister = async () => {
   errorMsg.value = '';
 
-  const ten = form.tenKhachHang?.trim() ?? "";
-  if (!ten) return (errorMsg.value = 'Vui lòng nhập họ và tên.');
-  if (!NAME_RE.test(ten)) return (errorMsg.value = 'Họ tên chỉ được chứa chữ cái, không được chứa số hoặc ký tự đặc biệt.');
-
-  const tenTaiKhoan = form.tenTaiKhoan?.trim() ?? "";
-  if (!tenTaiKhoan) return (errorMsg.value = 'Vui lòng nhập tên tài khoản.');
-  if (!USERNAME_RE.test(tenTaiKhoan))
-    return (errorMsg.value = 'Tên tài khoản chỉ gồm chữ cái, số, dấu gạch dưới và ít nhất 4 ký tự.');
-
-  const email = form.email?.trim() ?? "";
-  if (!email) return (errorMsg.value = 'Vui lòng nhập email.');
-  if (!EMAIL_RE.test(email)) return (errorMsg.value = 'Email không đúng định dạng (VD: abc@gmail.com).');
-
-  if (form.soDienThoai?.trim() && !PHONE_VN.test(form.soDienThoai.trim()))
-    return (errorMsg.value = 'Số điện thoại phải bắt đầu bằng 0 và gồm đúng 10 chữ số.');
-
-  if (!form.matKhau || form.matKhau.length < 6)
-    return (errorMsg.value = 'Mật khẩu phải có ít nhất 6 ký tự.');
-
-  if (!confirmPassword.value)
-    return (errorMsg.value = 'Vui lòng nhập xác nhận mật khẩu.');
-  if (form.matKhau !== confirmPassword.value)
-    return (errorMsg.value = 'Mật khẩu xác nhận không khớp!');
+  if (form.matKhau !== confirmPassword.value) {
+    errorMsg.value = 'Mật khẩu xác nhận không khớp!';
+    return;
+  }
 
   loading.value = true;
   try {
     await register(form);
-    await Swal.fire({
-      icon: 'success',
-      title: 'Đăng ký thành công!',
-      text: 'Chào mừng bạn đến với SevenStrike',
-      confirmButtonColor: '#d33',
-      timer: 2000,
-      timerProgressBar: true,
-    });
     router.push('/client');
   } catch (err) {
     errorMsg.value = err.userMessage || err.response?.data || 'Đăng ký thất bại!';

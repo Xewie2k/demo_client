@@ -2347,12 +2347,14 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .ss-btn-lite {
-  background: #f3f4f6 !important;
-  color: rgba(17, 24, 39, 0.88) !important;
-  border: 1px solid rgba(17, 24, 39, 0.1) !important;
+  background: #fff !important;
+  color: #ff4d4f !important;
+  border: 1px solid rgba(255, 77, 79, 0.26) !important;
+  box-shadow: 0 8px 18px rgba(255, 77, 79, 0.06);
 }
 .ss-btn-lite:hover {
-  background: #eef0f3 !important;
+  background: rgba(255, 77, 79, 0.06) !important;
+  border-color: rgba(255, 77, 79, 0.36) !important;
 }
 
 .ss-font,
@@ -2363,6 +2365,17 @@ onBeforeUnmount(() => {
 .ss-font {
   font-family: inherit;
   color: rgba(17, 24, 39, 0.82);
+}
+
+:root {
+  --ss-brand-red: #ff4d4f;
+  --ss-brand-red-dark: #e13c3f;
+  --ss-brand-ink: #111827;
+  --ss-brand-soft: rgba(255, 77, 79, 0.08);
+  --ss-brand-soft-2: rgba(255, 77, 79, 0.12);
+  --ss-brand-border: rgba(255, 77, 79, 0.22);
+  --ss-text-main: rgba(17, 24, 39, 0.88);
+  --ss-text-muted: rgba(17, 24, 39, 0.55);
 }
 
 .material-icons,
@@ -2389,20 +2402,20 @@ onBeforeUnmount(() => {
   background: #fff;
 }
 .ss-toast-success {
-  border-left: 4px solid #22c55e;
+  border-left: 5px solid var(--ss-brand-red);
 }
 .ss-toast-error {
-  border-left: 4px solid #ff4d4f;
+  border-left: 5px solid #dc2626;
 }
 .ss-toast-icon {
   font-size: 20px;
   margin-top: 1px;
 }
 .ss-toast-success .ss-toast-icon {
-  color: #22c55e;
+  color: var(--ss-brand-red);
 }
 .ss-toast-error .ss-toast-icon {
-  color: #ff4d4f;
+  color: #dc2626;
 }
 .ss-toast-text {
   flex: 1;
@@ -2411,18 +2424,24 @@ onBeforeUnmount(() => {
   line-height: 1.5;
 }
 .ss-toast-close {
-  width: 26px;
-  height: 26px;
-  border-radius: 999px;
+  width: 30px;
+  height: 30px;
   border: none;
   background: transparent;
+  color: rgba(17, 24, 39, 0.5);
+  border-radius: 8px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: 0.18s ease;
+}
+.ss-toast-close:hover {
+  background: rgba(17, 24, 39, 0.05);
+  color: rgba(17, 24, 39, 0.8);
 }
 .ss-toast-close .material-icons-outlined {
   font-size: 18px;
-  color: rgba(17, 24, 39, 0.55);
+  color: inherit;
 }
 .ss-toast-fade-enter-active,
 .ss-toast-fade-leave-active {
@@ -2570,29 +2589,36 @@ onBeforeUnmount(() => {
 .ss-btn-primary:hover {
   filter: brightness(0.98);
 }
-.ss-btn-warn {
-  border: none !important;
-  background: #ff7a45 !important;
-  color: #fff !important;
-}
-.ss-btn-warn:hover {
-  filter: brightness(0.98);
-}
+.ss-btn-lite,
+.ss-btn-warn,
 .ss-btn-dark {
-  background: #4b5563 !important;
-  color: #fff !important;
-  border: none !important;
+  background: rgba(255, 77, 79, 0.06) !important;
+  color: #ff4d4f !important;
+  border: 1px solid rgba(255, 77, 79, 0.26) !important;
+  box-shadow: 0 8px 18px rgba(255, 77, 79, 0.06);
 }
-.ss-btn-dark:hover {
-  filter: brightness(0.98);
+
+.ss-btn-lite:hover:not(:disabled),
+.ss-btn-warn:hover:not(:disabled),
+.ss-btn-dark:hover:not(:disabled) {
+  background: rgba(255, 77, 79, 0.1) !important;
+  border-color: rgba(255, 77, 79, 0.36) !important;
+}
+
+.ss-btn-lite .material-icons-outlined,
+.ss-btn-warn .material-icons-outlined,
+.ss-btn-dark .material-icons-outlined {
+  color: inherit !important;
 }
 .ss-btn-outline {
   background: #fff !important;
-  color: rgba(17, 24, 39, 0.88) !important;
-  border: 1px solid rgba(17, 24, 39, 0.18) !important;
+  color: #ff4d4f !important;
+  border: 1px solid rgba(255, 77, 79, 0.26) !important;
+  box-shadow: 0 8px 18px rgba(255, 77, 79, 0.06);
 }
 .ss-btn-outline:hover {
-  background: rgba(17, 24, 39, 0.04) !important;
+  background: rgba(255, 77, 79, 0.06) !important;
+  border-color: rgba(255, 77, 79, 0.36) !important;
 }
 
 /* LIST */
@@ -2755,7 +2781,7 @@ onBeforeUnmount(() => {
   height: 36px;
   border-radius: 10px;
   background: #fff;
-  border: 1px solid rgba(17, 24, 39, 0.14);
+  border: 1px solid rgba(255, 77, 79, 0.18);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2764,11 +2790,11 @@ onBeforeUnmount(() => {
 }
 .ss-icon-btn-view .material-icons-outlined {
   font-size: 20px;
-  color: rgba(17, 24, 39, 0.88);
+  color: rgba(180, 35, 36, 0.95);
 }
 .ss-icon-btn-view:hover {
-  background: rgba(17, 24, 39, 0.04);
-  border-color: rgba(17, 24, 39, 0.22);
+  background: rgba(255, 77, 79, 0.06);
+  border-color: rgba(255, 77, 79, 0.3);
 }
 
 .ss-price-hint {
@@ -2968,18 +2994,21 @@ onBeforeUnmount(() => {
   width: 34px;
   height: 34px;
   border-radius: 10px;
-  border: 1px solid rgba(17, 24, 39, 0.14);
+  border: 1px solid rgba(255, 77, 79, 0.18);
   background: #fff;
+  color: rgba(180, 35, 36, 0.95);
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: 0.16s ease;
 }
 .ss-xbtn .material-icons-outlined {
   font-size: 18px;
-  color: rgba(17, 24, 39, 0.8);
+  color: inherit;
 }
 .ss-xbtn:hover {
-  background: rgba(17, 24, 39, 0.04);
+  background: rgba(255, 77, 79, 0.06);
+  border-color: rgba(255, 77, 79, 0.28);
 }
 
 .ss-alert {
@@ -3097,13 +3126,15 @@ onBeforeUnmount(() => {
 .ss-mini-btn {
   border-radius: 10px;
   padding: 7px 10px;
-  border: 1px solid rgba(17, 24, 39, 0.14);
+  border: 1px solid rgba(255, 77, 79, 0.26);
   background: #fff;
-  color: rgba(17, 24, 39, 0.86);
+  color: #ff4d4f;
+  box-shadow: 0 8px 18px rgba(255, 77, 79, 0.06);
   gap: 8px;
 }
 .ss-mini-btn:hover {
-  background: rgba(17, 24, 39, 0.04);
+  background: rgba(255, 77, 79, 0.06);
+  border-color: rgba(255, 77, 79, 0.36);
 }
 
 .ss-qr-wrap {
@@ -3169,14 +3200,16 @@ onBeforeUnmount(() => {
   object-fit: contain;
 }
 .ss-btn-img {
-  border: none !important;
-  background: #ff7a45 !important;
-  color: #fff !important;
+  background: #fff !important;
+  color: #ff4d4f !important;
+  border: 1px solid rgba(255, 77, 79, 0.26) !important;
   border-radius: 10px !important;
+  box-shadow: 0 8px 18px rgba(255, 77, 79, 0.06);
   padding: 8px 14px !important;
 }
 .ss-btn-img:hover {
-  filter: brightness(0.98);
+  background: rgba(255, 77, 79, 0.06) !important;
+  border-color: rgba(255, 77, 79, 0.36) !important;
 }
 .ss-img-note {
   font-size: 11px;

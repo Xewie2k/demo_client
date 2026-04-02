@@ -1,4 +1,4 @@
-<!-- src/pages/product/ProductEditPage.vue -->
+<!-- File: src/pages/product/ProductEditPage.vue -->
 <template>
   <div class="ss-page">
     <!-- HEAD -->
@@ -7,14 +7,12 @@
 
       <div class="d-flex gap-2">
         <button class="btn btn-outline-dark ss-btn" type="button" @click="back">Quay lại</button>
-        <!-- ✅ đổi sang mở confirm -->
         <button class="btn btn-dark ss-btn" type="button" :disabled="loading" @click="openConfirmSave">
           Lưu
         </button>
       </div>
     </div>
 
-    <!-- ✅ bọc form để chặn submit ngầm (Enter) -->
     <form @submit.prevent="openConfirmSave">
       <div class="row g-3">
         <div class="col-lg-12">
@@ -82,7 +80,7 @@
                 <v-select
                   v-model="selectedViTriThiDau"
                   :options="viTriThiDauOptions"
-                  :getOptionLabel="(o) => o?.tenViTriThiDau ?? o?.ten ?? ''"
+                  :get-option-label="(o) => o?.tenViTriThiDau ?? o?.tenViTri ?? o?.ten ?? ''"
                   placeholder="Chọn vị trí..."
                 />
               </div>
@@ -92,7 +90,7 @@
                 <v-select
                   v-model="selectedPhongCachChoi"
                   :options="phongCachChoiOptions"
-                  :getOptionLabel="(o) => o?.tenPhongCachChoi ?? o?.ten ?? ''"
+                  :get-option-label="(o) => o?.tenPhongCachChoi ?? o?.tenPhongCach ?? o?.ten ?? ''"
                   placeholder="Chọn phong cách..."
                 />
               </div>
@@ -107,7 +105,6 @@
       </div>
     </form>
 
-    <!-- ✅ CONFIRM POPUP (CHẮC CHẮN HIỆN) -->
     <div v-if="confirmSave.open" class="ss-overlay" @click.self="closeConfirmSave">
       <div class="ss-confirm">
         <div class="ss-confirm-header">
@@ -183,7 +180,11 @@ function toastError(detail) {
 }
 
 function normalizeArr(res) {
-  return Array.isArray(res) ? res : res?.data ?? [];
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res?.data)) return res.data;
+  if (Array.isArray(res?.data?.data)) return res.data.data;
+  if (Array.isArray(res?.data?.content)) return res.data.content;
+  return [];
 }
 
 function back() {
@@ -191,26 +192,114 @@ function back() {
 }
 
 function openConfirmSave() {
-  // ✅ validate trước khi mở confirm
   if (!form.tenSanPham?.trim()) return toastError("Vui lòng nhập tên sản phẩm.");
   if (!selectedThuongHieu.value?.id) return toastError("Vui lòng chọn Thương hiệu.");
-
   confirmSave.open = true;
 }
 function closeConfirmSave() {
   confirmSave.open = false;
 }
 
+function pickTextByKeys(obj, keys = []) {
+  if (!obj) return "";
+  for (const k of keys) {
+    const v = obj?.[k];
+    if (v != null && String(v).trim() !== "") return String(v).trim();
+  }
+  return "";
+}
+
+function mergeOptionIntoList(listRef, option) {
+  const idNum = Number(option?.id);
+  if (!Number.isFinite(idNum) || idNum <= 0) return null;
+
+  const current = Array.isArray(listRef.value) ? listRef.value : [];
+  const existed = current.find((x) => Number(x?.id) === idNum);
+  if (existed) return existed;
+
+  listRef.value = [...current, option];
+  return option;
+}
+
+function buildOptionFromSource({
+  source,
+  currentId,
+  nestedKeys = [],
+  flatNameKeys = [],
+  preferredNameKey = "ten",
+}) {
+  if (!source) return null;
+
+  for (const nestedKey of nestedKeys) {
+    const nested = source?.[nestedKey];
+    if (nested && typeof nested === "object") {
+      return {
+        ...nested,
+        id: nested?.id ?? currentId,
+      };
+    }
+  }
+
+  const name = pickTextByKeys(source, flatNameKeys);
+  if (!name) return null;
+
+  return {
+    id: currentId,
+    [preferredNameKey]: name,
+    ten: name,
+    __inactive: true,
+  };
+}
+
+async function ensureCurrentOption({
+  currentId,
+  optionsRef,
+  fallbackGetter,
+  source = null,
+  nestedKeys = [],
+  flatNameKeys = [],
+  preferredNameKey = "ten",
+}) {
+  const idNum = Number(currentId);
+  if (!Number.isFinite(idNum) || idNum <= 0) return null;
+
+  const existed = (optionsRef.value || []).find((x) => Number(x?.id) === idNum);
+  if (existed) return existed;
+
+  const built = buildOptionFromSource({
+    source,
+    currentId: idNum,
+    nestedKeys,
+    flatNameKeys,
+    preferredNameKey,
+  });
+  if (built) {
+    return mergeOptionIntoList(optionsRef, built) || built;
+  }
+
+  if (typeof fallbackGetter !== "function") return null;
+
+  try {
+    const fullList = normalizeArr(await fallbackGetter());
+    const found = fullList.find((x) => Number(x?.id) === idNum) || null;
+    if (!found) return null;
+    return mergeOptionIntoList(optionsRef, found) || found;
+  } catch (e) {
+    console.warn("Không merge được option hiện tại:", e);
+    return null;
+  }
+}
+
 async function loadData() {
   loading.value = true;
   try {
     const [th, xx, cg, cl, vt, pc] = await Promise.all([
-      refDataService.getThuongHieu(),
-      refDataService.getXuatXu(),
-      refDataService.getCoGiay(),
-      refDataService.getChatLieu(),
-      refDataService.getViTriThiDau(),
-      refDataService.getPhongCachChoi(),
+      refDataService.getThuongHieuActive(),
+      refDataService.getXuatXuActive(),
+      refDataService.getCoGiayActive(),
+      refDataService.getChatLieuActive(),
+      refDataService.getViTriThiDauActive(),
+      refDataService.getPhongCachChoiActive(),
     ]);
 
     thuongHieuOptions.value = normalizeArr(th);
@@ -228,12 +317,65 @@ async function loadData() {
     form.tenSanPham = p.tenSanPham ?? p.ten ?? "";
     form.moTaNgan = p.moTaNgan ?? p.moTa ?? "";
 
-    selectedThuongHieu.value = thuongHieuOptions.value.find((x) => x.id === p.idThuongHieu) || null;
-    selectedXuatXu.value = xuatXuOptions.value.find((x) => x.id === p.idXuatXu) || null;
-    selectedCoGiay.value = coGiayOptions.value.find((x) => x.id === p.idCoGiay) || null;
-    selectedChatLieu.value = chatLieuOptions.value.find((x) => x.id === p.idChatLieu) || null;
-    selectedViTriThiDau.value = viTriThiDauOptions.value.find((x) => x.id === p.idViTriThiDau) || null;
-    selectedPhongCachChoi.value = phongCachChoiOptions.value.find((x) => x.id === p.idPhongCachChoi) || null;
+    selectedThuongHieu.value = await ensureCurrentOption({
+      currentId: p.idThuongHieu,
+      optionsRef: thuongHieuOptions,
+      fallbackGetter: refDataService.getThuongHieu,
+      source: p,
+      nestedKeys: ["thuongHieu"],
+      flatNameKeys: ["tenThuongHieu", "thuongHieuTen", "ten_thuong_hieu"],
+      preferredNameKey: "tenThuongHieu",
+    });
+
+    selectedXuatXu.value = await ensureCurrentOption({
+      currentId: p.idXuatXu,
+      optionsRef: xuatXuOptions,
+      fallbackGetter: refDataService.getXuatXu,
+      source: p,
+      nestedKeys: ["xuatXu"],
+      flatNameKeys: ["tenXuatXu", "xuatXuTen", "ten_xuat_xu"],
+      preferredNameKey: "tenXuatXu",
+    });
+
+    selectedCoGiay.value = await ensureCurrentOption({
+      currentId: p.idCoGiay,
+      optionsRef: coGiayOptions,
+      fallbackGetter: refDataService.getCoGiay,
+      source: p,
+      nestedKeys: ["coGiay"],
+      flatNameKeys: ["tenCoGiay", "coGiayTen", "ten_co_giay"],
+      preferredNameKey: "tenCoGiay",
+    });
+
+    selectedChatLieu.value = await ensureCurrentOption({
+      currentId: p.idChatLieu,
+      optionsRef: chatLieuOptions,
+      fallbackGetter: refDataService.getChatLieu,
+      source: p,
+      nestedKeys: ["chatLieu"],
+      flatNameKeys: ["tenChatLieu", "chatLieuTen", "ten_chat_lieu"],
+      preferredNameKey: "tenChatLieu",
+    });
+
+    selectedViTriThiDau.value = await ensureCurrentOption({
+      currentId: p.idViTriThiDau,
+      optionsRef: viTriThiDauOptions,
+      fallbackGetter: refDataService.getViTriThiDau,
+      source: p,
+      nestedKeys: ["viTriThiDau", "viTri"],
+      flatNameKeys: ["tenViTriThiDau", "tenViTri", "viTriThiDauTen", "ten_vi_tri_thi_dau"],
+      preferredNameKey: "tenViTriThiDau",
+    });
+
+    selectedPhongCachChoi.value = await ensureCurrentOption({
+      currentId: p.idPhongCachChoi,
+      optionsRef: phongCachChoiOptions,
+      fallbackGetter: refDataService.getPhongCachChoi,
+      source: p,
+      nestedKeys: ["phongCachChoi"],
+      flatNameKeys: ["tenPhongCachChoi", "tenPhongCach", "phongCachChoiTen", "ten_phong_cach_choi"],
+      preferredNameKey: "tenPhongCachChoi",
+    });
   } catch (e) {
     console.error(e);
     toastError("Không tải được dữ liệu sản phẩm.");
@@ -243,7 +385,6 @@ async function loadData() {
 }
 
 async function confirmAndSubmit() {
-  // đóng confirm trước để tránh double click/lag
   confirmSave.open = false;
 
   const payload = {
@@ -279,7 +420,6 @@ onMounted(loadData);
 .ss-btn { border-radius: 10px; padding: 10px 14px; }
 .ss-card-title { font-weight: 700; }
 
-/* overlay giống chuẩn dự án */
 .ss-overlay {
   position: fixed;
   inset: 0;
@@ -290,7 +430,6 @@ onMounted(loadData);
   z-index: 4000;
 }
 
-/* confirm box */
 .ss-confirm {
   width: 520px;
   background: #fff;
@@ -320,7 +459,6 @@ onMounted(loadData);
   border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-/* nút primary theo palette SevenStrike */
 .btn-primary {
   border: none !important;
   background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%) !important;

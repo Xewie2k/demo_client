@@ -337,11 +337,6 @@ const discountBadgeStyle = (pct) => pct > 70 ? 'background-color:#FF6B00;font-si
 
 const handleAddToCart = () => {
   if (!selectedVariant.value) return;
-  if (!quantity.value || quantity.value < 1) {
-    quantity.value = 1;
-    Swal.fire({ icon: 'warning', title: 'Thông báo', text: 'Số lượng phải ít nhất là 1.' });
-    return;
-  }
   addToCart(product.value, selectedVariant.value, quantity.value);
 
   Swal.fire({
@@ -365,10 +360,6 @@ onMounted(fetchProduct);
 watch(() => props.id, fetchProduct);
 
 watch([quantity, selectedVariant], ([newQty, newVariant]) => {
-  if (newQty !== null && newQty !== '' && newQty < 1) {
-    quantity.value = 1;
-    return;
-  }
   if (newVariant && newQty > newVariant.soLuong) {
     Swal.fire({
       icon: 'warning',

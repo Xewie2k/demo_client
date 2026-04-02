@@ -17,6 +17,14 @@
       </div>
     </div>
 
+    <div v-if="toast.show" class="ss-page-toast" :class="toast.type">
+      <span class="material-icons-outlined ss-page-toast-ic">
+        {{ toast.type === "success" ? "check_circle" : toast.type === "error" ? "error" : "info" }}
+      </span>
+      <div class="ss-page-toast-msg">{{ toast.msg }}</div>
+      <button class="ss-page-toast-x" type="button" @click="toast.show = false">×</button>
+    </div>
+
     <div class="card">
       <div class="row">
         <div class="col">
@@ -131,14 +139,9 @@
         </div>
       </div>
 
-      <div v-if="errorMsg" class="alert error">
+      <div v-if="addrErrorMsg" class="alert error">
         <i class="fa-solid fa-circle-exclamation"></i>
-        <span>{{ errorMsg }}</span>
-      </div>
-
-      <div v-if="successMsg" class="alert success">
-        <i class="fa-solid fa-circle-check"></i>
-        <span>{{ successMsg }}</span>
+        <span>{{ addrErrorMsg }}</span>
       </div>
     </div>
   </div>
@@ -154,8 +157,22 @@ import vnAddressService from "@/services/vnAddressService";
 const router = useRouter();
 
 const saving = ref(false);
-const errorMsg = ref("");
-const successMsg = ref("");
+const addrErrorMsg = ref("");
+
+const toast = ref({
+  show: false,
+  type: "info",
+  msg: "",
+});
+
+let toastTimer = null;
+const showToast = (type, msg) => {
+  toast.value = { show: true, type, msg };
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.value.show = false;
+  }, 3000);
+};
 
 const form = ref({
   tenKhachHang: "",
@@ -209,13 +226,18 @@ const onHuyenChange = async (a) => {
 };
 
 const setDefault = (idx) => addresses.value.forEach((x, i) => (x.macDinh = i === idx));
-const addAddress = () => addresses.value.push(newAddr());
+
+const addAddress = () => {
+  const a = newAddr();
+  if (!addresses.value.some((x) => x.macDinh)) a.macDinh = true;
+  addresses.value.push(a);
+};
 
 const removeAddress = (idx) => {
   if (addresses.value.length === 1) return;
   const wasDefault = addresses.value[idx].macDinh;
   addresses.value.splice(idx, 1);
-  if (wasDefault) addresses.value[0].macDinh = true;
+  if (wasDefault && addresses.value.length) addresses.value[0].macDinh = true;
 };
 
 const findName = (list, code) => list.find((x) => x.code === code)?.name || "";
@@ -227,8 +249,8 @@ const removeVietnameseTones = (str) => {
 const buildUsername = (fullName) => {
   if (!fullName) return "";
   const noTone = removeVietnameseTones(fullName.trim().toLowerCase());
-  const parts = noTone.split(/\s+/);
-  const lastName = parts[parts.length - 1];
+  const parts = noTone.split(/\s+/).filter(Boolean);
+  const lastName = parts[parts.length - 1] || "";
   const initials = parts.slice(0, parts.length - 1).map((x) => x[0]).join("");
   return lastName + initials;
 };
@@ -242,6 +264,7 @@ const previewAddress = (a) => {
   const tinhName = findName(provinces.value, a.tinhCode);
   const huyenName = findName(a.districts, a.huyenCode);
   const xaName = findName(a.wards, a.xaCode);
+
   return vnAddressService.buildAddressText({
     detail: a.diaChiCuThe,
     wardName: xaName,
@@ -251,29 +274,81 @@ const previewAddress = (a) => {
 };
 
 const validate = () => {
-  if (!form.value.tenKhachHang) return "Vui lòng nhập Tên khách hàng";
-  if (!String(form.value.email || "").trim()) return "Vui lòng nhập Email";
-  if (!form.value.tenTaiKhoan) return "Vui lòng nhập Tên tài khoản";
-  if (!form.value.matKhau) return "Vui lòng nhập Mật khẩu";
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
 
-  if (!addresses.value.length) return "Vui lòng thêm ít nhất 1 địa chỉ";
-  if (!addresses.value.some((x) => x.macDinh)) return "Vui lòng chọn 1 địa chỉ mặc định";
+  const tenKhachHang = String(form.value.tenKhachHang || "").trim();
+  const email = String(form.value.email || "").trim();
+  const soDienThoai = String(form.value.soDienThoai || "").trim();
 
-  for (const a of addresses.value) {
-    if (!a.tenDiaChi?.trim()) return "Vui lòng nhập Tên địa chỉ cho tất cả địa chỉ";
+  if (!tenKhachHang) {
+    return { type: "customer", msg: "Vui lòng nhập Tên khách hàng" };
   }
-  return "";
+
+  if (tenKhachHang.length > 100) {
+    return { type: "customer", msg: "Tên khách hàng không được vượt quá 100 ký tự" };
+  }
+
+  if (!email) {
+    return { type: "customer", msg: "Vui lòng nhập Email" };
+  }
+
+  if (email.length > 100 || !emailRegex.test(email)) {
+    return { type: "customer", msg: "Email không đúng định dạng hoặc vượt quá 100 ký tự" };
+  }
+
+  if (!form.value.tenTaiKhoan) {
+    return { type: "customer", msg: "Vui lòng nhập Tên tài khoản" };
+  }
+
+  if (!form.value.matKhau) {
+    return { type: "customer", msg: "Vui lòng nhập Mật khẩu" };
+  }
+
+  if (soDienThoai && !phoneRegex.test(soDienThoai)) {
+    return { type: "customer", msg: "Số điện thoại không đúng định dạng (10 số)" };
+  }
+
+  if (!addresses.value.length) {
+    return { type: "address", msg: "Vui lòng thêm ít nhất 1 địa chỉ" };
+  }
+
+  if (!addresses.value.some((x) => x.macDinh)) {
+    return { type: "address", msg: "Vui lòng chọn 1 địa chỉ mặc định" };
+  }
+
+  for (let i = 0; i < addresses.value.length; i++) {
+    const a = addresses.value[i];
+    const tenDiaChi = String(a.tenDiaChi || "").trim();
+
+    if (!tenDiaChi) {
+      return { type: "address", msg: `Địa chỉ thứ ${i + 1}: Vui lòng nhập Tên địa chỉ` };
+    }
+
+    if (tenDiaChi.length > 255) {
+      return { type: "address", msg: `Địa chỉ thứ ${i + 1}: Tên địa chỉ không được vượt quá 255 ký tự` };
+    }
+  }
+
+  return null;
 };
 
 const submit = async () => {
-  errorMsg.value = "";
-  successMsg.value = "";
+  addrErrorMsg.value = "";
+  toast.value.show = false;
 
   form.value.tenTaiKhoan = buildUsername(form.value.tenKhachHang);
   form.value.matKhau = generatePassword();
 
-  const msg = validate();
-  if (msg) return (errorMsg.value = msg);
+  const error = validate();
+  if (error) {
+    if (error.type === "customer") {
+      showToast("error", error.msg);
+    } else {
+      addrErrorMsg.value = error.msg;
+    }
+    return;
+  }
 
   const ok = confirm(`Xác nhận tạo khách hàng: "${form.value.tenKhachHang}" ?`);
   if (!ok) return;
@@ -282,11 +357,11 @@ const submit = async () => {
     saving.value = true;
 
     const payloadKh = {
-      tenKhachHang: form.value.tenKhachHang,
+      tenKhachHang: String(form.value.tenKhachHang || "").trim(),
       tenTaiKhoan: form.value.tenTaiKhoan,
       matKhau: form.value.matKhau,
       email: String(form.value.email || "").trim(),
-      soDienThoai: form.value.soDienThoai || null,
+      soDienThoai: String(form.value.soDienThoai || "").trim() || null,
       gioiTinh: form.value.gioiTinh,
       ngaySinh: form.value.ngaySinh || null,
       trangThai: form.value.trangThai === true,
@@ -303,22 +378,25 @@ const submit = async () => {
 
       return addDiaChiKhachHang({
         idKhachHang,
-        tenDiaChi: a.tenDiaChi.trim(),
+        tenDiaChi: String(a.tenDiaChi || "").trim(),
         thanhPho: tinhName,
         quan: huyenName,
         phuong: xaName,
-        diaChiCuThe: a.diaChiCuThe?.trim() || null,
+        diaChiCuThe: String(a.diaChiCuThe || "").trim() || null,
         macDinh: !!a.macDinh,
       });
     });
 
     await Promise.all(tasks);
 
-    successMsg.value = "Tạo khách hàng + địa chỉ thành công!";
-    setTimeout(() => back(), 350);
+    showToast("success", "Thêm khách hàng thành công!");
+
+    setTimeout(() => {
+      router.push({ name: "tai-khoan-khach-hang", query: { added: true } });
+    }, 700);
   } catch (e) {
     console.log(e);
-    errorMsg.value = e?.message || "Tạo khách hàng thất bại";
+    showToast("error", e?.message || "Tạo khách hàng thất bại");
   } finally {
     saving.value = false;
   }
@@ -346,7 +424,7 @@ onMounted(async () => {
   font-weight: 400 !important;
 }
 
-.taikhoan-form :deep(*) {
+.taikhoan-form :deep(*:not([class*="fa-"])) {
   font-family: inherit !important;
   font-weight: 400 !important;
   color: inherit;
@@ -417,7 +495,7 @@ onMounted(async () => {
 }
 
 .btn-primary {
-  color: #fff;
+  color: #ffffff !important;
   background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%);
   box-shadow: 0 10px 18px rgba(255, 77, 79, 0.16);
 }
@@ -550,10 +628,79 @@ onMounted(async () => {
   color: #991b1b;
   border: 1px solid rgba(239, 68, 68, 0.20);
 }
-.alert.success {
-  background: rgba(34, 197, 94, 0.10);
-  color: #166534;
-  border: 1px solid rgba(34, 197, 94, 0.20);
+
+.ss-page-toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 300px;
+  max-width: 460px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  box-shadow: 0 20px 40px rgba(17, 24, 39, 0.15);
+  animation: slideIn 0.3s ease-out;
+}
+
+.ss-page-toast.error {
+  border-color: #ef4444;
+  background: #fef2f2;
+}
+.ss-page-toast.success {
+  border-color: #22c55e;
+  background: #f0fdf4;
+}
+.ss-page-toast.info {
+  border-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.ss-page-toast-ic {
+  font-size: 18px;
+  color: rgba(17, 24, 39, 0.55);
+}
+.ss-page-toast.success .ss-page-toast-ic {
+  color: #16a34a;
+}
+.ss-page-toast.error .ss-page-toast-ic {
+  color: #dc2626;
+}
+.ss-page-toast.info .ss-page-toast-ic {
+  color: #2563eb;
+}
+
+.ss-page-toast-msg {
+  font-size: 13px;
+  color: #111827;
+  flex: 1;
+}
+
+.ss-page-toast-x {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 18px;
+  line-height: 1;
+}
+.ss-page-toast-x:hover {
+  color: #6b7280;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
 
 @media (max-width: 900px) {

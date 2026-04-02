@@ -19,22 +19,40 @@
           <div class="col-md-6">
             <div class="mb-3">
               <label class="form-label">Họ và tên</label>
-              <input class="form-control ss-input" v-model="kh.tenKhachHang" placeholder="Nhập họ và tên" />
+              <input
+                class="form-control ss-input"
+                v-model="kh.tenKhachHang"
+                placeholder="Nhập họ và tên"
+              />
             </div>
 
             <div class="mb-3">
               <label class="form-label">Tên tài khoản</label>
-              <input class="form-control ss-input" v-model="kh.tenTaiKhoan" placeholder="Nhập tên tài khoản" />
+              <input
+                class="form-control ss-input"
+                v-model="kh.tenTaiKhoan"
+                placeholder="Nhập tên tài khoản"
+              />
             </div>
 
             <div class="mb-3">
               <label class="form-label">Email</label>
-              <input class="form-control ss-input" type="email" v-model="kh.email" placeholder="example@email.com" />
+              <input
+                class="form-control ss-input"
+                type="email"
+                v-model="kh.email"
+                placeholder="example@email.com"
+              />
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Mật khẩu</label>
-              <input class="form-control ss-input" type="password" v-model="kh.matKhau" placeholder="Nhập mật khẩu" />
+              <label class="form-label">Mật khẩu mới</label>
+              <input
+                class="form-control ss-input"
+                type="password"
+                v-model="kh.matKhau"
+                placeholder="Để trống nếu không đổi mật khẩu"
+              />
             </div>
           </div>
 
@@ -44,12 +62,24 @@
               <label class="form-label">Giới tính</label>
               <div class="d-flex align-items-center gap-3 mt-1">
                 <div class="form-check form-check-inline m-0">
-                  <input class="form-check-input ss-radio" type="radio" id="nam" :value="true" v-model="kh.gioiTinh" />
+                  <input
+                    class="form-check-input ss-radio"
+                    type="radio"
+                    id="nam"
+                    :value="true"
+                    v-model="kh.gioiTinh"
+                  />
                   <label class="form-check-label" for="nam">Nam</label>
                 </div>
 
                 <div class="form-check form-check-inline m-0">
-                  <input class="form-check-input ss-radio" type="radio" id="nu" :value="false" v-model="kh.gioiTinh" />
+                  <input
+                    class="form-check-input ss-radio"
+                    type="radio"
+                    id="nu"
+                    :value="false"
+                    v-model="kh.gioiTinh"
+                  />
                   <label class="form-check-label" for="nu">Nữ</label>
                 </div>
               </div>
@@ -62,7 +92,11 @@
 
             <div class="mb-3">
               <label class="form-label">Số điện thoại</label>
-              <input class="form-control ss-input" v-model="kh.soDienThoai" placeholder="Nhập số điện thoại" />
+              <input
+                class="form-control ss-input"
+                v-model="kh.soDienThoai"
+                placeholder="Nhập số điện thoại"
+              />
             </div>
           </div>
         </div>
@@ -72,8 +106,12 @@
           <div class="addr-head">
             <div class="addr-title">Địa chỉ (có thể thêm nhiều)</div>
 
-            <!-- ✅ FIX: dùng Bootstrap Icons -->
-            <button type="button" class="ss-btn ss-btn-outline" @click="addAddress" :disabled="loadingAddr">
+            <button
+              type="button"
+              class="ss-btn ss-btn-outline"
+              @click="addAddress"
+              :disabled="loadingAddr"
+            >
               <i class="bi bi-plus-lg"></i>
               Thêm địa chỉ
             </button>
@@ -89,11 +127,15 @@
             <div v-for="(a, idx) in addresses" :key="a.key" class="addr-card">
               <div class="addr-top">
                 <label class="radio">
-                  <input type="radio" name="defaultAddr" :checked="a.macDinh" @change="setDefault(idx)" />
+                  <input
+                    type="radio"
+                    name="defaultAddr"
+                    :checked="a.macDinh"
+                    @change="setDefault(idx)"
+                  />
                   <span>Đặt làm mặc định</span>
                 </label>
 
-                <!-- ✅ FIX: dùng Bootstrap Icons -->
                 <button
                   class="ss-btn ss-btn-outline danger"
                   type="button"
@@ -108,12 +150,20 @@
               <div class="row addr-grid">
                 <div class="col">
                   <label class="form-label">Tên địa chỉ <span class="req">*</span></label>
-                  <input class="form-control ss-input" v-model.trim="a.tenDiaChi" placeholder="Ví dụ: Nhà riêng / Công ty..." />
+                  <input
+                    class="form-control ss-input"
+                    v-model.trim="a.tenDiaChi"
+                    placeholder="Ví dụ: Nhà riêng / Công ty..."
+                  />
                 </div>
 
                 <div class="col">
                   <label class="form-label">Số nhà / Đường</label>
-                  <input class="form-control ss-input" v-model.trim="a.diaChiCuThe" placeholder="Ví dụ: 12A Nguyễn Trãi" />
+                  <input
+                    class="form-control ss-input"
+                    v-model.trim="a.diaChiCuThe"
+                    placeholder="Ví dụ: 12A Nguyễn Trãi"
+                  />
                 </div>
               </div>
 
@@ -122,15 +172,24 @@
                   <label class="form-label">Tỉnh/Thành</label>
                   <select class="form-control ss-input" v-model="a.tinhCode" @change="onTinhChange(a)">
                     <option value="">-- Chọn tỉnh/thành --</option>
-                    <option v-for="p in provinces" :key="p.code" :value="p.code">{{ p.name }}</option>
+                    <option v-for="p in provinces" :key="p.code" :value="p.code">
+                      {{ p.name }}
+                    </option>
                   </select>
                 </div>
 
                 <div class="col">
                   <label class="form-label">Quận/Huyện</label>
-                  <select class="form-control ss-input" v-model="a.huyenCode" :disabled="!a.tinhCode" @change="onHuyenChange(a)">
+                  <select
+                    class="form-control ss-input"
+                    v-model="a.huyenCode"
+                    :disabled="!a.tinhCode"
+                    @change="onHuyenChange(a)"
+                  >
                     <option value="">-- Chọn quận/huyện --</option>
-                    <option v-for="d in a.districts" :key="d.code" :value="d.code">{{ d.name }}</option>
+                    <option v-for="d in a.districts" :key="d.code" :value="d.code">
+                      {{ d.name }}
+                    </option>
                   </select>
                 </div>
               </div>
@@ -140,7 +199,9 @@
                   <label class="form-label">Phường/Xã</label>
                   <select class="form-control ss-input" v-model="a.xaCode" :disabled="!a.huyenCode">
                     <option value="">-- Chọn phường/xã --</option>
-                    <option v-for="w in a.wards" :key="w.code" :value="w.code">{{ w.name }}</option>
+                    <option v-for="w in a.wards" :key="w.code" :value="w.code">
+                      {{ w.name }}
+                    </option>
                   </select>
                 </div>
 
@@ -177,7 +238,11 @@
 import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
-import { detailKhachHang, removeKhachHang, updateKhachHang } from "@/services/tai_khoan/khach_hang/khach_hangService.js";
+import {
+  detailKhachHang,
+  removeKhachHang,
+  updateKhachHang,
+} from "@/services/tai_khoan/khach_hang/khach_hangService.js";
 
 import {
   getAllDiaChiKhachHang,
@@ -229,7 +294,8 @@ const newAddr = () => ({
 
 const addresses = ref([]);
 
-const normalize = (v) => (v ?? "").toString().trim().toLowerCase();
+const trimValue = (v) => (v ?? "").toString().trim();
+const normalize = (v) => trimValue(v).toLowerCase();
 
 const findCodeByName = (list, name) => {
   const n = normalize(name);
@@ -243,6 +309,7 @@ const previewAddress = (a) => {
   const tinhName = findNameByCode(provinces.value, a.tinhCode);
   const huyenName = findNameByCode(a.districts, a.huyenCode);
   const xaName = findNameByCode(a.wards, a.xaCode);
+
   return vnAddressService.buildAddressText({
     detail: a.diaChiCuThe,
     wardName: xaName,
@@ -264,7 +331,9 @@ const onHuyenChange = async (a) => {
 };
 
 const setDefault = (idx) => {
-  addresses.value.forEach((x, i) => (x.macDinh = i === idx));
+  addresses.value.forEach((x, i) => {
+    x.macDinh = i === idx;
+  });
 };
 
 const addAddress = () => {
@@ -294,7 +363,8 @@ const loadKhachHang = async () => {
     kh.value = {
       ...kh.value,
       ...data,
-      ngaySinh: data.ngaySinh?.substring(0, 10),
+      matKhau: "",
+      ngaySinh: data.ngaySinh?.substring(0, 10) || "",
     };
   }
 };
@@ -370,11 +440,65 @@ const loadDiaChi = async () => {
 };
 
 const validateAll = () => {
-  if (!addresses.value.length) return "Vui lòng có ít nhất 1 địa chỉ";
-  if (!addresses.value.some((x) => x.macDinh)) return "Vui lòng chọn 1 địa chỉ mặc định";
-  for (const a of addresses.value) {
-    if (!a.tenDiaChi || !a.tenDiaChi.trim()) return "Vui lòng nhập Tên địa chỉ (Nhà riêng/Công ty...)";
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
+
+  const tenKhachHang = trimValue(kh.value.tenKhachHang);
+  const tenTaiKhoan = trimValue(kh.value.tenTaiKhoan);
+  const email = trimValue(kh.value.email);
+  const matKhau = trimValue(kh.value.matKhau);
+  const soDienThoai = trimValue(kh.value.soDienThoai);
+
+  if (!tenKhachHang) return "Tên khách hàng không được để trống";
+  if (tenKhachHang.length < 5 || tenKhachHang.length > 100) {
+    return "Tên khách hàng phải từ 5 - 100 ký tự";
   }
+
+  if (!tenTaiKhoan) return "Tên tài khoản không được để trống";
+  if (tenTaiKhoan.length < 3 || tenTaiKhoan.length > 100) {
+    return "Tên tài khoản phải từ 3 - 100 ký tự";
+  }
+
+  if (!email) return "Email không được để trống";
+  if (email.length < 5 || email.length > 100 || !emailRegex.test(email)) {
+    return "Email phải có độ dài từ 5 - 100 ký tự và đúng định dạng";
+  }
+
+  if (!soDienThoai || !phoneRegex.test(soDienThoai)) {
+    return "Số điện thoại không được để trống và phải đúng định dạng (10 số)";
+  }
+
+  if (kh.value.gioiTinh === null || kh.value.gioiTinh === "") {
+    return "Giới tính không được để trống";
+  }
+
+  if (!kh.value.ngaySinh) return "Ngày sinh không được để trống";
+
+  if (matKhau && matKhau.length < 6) {
+    return "Mật khẩu mới phải có ít nhất 6 ký tự";
+  }
+
+  if (!addresses.value.length) return "Vui lòng thêm ít nhất 1 địa chỉ";
+  if (!addresses.value.some((x) => x.macDinh)) return "Vui lòng chọn 1 địa chỉ mặc định";
+
+  for (let i = 0; i < addresses.value.length; i++) {
+    const a = addresses.value[i];
+    const tenDiaChi = trimValue(a.tenDiaChi);
+    const diaChiCuThe = trimValue(a.diaChiCuThe);
+
+    if (!tenDiaChi || tenDiaChi.length < 5 || tenDiaChi.length > 255) {
+      return `Địa chỉ thứ ${i + 1}: Tên địa chỉ phải từ 5 - 255 ký tự`;
+    }
+
+    if (!diaChiCuThe || diaChiCuThe.length < 5 || diaChiCuThe.length > 255) {
+      return `Địa chỉ thứ ${i + 1}: Số nhà/Đường phải từ 5 - 255 ký tự`;
+    }
+
+    if (!a.tinhCode || !a.huyenCode || !a.xaCode) {
+      return `Địa chỉ thứ ${i + 1}: Vui lòng chọn đầy đủ Tỉnh/Huyện/Xã`;
+    }
+  }
+
   return "";
 };
 
@@ -390,11 +514,11 @@ const saveAddresses = async () => {
 
     return {
       idKhachHang: Number(id),
-      tenDiaChi: a.tenDiaChi?.trim(),
+      tenDiaChi: trimValue(a.tenDiaChi),
       thanhPho: tinhName,
       quan: huyenName,
       phuong: xaName,
-      diaChiCuThe: a.diaChiCuThe?.trim() || null,
+      diaChiCuThe: trimValue(a.diaChiCuThe) || null,
       macDinh: !!macDinh,
     };
   };
@@ -407,8 +531,9 @@ const saveAddresses = async () => {
     if (a === defaultAddr) continue;
 
     const payload = toPayload(a, false);
-    if (a.id) await updateDiaChiKhachHang(a.id, payload);
-    else {
+    if (a.id) {
+      await updateDiaChiKhachHang(a.id, payload);
+    } else {
       const created = await createDiaChiKhachHang(payload);
       a.id = created?.id ?? a.id;
     }
@@ -416,8 +541,9 @@ const saveAddresses = async () => {
 
   if (defaultAddr) {
     const payload = toPayload(defaultAddr, true);
-    if (defaultAddr.id) await updateDiaChiKhachHang(defaultAddr.id, payload);
-    else {
+    if (defaultAddr.id) {
+      await updateDiaChiKhachHang(defaultAddr.id, payload);
+    } else {
       const created = await createDiaChiKhachHang(payload);
       defaultAddr.id = created?.id ?? defaultAddr.id;
     }
@@ -436,16 +562,20 @@ const submit = async () => {
   try {
     saving.value = true;
 
-    await updateKhachHang(id, {
-      tenKhachHang: kh.value.tenKhachHang,
-      tenTaiKhoan: kh.value.tenTaiKhoan,
-      email: kh.value.email || null,
-      matKhau: kh.value.matKhau,
+    const payload = {
+      tenKhachHang: trimValue(kh.value.tenKhachHang),
+      tenTaiKhoan: trimValue(kh.value.tenTaiKhoan),
+      email: trimValue(kh.value.email) || null,
       gioiTinh: kh.value.gioiTinh,
       ngaySinh: kh.value.ngaySinh || null,
-      soDienThoai: kh.value.soDienThoai || null,
-    });
+      soDienThoai: trimValue(kh.value.soDienThoai) || null,
+    };
 
+    if (trimValue(kh.value.matKhau)) {
+      payload.matKhau = trimValue(kh.value.matKhau);
+    }
+
+    await updateKhachHang(id, payload);
     await saveAddresses();
 
     alert("Cập nhật thành công!");
@@ -486,7 +616,6 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ✅ ÉP FONT + SIZE + KHÔNG IN ĐẬM */
 .update_page {
   margin: 20px;
   font-family: inherit !important;
@@ -523,7 +652,6 @@ onMounted(async () => {
   margin: 0;
 }
 
-/* Title trang: 20px fw 500 */
 .page-title {
   text-align: left;
   font-size: 20px !important;
@@ -545,7 +673,6 @@ onMounted(async () => {
   height: 1px;
 }
 
-/* Card */
 .ss-card {
   background: #fff;
   padding: 22px;
@@ -554,7 +681,6 @@ onMounted(async () => {
   box-shadow: 0 18px 50px rgba(17, 24, 39, 0.08);
 }
 
-/* Label / input */
 .form-label,
 .form-check-label,
 .ss-btn,
@@ -576,6 +702,7 @@ option,
   border: 1px solid rgba(17, 24, 39, 0.14) !important;
   height: 40px;
 }
+
 .ss-input:focus {
   border-color: rgba(255, 77, 79, 0.45) !important;
   box-shadow: 0 0 0 0.18rem rgba(255, 77, 79, 0.14) !important;
@@ -586,26 +713,21 @@ option,
   border-color: #ff4d4f !important;
 }
 
-/* Buttons */
 .ss-btn {
   border-radius: 10px;
   height: 36px;
   padding: 0 14px;
   font-size: 13px !important;
   font-weight: 400 !important;
-
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   border: none;
   cursor: pointer;
   user-select: none;
-
-  gap: 8px; /* ✅ để icon + chữ cân */
+  gap: 8px;
 }
 
-/* ✅ icon size chuẩn */
 .ss-btn i {
   font-size: 18px;
   line-height: 1;
@@ -616,6 +738,7 @@ option,
   color: rgba(17, 24, 39, 0.88) !important;
   border: 1px solid rgba(255, 77, 79, 0.22);
 }
+
 .ss-btn-back:hover {
   background: rgba(255, 77, 79, 0.12);
 }
@@ -625,6 +748,7 @@ option,
   color: #fff !important;
   box-shadow: 0 10px 22px rgba(255, 77, 79, 0.14);
 }
+
 .ss-btn-primary:hover {
   filter: brightness(0.98);
 }
@@ -639,11 +763,10 @@ option,
 }
 
 .actions {
-  border-top: 1px solid rgba(17, 24, 39, 0.10);
+  border-top: 1px solid rgba(17, 24, 39, 0.1);
   padding-top: 16px;
 }
 
-/* Address */
 .addr-section {
   margin-top: 18px;
   padding-top: 16px;
@@ -658,7 +781,6 @@ option,
   margin-bottom: 10px;
 }
 
-/* title khu địa chỉ: 14px fw 500 */
 .addr-title {
   font-size: 14px !important;
   font-weight: 500 !important;
@@ -671,13 +793,16 @@ option,
   border: 1px solid rgba(17, 24, 39, 0.14);
   color: rgba(17, 24, 39, 0.88) !important;
 }
+
 .ss-btn-outline:hover {
   background: rgba(17, 24, 39, 0.04);
 }
+
 .ss-btn-outline.danger {
   border-color: rgba(239, 68, 68, 0.35);
   color: #b42324 !important;
 }
+
 .ss-btn-outline.danger:hover {
   background: rgba(239, 68, 68, 0.06);
 }
@@ -703,6 +828,7 @@ option,
   align-items: center;
   gap: 8px;
 }
+
 .radio input {
   transform: translateY(1px);
 }
@@ -719,6 +845,7 @@ option,
 .addr-preview .muted {
   color: rgba(17, 24, 39, 0.55) !important;
 }
+
 .addr-preview .text {
   color: rgba(17, 24, 39, 0.88) !important;
 }
@@ -727,8 +854,8 @@ option,
   margin-top: 10px;
   border-radius: 12px;
   padding: 10px 12px;
-  background: rgba(239, 68, 68, 0.10);
-  border: 1px solid rgba(239, 68, 68, 0.20);
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
   color: #991b1b !important;
 }
 </style>

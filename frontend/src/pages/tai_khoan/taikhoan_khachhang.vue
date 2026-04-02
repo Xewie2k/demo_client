@@ -34,7 +34,6 @@
         {{ confirmTrangThai.loading ? "Đang cập nhật..." : "Xác nhận" }}
       </button>
     </div>
-
   </div>
 
   <div class="taikhoan-khachhang-container" v-if="!isPage">
@@ -136,7 +135,6 @@
                     <span class="slider"></span>
                   </label>
 
-                  <!-- ✅ Sổ địa chỉ -->
                   <button
                     class="ss-icon-btn-view"
                     @click="openSoDiaChi(item)"
@@ -198,13 +196,8 @@
 
   <router-view />
 
-  <!-- =========================
-       MODAL: SỔ ĐỊA CHỈ KHÁCH HÀNG
-       (✅ chỉ sửa trong modal)
-       ========================= -->
   <div v-if="soDiaChi.open" class="ss-overlay" @click.self="closeSoDiaChi">
     <div class="ss-addr-modal">
-      <!-- ✅ TOAST trong modal -->
       <div v-if="soDiaChi.toast.show" class="ss-addr-toast" :class="soDiaChi.toast.type">
         <span class="material-icons-outlined ss-addr-toast-ic">
           {{ soDiaChi.toast.type === "success" ? "check_circle" : soDiaChi.toast.type === "error" ? "error" : "info" }}
@@ -244,7 +237,6 @@
 
       <div class="ss-addr-body">
         <div class="ss-addr-grid">
-          <!-- LEFT: danh sách -->
           <div class="ss-addr-card ss-addr-card-list">
             <div class="ss-addr-card-head">
               <div class="ss-addr-card-title">
@@ -303,7 +295,6 @@
             </div>
           </div>
 
-          <!-- RIGHT: thêm nhanh -->
           <div class="ss-addr-card ss-addr-card-form">
             <div class="ss-addr-card-head">
               <div class="ss-addr-card-title">
@@ -429,8 +420,6 @@
           </div>
         </div>
       </div>
-
-      <!-- ✅ bỏ footer Đóng (tránh thừa nút) -->
     </div>
   </div>
 </template>
@@ -469,13 +458,12 @@ const totalPages = ref(0);
 const khachhangList = ref([]);
 const khachhangOrigin = ref([]);
 
-const addrMap = ref(new Map()); // idKhachHang -> "text"
+const addrMap = ref(new Map());
 
 const filters = ref({ keyword: "", status: "", gender: "" });
 
-// ✅ Khóa theo id khi đang cập nhật + chống out-of-order khi bấm nhanh
-const dangCapNhatTrangThai = ref(new Set()); // Set<id>
-const trangThaiSeqMap = ref(new Map()); // Map<id, seq>
+const dangCapNhatTrangThai = ref(new Set());
+const trangThaiSeqMap = ref(new Map());
 
 const themkh = () => router.push({ name: "tai-khoan-khach-hang-them" });
 const updatedkh = (id) => router.push({ name: "tai-khoan-khach-hang-cap-nhat", params: { id } });
@@ -544,9 +532,6 @@ const reApplyFilters = () => {
   applyGenderFilter();
 };
 
-// =======================
-// ✅ TOAST (TRANG)
-// =======================
 const pageToast = reactive({ show: false, type: "info", msg: "" });
 let pageToastTimer = null;
 
@@ -565,9 +550,6 @@ const hidePageToast = () => {
   pageToast.show = false;
 };
 
-// =======================
-// ✅ XÁC NHẬN ĐỔI TRẠNG THÁI (TOAST)
-// =======================
 const confirmTrangThai = reactive({
   show: false,
   loading: false,
@@ -610,7 +592,6 @@ const capNhatTrangThai = async (item, newValue) => {
   const nextSeq = (trangThaiSeqMap.value.get(id) ?? 0) + 1;
   trangThaiSeqMap.value.set(id, nextSeq);
 
-  // optimistic UI
   item.trangThai = nextValue;
   reApplyFilters();
 
@@ -643,7 +624,6 @@ const okConfirmTrangThai = async () => {
     return;
   }
 
-  // tránh bấm nhiều lần
   if (confirmTrangThai.loading) return;
 
   confirmTrangThai.loading = true;
@@ -655,14 +635,10 @@ const okConfirmTrangThai = async () => {
   }
 };
 
-// =======================
-// ✅ CHUYỂN TRẠNG THÁI (có xác nhận)
-// =======================
 const toggleStatus = async (item, e) => {
   const id = item?.id;
   if (!id) return;
 
-  // đang cập nhật thì giữ nguyên
   if (dangCapNhatTrangThai.value.has(id)) {
     if (e?.target) e.target.checked = !!item.trangThai;
     return;
@@ -673,10 +649,8 @@ const toggleStatus = async (item, e) => {
 
   if (oldValue === newValue) return;
 
-  // ✅ chưa xác nhận: trả switch về trạng thái cũ
   if (e?.target) e.target.checked = oldValue;
 
-  // ✅ mở toast xác nhận
   openConfirmTrangThai(item, newValue);
 };
 
@@ -809,9 +783,6 @@ watch(
   }
 );
 
-// =======================
-// MODAL SỔ ĐỊA CHỈ
-// =======================
 const soDiaChi = reactive({
   open: false,
   loading: false,
@@ -1080,6 +1051,12 @@ const setMacDinhDiaChi = async (a) => {
 
 onMounted(async () => {
   await handleFilter();
+
+  if (route.query.added) {
+    showPageToast("success", "Thêm khách hàng thành công!");
+    const { added, ...restQuery } = route.query;
+    await router.replace({ query: restQuery });
+  }
 });
 </script>
 
@@ -1141,7 +1118,6 @@ onMounted(async () => {
   align-items: center;
 }
 
-/* ✅ Material icon trong button */
 .btn-mi {
   font-size: 18px;
   line-height: 1;
@@ -1151,7 +1127,6 @@ onMounted(async () => {
   color: currentColor;
 }
 
-/* Base button */
 .btn {
   height: 34px;
   padding: 0 14px;
@@ -1168,7 +1143,6 @@ onMounted(async () => {
   opacity: 0.96;
 }
 
-/* ✅ Thêm khách hàng (giữ nguyên) */
 .btn-newaccount {
   height: 34px;
   padding: 0 14px;
@@ -1184,7 +1158,6 @@ onMounted(async () => {
   font-size: 12px;
 }
 
-/* ✅ XUẤT EXCEL */
 .btn-export {
   height: 34px;
   padding: 0 14px;
@@ -1192,11 +1165,9 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-
   background: #f3f4f6 !important;
   color: rgba(17, 24, 39, 0.88) !important;
   border: 1px solid rgba(17, 24, 39, 0.10) !important;
-
   cursor: pointer;
   font-weight: 600;
   font-size: 13px;
@@ -1206,7 +1177,6 @@ onMounted(async () => {
   background: #eef0f3 !important;
 }
 
-/* ✅ ĐẶT LẠI BỘ LỌC */
 .btn-reset {
   height: 34px;
   padding: 0 14px;
@@ -1214,11 +1184,9 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-
   background: #4b5563 !important;
   color: #fff !important;
   border: none !important;
-
   cursor: pointer;
   font-weight: 600;
   font-size: 13px;
@@ -1233,7 +1201,6 @@ onMounted(async () => {
   min-width: 150px;
 }
 
-/* Badge */
 .badge {
   padding: 6px 12px;
   border-radius: 999px;
@@ -1258,7 +1225,6 @@ onMounted(async () => {
   border: 1px solid rgba(17, 24, 39, 0.14);
 }
 
-/* Table */
 .table-wrapper {
   overflow-x: auto;
   border-radius: 18px;
@@ -1304,7 +1270,6 @@ tbody tr:hover {
   background: #f9fafb;
 }
 
-/* Pagination */
 .pagination-container {
   display: flex;
   justify-content: center;
@@ -1345,7 +1310,6 @@ tbody tr:hover {
   background: #f9fafb;
 }
 
-/* Search */
 .search-wrapper {
   position: relative;
   display: flex;
@@ -1378,7 +1342,6 @@ tbody tr:hover {
   box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.10);
 }
 
-/* ✅ Eye icon unified */
 .ss-icon-btn-view {
   width: 36px;
   height: 36px;
@@ -1425,9 +1388,6 @@ tbody tr:hover {
   gap: 8px;
 }
 
-/* =======================
-   ✅ TOAST (TRANG)
-   ======================= */
 .ss-page-toast {
   position: fixed;
   top: 14px;
@@ -1467,9 +1427,6 @@ tbody tr:hover {
 }
 .ss-page-toast-x:hover { color: rgba(17, 24, 39, 0.7); }
 
-/* =======================
-   ✅ TOAST XÁC NHẬN
-   ======================= */
 .ss-confirm-toast {
   position: fixed;
   top: 64px;
@@ -1535,9 +1492,6 @@ tbody tr:hover {
 }
 .ss-confirm-ok:hover { filter: brightness(0.98); }
 
-
-
-/* Switch */
 .switch {
   position: relative;
   display: inline-block;
@@ -1585,7 +1539,6 @@ tbody tr:hover {
   transition: 0.3s;
 }
 
-/* ✅ ĐỔI MÀU ON = ĐỎ (đồng nhất màn hình khác) */
 .switch input:checked + .slider {
   background-color: #ff4d4f;
 }
@@ -1594,9 +1547,6 @@ tbody tr:hover {
   transform: translateX(14px);
 }
 
-/* =========================================
-   MODAL SỔ ĐỊA CHỈ (✅ chỉ chỉnh phần modal)
-   ========================================= */
 .ss-overlay {
   position: fixed;
   inset: 0;
@@ -1607,14 +1557,12 @@ tbody tr:hover {
   z-index: 3000;
 }
 
-/* ✅ ép 1 font, không in đậm trong modal (nhưng KHÔNG làm hỏng icon nữa) */
 .ss-addr-modal,
 .ss-addr-modal * {
   font-family: inherit !important;
   font-weight: 400 !important;
 }
 
-/* ✅ FIX ICON: trả lại font đúng cho Material Icons trong modal */
 .ss-addr-modal .material-icons-outlined,
 .ss-addr-modal .material-icons {
   font-family: "Material Icons Outlined", "Material Icons" !important;
@@ -1640,7 +1588,6 @@ tbody tr:hover {
   position: relative;
 }
 
-/* ✅ toast trong modal */
 .ss-addr-toast {
   position: absolute;
   top: 12px;
@@ -1689,7 +1636,6 @@ tbody tr:hover {
   gap: 12px;
 }
 
-/* ✅ CHỈNH: đẩy dòng tên + mã xuống rõ ràng và canh thẳng dưới tiêu đề */
 .ss-addr-head-left {
   display: flex;
   flex-direction: column;
@@ -1913,7 +1859,6 @@ tbody tr:hover {
 }
 .ss-addr-err span.material-icons-outlined { font-size: 18px; }
 
-/* ✅ Vue Select */
 :deep(.vs__dropdown-toggle) {
   min-height: 40px !important;
   border-radius: 12px !important;
@@ -1954,7 +1899,6 @@ tbody tr:hover {
 }
 :deep(.vs__deselect) { color: rgba(17, 24, 39, 0.45) !important; }
 
-/* responsive */
 @media (max-width: 980px) {
   .ss-addr-grid { grid-template-columns: 1fr; }
   .ss-addr-row { grid-template-columns: 1fr; }

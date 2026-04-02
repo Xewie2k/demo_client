@@ -834,8 +834,8 @@ const filteredProducts = computed(() => {
   let result = [...products.value];
 
   if (filters.search) {
-    const k = filters.search.trim().toLowerCase();
-    if (k) result = result.filter(p => p.tenSanPham.toLowerCase().includes(k));
+    const k = filters.search.toLowerCase();
+    result = result.filter(p => p.tenSanPham.toLowerCase().includes(k));
   }
 
   // Product-level multi-select

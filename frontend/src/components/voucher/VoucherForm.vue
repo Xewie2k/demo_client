@@ -1,4 +1,3 @@
-<!-- File: src/components/voucher/VoucherForm.vue -->
 <template>
   <div class="row g-3">
     <div class="col-12">
@@ -50,7 +49,9 @@
     </div>
 
     <div class="col-md-6">
-      <label class="form-label fw-bold small">Giá trị giảm ({{ modelValue.hinhThucGiam ? '%' : 'VNĐ' }})</label>
+      <label class="form-label fw-bold small">
+        Giá trị giảm ({{ modelValue.hinhThucGiam ? '%' : 'VNĐ' }})
+      </label>
 
       <input
         v-if="modelValue.hinhThucGiam === true"
@@ -60,28 +61,18 @@
         type="number"
         class="form-control rounded-3"
         placeholder="1 - 100"
+        min="0"
+        max="100"
       />
 
       <input
         v-else
-        :value="formatDisplay(modelValue.soTienGiamToiDa)"
-        @input="handleMoneyInput('soTienGiamToiDa', $event.target.value)"
+        :value="formatDisplay(modelValue.giaTriGiamGia)"
+        @input="handleMoneyInput('giaTriGiamGia', $event.target.value)"
         :disabled="disabled"
         type="text"
         class="form-control rounded-3"
         placeholder="Nhập số tiền VNĐ"
-      />
-    </div>
-
-    <div v-if="modelValue.hinhThucGiam === true" class="col-md-6">
-      <label class="form-label fw-bold small">Số tiền giảm tối đa (VNĐ)</label>
-      <input
-        :value="formatDisplay(modelValue.soTienGiamToiDa)"
-        @input="handleMoneyInput('soTienGiamToiDa', $event.target.value)"
-        :disabled="disabled"
-        type="text"
-        class="form-control rounded-3"
-        placeholder="Để trống = không giới hạn"
       />
     </div>
 
@@ -169,6 +160,18 @@
       </div>
     </div>
 
+    <div v-if="modelValue.hinhThucGiam === true" class="col-md-6">
+      <label class="form-label fw-bold small">Số tiền giảm tối đa</label>
+      <input
+        :value="formatDisplay(modelValue.soTienGiamToiDa)"
+        @input="handleMoneyInput('soTienGiamToiDa', $event.target.value)"
+        :disabled="disabled"
+        type="text"
+        class="form-control rounded-3"
+        placeholder="Nhập số tiền giảm tối đa"
+      />
+    </div>
+
     <div class="col-12 mt-2">
       <label class="form-label fw-bold small">Mô tả phiếu giảm giá</label>
       <textarea
@@ -187,21 +190,21 @@
 const props = defineProps(["modelValue", "disabled", "isUnlimited"]);
 const emit = defineEmits(["update:modelValue", "update:isUnlimited"]);
 
-// ✅ parse number an toàn (tránh NaN)
 const toNumber = (val) => {
   const n = Number(val);
   return Number.isFinite(n) ? n : 0;
 };
 
-// Hàm chuyển số thành chuỗi có dấu chấm để hiển thị
 const formatDisplay = (val) => {
   if (val === undefined || val === null || val === "") return "";
-  return val.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const n = Number(val);
+  if (!Number.isFinite(n)) return "";
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
-// Hàm xử lý khi người dùng gõ tiền: Xóa dấu chấm để lấy số nguyên
 const handleMoneyInput = (key, rawValue) => {
-  const numberValue = Number(String(rawValue || "").replace(/\./g, ""));
+  const cleaned = String(rawValue || "").replace(/[^\d]/g, "");
+  const numberValue = Number(cleaned);
   update(key, Number.isFinite(numberValue) ? numberValue : 0);
 };
 
@@ -224,7 +227,7 @@ const handleTypeChange = (isPercent) => {
     ...props.modelValue,
     hinhThucGiam: isPercent,
     giaTriGiamGia: 0,
-    soTienGiamToiDa: 0,
+    soTienGiamToiDa: isPercent ? 0 : null,
   });
 };
 
@@ -236,9 +239,6 @@ const handleUnlimitedChange = (event) => {
   else update("soLuongSuDung", 0);
 };
 
-// ✅ QUAN TRỌNG: đổi công khai/cá nhân => reset các state liên quan số lượng
-// - Tránh emit modelValue 2 lần (dễ bị overwrite / loop)
-// - Nếu chọn "Cá nhân": tắt "vô hạn" + reset soLuongSuDung về 0 (UI), BE sẽ set theo list KH
 const handleLoaiPhieuChange = (isCaNhan) => {
   const nextModel = {
     ...props.modelValue,
@@ -277,9 +277,9 @@ const handleLoaiPhieuChange = (isCaNhan) => {
 .form-control:not(.ss-input-readonly) {
   border: 1px solid rgba(255, 77, 79, 0.2);
 }
+
 .form-control:focus {
   border-color: #ff4d4f;
-  /* ✅ FIX TYPO: 0.2srem -> 0.2rem */
   box-shadow: 0 0 0 0.2rem rgba(255, 77, 79, 0.1);
 }
 </style>

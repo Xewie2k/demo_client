@@ -71,7 +71,7 @@
               <label class="form-label">Ghi chú</label>
               <textarea
                 class="form-control ss-input"
-                style="height:auto; min-height: 92px; padding-top: 10px"
+                style="height: auto; min-height: 92px; padding-top: 10px"
                 v-model="nv.ghiChu"
               ></textarea>
             </div>
@@ -82,7 +82,7 @@
 
             <div class="mb-3">
               <label class="form-label">Thành phố</label>
-              <select class="form-control ss-input" v-model="nv.thanhPho">
+              <select class="form-control ss-input" v-model="nv.thanhPho" @change="onCityChange">
                 <option value="">Chọn thành phố</option>
 
                 <option v-if="nv.thanhPho && !thanhphoOptions.includes(nv.thanhPho)" :value="nv.thanhPho">
@@ -96,7 +96,7 @@
             <div class="mb-3 d-flex gap-2">
               <div class="flex-grow-1">
                 <label class="form-label">Quận</label>
-                <select class="form-control ss-input" v-model="nv.quan" :disabled="!nv.thanhPho">
+                <select class="form-control ss-input" v-model="nv.quan" :disabled="!nv.thanhPho" @change="onDistrictChange">
                   <option value="">Chọn quận</option>
 
                   <option v-if="nv.quan && !quanOptions.includes(nv.quan)" :value="nv.quan">
@@ -149,7 +149,7 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch } from "vue";
+import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { detailNhanVien, removeNhanVien, updateNhanVien } from "@/services/tai_khoan/nhan_vien/nhan_vienService.js";
 import { getAllQuyenHan } from "@/services/tai_khoan/nhan_vien/quyen_hanService.js";
@@ -164,18 +164,6 @@ const fileInput = ref(null);
 
 const listQuyenHan = ref([]);
 const BASE_URL = "http://localhost:8080";
-
-const mapTenQuyenHan = (raw) => {
-  const v = String(raw ?? "").trim();
-  if (!v) return v;
-
-  const k = v.toUpperCase().replace(/\s+/g, "");
-
-  if (k === "NHAN_VIEN" || k === "NHANVIEN" || k === "ROLE_NHAN_VIEN" || k === "ROLENHAN_VIEN") return "Nhân viên";
-  if (k === "ADMIN" || k === "ROLE_ADMIN" || k === "ROLEADMIN") return "Admin";
-
-  return v;
-};
 
 const provinces = ref([]);
 const districts = ref([]);
@@ -202,6 +190,20 @@ const nv = ref({
   cccd: "",
   trangThai: true,
 });
+
+const mapTenQuyenHan = (raw) => {
+  const v = String(raw ?? "").trim();
+  if (!v) return v;
+
+  const k = v.toUpperCase().replace(/\s+/g, "");
+
+  if (k === "NHAN_VIEN" || k === "NHANVIEN" || k === "ROLE_NHAN_VIEN" || k === "ROLENHAN_VIEN") return "Nhân viên";
+  if (k === "ADMIN" || k === "ROLE_ADMIN" || k === "ROLEADMIN") return "Admin";
+
+  return v;
+};
+
+const trimValue = (v) => (v ?? "").toString().trim();
 
 const getImageUrl = (imageData) => {
   if (!imageData) return null;
@@ -264,7 +266,8 @@ const loadProvinces = async () => {
   thanhphoOptions.value = (provinces.value || []).map((p) => p.name);
 };
 
-const findByName = (arr, name) => (arr || []).find((x) => (x?.name ?? "").trim() === (name ?? "").trim());
+const findByName = (arr, name) =>
+  (arr || []).find((x) => (x?.name ?? "").trim() === (name ?? "").trim());
 
 const loadDistrictsByProvinceName = async (provinceName) => {
   const p = findByName(provinces.value, provinceName);
@@ -288,6 +291,31 @@ const loadWardsByDistrictName = async (districtName) => {
   phuongOptions.value = (wards.value || []).map((w) => w.name);
 };
 
+const onCityChange = async () => {
+  nv.value.quan = "";
+  nv.value.phuong = "";
+  wards.value = [];
+  phuongOptions.value = [];
+
+  if (nv.value.thanhPho) {
+    await loadDistrictsByProvinceName(nv.value.thanhPho);
+  } else {
+    districts.value = [];
+    quanOptions.value = [];
+  }
+};
+
+const onDistrictChange = async () => {
+  nv.value.phuong = "";
+
+  if (nv.value.quan) {
+    await loadWardsByDistrictName(nv.value.quan);
+  } else {
+    wards.value = [];
+    phuongOptions.value = [];
+  }
+};
+
 const loadNhanVien = async () => {
   try {
     const raw = await detailNhanVien(id);
@@ -296,6 +324,7 @@ const loadNhanVien = async () => {
     nv.value = {
       ...nv.value,
       ...mapped,
+      matKhau: "",
       idQuyenHan: mapped.idQuyenHan !== null && mapped.idQuyenHan !== "" ? Number(mapped.idQuyenHan) : null,
     };
 
@@ -317,6 +346,7 @@ const onFileChange = (event) => {
     alert("Vui lòng chọn file ảnh!");
     return;
   }
+
   if (file.size > 2 * 1024 * 1024) {
     alert("Ảnh quá lớn (tối đa 2MB)!");
     return;
@@ -339,17 +369,22 @@ const buildFormData = () => {
   }
 
   payload.idQuyenHan = payload.idQuyenHan ? Number(payload.idQuyenHan) : null;
-  payload.ngaySinh = payload.ngaySinh || null;
-  payload.ghiChu = payload.ghiChu || null;
-  payload.thanhPho = payload.thanhPho || null;
-  payload.quan = payload.quan || null;
-  payload.phuong = payload.phuong || null;
-  payload.diaChiCuThe = payload.diaChiCuThe || null;
-  payload.email = payload.email || null;
-  payload.soDienThoai = payload.soDienThoai || null;
-  payload.tenNhanVien = payload.tenNhanVien || null;
-  payload.tenTaiKhoan = payload.tenTaiKhoan || null;
-  payload.matKhau = payload.matKhau || null;
+  payload.ngaySinh = trimValue(payload.ngaySinh) || null;
+  payload.ghiChu = trimValue(payload.ghiChu) || null;
+  payload.thanhPho = trimValue(payload.thanhPho) || null;
+  payload.quan = trimValue(payload.quan) || null;
+  payload.phuong = trimValue(payload.phuong) || null;
+  payload.diaChiCuThe = trimValue(payload.diaChiCuThe) || null;
+  payload.email = trimValue(payload.email) || null;
+  payload.soDienThoai = trimValue(payload.soDienThoai) || null;
+  payload.tenNhanVien = trimValue(payload.tenNhanVien) || null;
+  payload.tenTaiKhoan = trimValue(payload.tenTaiKhoan) || null;
+
+  if (trimValue(payload.matKhau)) {
+    payload.matKhau = trimValue(payload.matKhau);
+  } else {
+    delete payload.matKhau;
+  }
 
   const fd = new FormData();
   fd.append(
@@ -366,25 +401,97 @@ const buildFormData = () => {
   return fd;
 };
 
+const parseUpdateError = (error) => {
+  const raw = error?.response?.data?.message || error?.message || "Có lỗi xảy ra";
+  const msg = String(raw).toLowerCase();
+
+  if (msg.includes("duplicate key") && msg.includes("email")) {
+    return "Email này đã được sử dụng bởi nhân viên khác!";
+  }
+
+  if (
+    msg.includes("duplicate key") &&
+    (msg.includes("ten_tai_khoan") || msg.includes("ten taikhoan") || msg.includes("username"))
+  ) {
+    return "Tên tài khoản này đã tồn tại!";
+  }
+
+  return raw;
+};
+
+const validate = () => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
+
+  const tenNhanVien = trimValue(nv.value.tenNhanVien);
+  const tenTaiKhoan = trimValue(nv.value.tenTaiKhoan);
+  const email = trimValue(nv.value.email);
+  const soDienThoai = trimValue(nv.value.soDienThoai);
+  const diaChiCuThe = trimValue(nv.value.diaChiCuThe);
+
+  if (!tenNhanVien || tenNhanVien.length < 5 || tenNhanVien.length > 100) {
+    return "Tên nhân viên không được để trống và phải từ 5 - 100 ký tự";
+  }
+
+  if (!tenTaiKhoan || tenTaiKhoan.length < 3 || tenTaiKhoan.length > 100) {
+    return "Tên tài khoản không được để trống và phải từ 3 - 100 ký tự";
+  }
+
+  if (!email || email.length < 5 || email.length > 100 || !emailRegex.test(email)) {
+    return "Email không được để trống, độ dài từ 5 - 100 ký tự và phải đúng định dạng";
+  }
+
+  if (!soDienThoai || !phoneRegex.test(soDienThoai)) {
+    return "Số điện thoại không được để trống và phải đúng định dạng (10 số)";
+  }
+
+  if (!nv.value.ngaySinh) {
+    return "Ngày sinh không được để trống";
+  }
+
+  if (!nv.value.idQuyenHan) {
+    return "Quyền hạn không được để trống";
+  }
+
+  if (!nv.value.thanhPho || !nv.value.quan || !nv.value.phuong) {
+    return "Vui lòng chọn đầy đủ Tỉnh/Thành, Quận/Huyện, Xã/Phường";
+  }
+
+  if (!diaChiCuThe || diaChiCuThe.length < 5 || diaChiCuThe.length > 255) {
+    return "Địa chỉ cụ thể không được để trống và phải từ 5 - 255 ký tự";
+  }
+
+  return "";
+};
+
 const toggleStatus = async () => {
+  const prevStatus = nv.value.trangThai;
+
   try {
-    nv.value.trangThai = !nv.value.trangThai;
+    nv.value.trangThai = !prevStatus;
     await updateNhanVien(id, buildFormData());
     alert(nv.value.trangThai ? "Đã kích hoạt nhân viên!" : "Đã hủy kích hoạt nhân viên!");
   } catch (e) {
+    nv.value.trangThai = prevStatus;
     console.error(e);
-    alert("Cập nhật trạng thái thất bại: " + (e?.message || ""));
+    alert("Cập nhật trạng thái thất bại: " + parseUpdateError(e));
   }
 };
 
 const submit = async () => {
+  const msg = validate();
+  if (msg) {
+    alert(msg);
+    return;
+  }
+
   try {
     await updateNhanVien(id, buildFormData());
     alert("Cập nhật thành công!");
     router.push("/admin/tai-khoan/nhan-vien");
   } catch (error) {
     console.error(error);
-    alert("Cập nhật thất bại: " + (error?.message || ""));
+    alert("Cập nhật thất bại: " + parseUpdateError(error));
   }
 };
 
@@ -399,27 +506,6 @@ const cancel = async () => {
 };
 
 const back = () => router.push("/admin/tai-khoan/nhan-vien");
-
-watch(
-  () => nv.value.thanhPho,
-  async (newVal, oldVal) => {
-    if (newVal === oldVal) return;
-    nv.value.quan = "";
-    nv.value.phuong = "";
-    await loadDistrictsByProvinceName(newVal);
-    wards.value = [];
-    phuongOptions.value = [];
-  }
-);
-
-watch(
-  () => nv.value.quan,
-  async (newVal, oldVal) => {
-    if (newVal === oldVal) return;
-    nv.value.phuong = "";
-    await loadWardsByDistrictName(newVal);
-  }
-);
 
 onMounted(async () => {
   await getAllQH();
@@ -495,6 +581,7 @@ onMounted(async () => {
   font-weight: 400 !important;
   color: rgba(17, 24, 39, 0.82);
 }
+
 .ss-input:focus {
   border-color: rgba(255, 77, 79, 0.45) !important;
   box-shadow: 0 0 0 0.18rem rgba(255, 77, 79, 0.14) !important;
@@ -518,14 +605,17 @@ textarea.ss-input {
   margin: auto;
   overflow: hidden;
 }
+
 .ss-border {
   border: 1px solid rgba(255, 77, 79, 0.22);
 }
+
 .avatar-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+
 .avatar-icon {
   font-size: 42px;
   color: #9ca3af;
@@ -547,6 +637,7 @@ textarea.ss-input {
   user-select: none;
   transition: 0.15s ease;
 }
+
 .ss-btn:hover {
   background: rgba(17, 24, 39, 0.04);
 }
@@ -562,6 +653,7 @@ textarea.ss-input {
   color: rgba(17, 24, 39, 0.88);
   border: 1px solid rgba(255, 77, 79, 0.22);
 }
+
 .ss-btn-back:hover {
   background: rgba(255, 77, 79, 0.12);
 }
@@ -572,6 +664,7 @@ textarea.ss-input {
   background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%) !important;
   box-shadow: 0 10px 18px rgba(255, 77, 79, 0.16);
 }
+
 .ss-btn-primary:hover {
   filter: brightness(0.98);
 }
@@ -582,6 +675,7 @@ textarea.ss-input {
   color: #fff !important;
   box-shadow: 0 10px 18px rgba(17, 24, 39, 0.12);
 }
+
 .ss-btn-state:hover {
   filter: brightness(0.98);
 }

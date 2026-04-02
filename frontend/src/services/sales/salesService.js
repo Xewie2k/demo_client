@@ -3,11 +3,10 @@ import apiClient from "@/services/apiClient";
 
 const SalesService = {
   async getCtspBanHang() {
-    // ✅ Ưu tiên đúng controller bạn đang có: /api/chi-tiet-san-pham/ban-hang
+    // Đúng controller: /api/chi-tiet-san-pham/ban-hang
     const candidates = [
       "/api/chi-tiet-san-pham/ban-hang",
       "/api/chi-tiet-san-pham",
-      // fallback (nếu sau này bạn có admin)
       "/api/admin/chi-tiet-san-pham/ban-hang",
       "/api/admin/chi-tiet-san-pham",
     ];
@@ -23,7 +22,6 @@ const SalesService = {
     return tryGetFirst(candidates, { silent: false });
   },
 
-  // ✅ khớp 100% với controller bạn gửi
   async getDiaChiByKhachHangId(khachHangId) {
     if (!khachHangId) return [];
     const id = Number(khachHangId);
@@ -45,8 +43,6 @@ const SalesService = {
   },
 
   async getVouchersPersonalByKhachHangId(khachHangId) {
-    // ✅ FIX spam 500: không gọi endpoint /khach-hang/{id} nữa (đang lỗi BE)
-    // -> gọi all rồi lọc theo khách ở FE.
     if (!khachHangId) return [];
     const id = Number(khachHangId);
     if (!Number.isFinite(id) || id <= 0) return [];

@@ -13,14 +13,18 @@ public interface KhachHangRepository extends JpaRepository<KhachHang, Integer> {
 
     List<KhachHang> findAllByXoaMemFalseOrderByIdDesc();
 
+    List<KhachHang> findAllByXoaMemFalseAndTrangThaiTrueOrderByIdDesc();
+
     Optional<KhachHang> findByIdAndXoaMemFalse(Integer id);
+
+    Optional<KhachHang> findByIdAndXoaMemFalseAndTrangThaiTrue(Integer id);
 
     Page<KhachHang> findAllByXoaMemFalse(Pageable pageable);
 
+    Page<KhachHang> findAllByXoaMemFalseAndTrangThaiTrue(Pageable pageable);
+
     // ✅ AuthService dùng
     Optional<KhachHang> findByTenTaiKhoanAndXoaMemFalse(String tenTaiKhoan);
-
-    Optional<KhachHang> findByEmailAndXoaMemFalse(String email);
 
     // ✅ Validate trùng (nếu DB có unique filtered theo xoa_mem)
     boolean existsByTenTaiKhoanAndXoaMemFalse(String tenTaiKhoan);

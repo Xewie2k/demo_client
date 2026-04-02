@@ -32,9 +32,7 @@ public class ClientAuthService {
             throw new RuntimeException("Vui lòng nhập mật khẩu!");
         }
 
-        String identifier = username.trim();
-        KhachHang kh = khachHangRepo.findByTenTaiKhoanAndXoaMemFalse(identifier)
-                .or(() -> khachHangRepo.findByEmailAndXoaMemFalse(identifier))
+        KhachHang kh = khachHangRepo.findByTenTaiKhoanAndXoaMemFalse(username.trim())
                 .orElseThrow(() -> new RuntimeException("Tài khoản không tồn tại!"));
 
         if (!Objects.equals(kh.getMatKhau(), password)) {
@@ -70,23 +68,19 @@ public class ClientAuthService {
         if (req.getMatKhau() == null || req.getMatKhau().trim().isEmpty()) {
             throw new RuntimeException("Vui lòng nhập mật khẩu!");
         }
-        if (req.getTenTaiKhoan() == null || req.getTenTaiKhoan().trim().isEmpty()) {
-            throw new RuntimeException("Vui lòng nhập tên tài khoản!");
-        }
 
         String email = req.getEmail().trim();
-        String tenTaiKhoan = req.getTenTaiKhoan().trim();
 
         if (khachHangRepo.existsByEmailAndXoaMemFalse(email)) {
             throw new RuntimeException("Email đã được sử dụng!");
         }
-        if (khachHangRepo.existsByTenTaiKhoanAndXoaMemFalse(tenTaiKhoan)) {
-            throw new RuntimeException("Tên tài khoản đã tồn tại!");
+        if (khachHangRepo.existsByTenTaiKhoanAndXoaMemFalse(email)) {
+            throw new RuntimeException("Tài khoản đã tồn tại!");
         }
 
         KhachHang kh = new KhachHang();
         kh.setTenKhachHang(req.getTenKhachHang().trim());
-        kh.setTenTaiKhoan(tenTaiKhoan);
+        kh.setTenTaiKhoan(email);
         kh.setEmail(email);
         kh.setSoDienThoai(req.getSoDienThoai() != null ? req.getSoDienThoai().trim() : null);
         kh.setMatKhau(req.getMatKhau());

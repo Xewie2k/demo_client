@@ -1,105 +1,154 @@
 <!-- File: src/pages/lich_lam_viec/LichSuHoatDong.vue -->
 <template>
-  <div class="ss-page ss-font">
-    <div class="ss-head">
-      <div class="ss-head-left">
-        <div class="ss-title">LỊCH SỬ HOẠT ĐỘNG</div>
-        <div class="ss-subtitle">Theo dõi lịch sử đóng/mở ca và dòng tiền của nhân viên</div>
+  <div class="ls-page ss-font">
+    <div class="ls-head">
+      <div class="ls-title">LỊCH SỬ HOẠT ĐỘNG</div>
+      <div class="ls-subtitle">
+        Theo dõi lịch sử đóng/mở ca và dòng tiền mặt trong két
       </div>
     </div>
 
-    <div class="ss-card ss-border ss-mb-16">
-      <div class="ss-card-body ss-filter-grid">
-        <div class="ss-field">
-          <label class="ss-label">Tìm kiếm</label>
-          <div class="ss-input-group">
-            <span class="material-icons-outlined ss-input-icon">search</span>
-            <input 
-              type="text" 
-              class="form-control ss-input ss-input-with-icon" 
-              placeholder="Tìm theo nhân viên / mã ca..." 
+    <!-- FILTER -->
+    <div class="ls-card ls-filter-card">
+      <div class="ls-filter-grid">
+        <div class="ls-field ls-search-field">
+          <label class="ls-label">Tìm kiếm</label>
+          <div class="ls-input-wrap">
+            <span class="material-icons-outlined ls-input-icon">search</span>
+            <input
+              v-model.trim="keyword"
+              type="text"
+              class="form-control ls-input ls-input-search"
+              placeholder="Tìm theo tài khoản / mã ca / mã hóa đơn..."
             />
           </div>
         </div>
 
-        <div class="ss-field">
-          <label class="ss-label">Từ ngày:</label>
-          <input type="date" v-model="tuNgay" class="form-control ss-input" />
+        <div class="ls-field">
+          <label class="ls-label">Từ ngày:</label>
+          <input v-model="tuNgay" type="date" class="form-control ls-input" />
         </div>
 
-        <div class="ss-field">
-          <label class="ss-label">Đến ngày:</label>
-          <input type="date" v-model="denNgay" class="form-control ss-input" />
+        <div class="ls-field">
+          <label class="ls-label">Đến ngày:</label>
+          <input v-model="denNgay" type="date" class="form-control ls-input" />
         </div>
 
-        <div class="ss-field ss-filter-actions">
-          <button class="btn ss-btn-outline" type="button" @click="loadData">
-            <i class="fa-solid fa-rotate-right me-2"></i> Tải lại
+        <div class="ls-field ls-btn-field">
+          <button class="btn ls-btn-refresh" type="button" @click="loadData">
+            <i class="fa-solid fa-rotate-right"></i>
+            <span>Tải lại</span>
           </button>
         </div>
       </div>
     </div>
 
-    <div class="ss-card ss-border">
+    <!-- TABLE -->
+    <div class="ls-card ls-table-card">
       <div class="table-responsive">
-        <table class="table ss-table mb-0">
+        <table class="table ls-table mb-0">
+          <colgroup>
+            <col style="width: 4%" />
+            <col style="width: 23%" />
+            <col style="width: 12%" />
+            <col style="width: 11%" />
+            <col style="width: 11%" />
+            <col style="width: 16%" />
+            <col style="width: 11%" />
+            <col style="width: 12%" />
+          </colgroup>
+
           <thead>
             <tr>
-              <th class="text-center" style="width: 50px">#</th>
-              <th>NHÂN VIÊN</th>
+              <th class="text-center">#</th>
+              <th>TÀI KHOẢN</th>
               <th>CA</th>
               <th>MỞ</th>
               <th>ĐÓNG</th>
               <th class="text-end">TIỀN MẶT</th>
-              <th class="text-end">TIỀN CK</th>
-              <th class="text-end">DOANH THU</th>
               <th class="text-end">CHÊNH LỆCH</th>
-              <th class="text-center" style="width: 120px">TRẠNG THÁI</th>
+              <th class="text-center">TRẠNG THÁI</th>
             </tr>
           </thead>
+
           <tbody>
             <tr v-if="isLoading">
-              <td colspan="10" class="text-center py-4">Đang tải dữ liệu...</td>
+              <td colspan="8" class="text-center py-4">Đang tải dữ liệu...</td>
             </tr>
-            <tr v-else-if="rawData.length === 0">
-              <td colspan="10" class="text-center py-4">Không có dữ liệu giao ca.</td>
+
+            <tr v-else-if="displayData.length === 0">
+              <td colspan="8" class="text-center py-4">Không có dữ liệu phù hợp.</td>
             </tr>
-            <tr v-else v-for="(item, index) in rawData" :key="item.id">
+
+            <tr
+              v-else
+              v-for="(item, index) in displayData"
+              :key="`${item.loaiBanGhi || 'GIAO_CA'}-${item.id}-${index}`"
+            >
               <td class="text-center">{{ index + 1 }}</td>
-              
-              <td>{{ item.tenNhanVien || '—' }}</td>
-              
+
               <td>
-                <span :class="getMauCaLam(item.tenCaLam || item.maGiaoCa)">
-                  {{ item.tenCaLam || item.maGiaoCa || '—' }}
+                <div class="ls-account" :title="item.tenNhanVien || ''">
+                  {{ item.tenNhanVien || "—" }}
+                </div>
+
+                <div
+                  v-if="item.maHoaDon"
+                  class="ls-subline"
+                  :title="item.maHoaDon"
+                >
+                  Hóa đơn: <span class="ls-code">{{ item.maHoaDon }}</span>
+                </div>
+
+                <div
+                  v-else-if="item.maGiaoCa"
+                  class="ls-subline"
+                  :title="item.maGiaoCa"
+                >
+                  Mã ca: <span class="ls-code">{{ item.maGiaoCa }}</span>
+                </div>
+              </td>
+
+              <td>
+                <span :class="getCaBadgeClass(item)">
+                  {{ getCaDisplay(item) }}
                 </span>
               </td>
-              
+
               <td>
-                <div class="ss-time">{{ formatTime(item.thoiGianNhanCa) }}</div>
-                <div class="ss-date">{{ formatDate(item.thoiGianNhanCa) }}</div>
+                <div class="ls-time">{{ formatTime(getStartTime(item)) }}</div>
+                <div class="ls-date">{{ formatDate(getStartTime(item)) }}</div>
               </td>
-              
+
               <td>
-                <div v-if="item.thoiGianKetCa">
-                  <div class="ss-time">{{ formatTime(item.thoiGianKetCa) }}</div>
-                  <div class="ss-date">{{ formatDate(item.thoiGianKetCa) }}</div>
-                </div>
-                <div v-else>—</div>
+                <template v-if="item.thoiGianKetCa">
+                  <div class="ls-time">{{ formatTime(item.thoiGianKetCa) }}</div>
+                  <div class="ls-date">{{ formatDate(item.thoiGianKetCa) }}</div>
+                </template>
+                <template v-else>—</template>
               </td>
-              
-              <td class="text-end">{{ formatMoney(item.tienMatTrongCa) }} đ</td>
-              <td class="text-end">{{ formatMoney(item.tienChuyenKhoanTrongCa) }} đ</td>
-              <td class="text-end fw-bold">{{ formatMoney(item.tongTienTrongCa) }} đ</td>
-              
-              <td class="text-end fw-bold" 
-                  :class="{'text-success': calcChenhLech(item) >= 0, 'text-danger': calcChenhLech(item) < 0}">
-                {{ formatMoney(calcChenhLech(item)) }} đ
+
+              <td class="text-end">
+                <span class="ls-money">{{ formatMoney(item.tienMatTrongCa) }} đ</span>
               </td>
-              
+
+              <td class="text-end">
+                <template v-if="getChenhLechDisplay(item) === null">—</template>
+                <span
+                  v-else
+                  class="ls-diff"
+                  :class="{
+                    'ls-diff-green': getChenhLechDisplay(item) >= 0,
+                    'ls-diff-red': getChenhLechDisplay(item) < 0,
+                  }"
+                >
+                  {{ formatMoney(getChenhLechDisplay(item)) }} đ
+                </span>
+              </td>
+
               <td class="text-center">
-                <span class="ss-badge" :class="item.trangThai === 1 ? 'badge-closed' : 'badge-active'">
-                  {{ item.trangThai === 1 ? 'Đã đóng' : 'Đang làm' }}
+                <span class="ls-status" :class="getTrangThaiBadgeClass(item)">
+                  {{ getTrangThaiText(item) }}
                 </span>
               </td>
             </tr>
@@ -111,46 +160,43 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
-import { getLichSuGiaoCa } from '@/services/lich_lam_viec/giao_caService.js'; 
+import { computed, onMounted, ref } from "vue";
+import { getLichSuGiaoCa } from "@/services/lich_lam_viec/giao_caService.js";
 
 const rawData = ref([]);
 const isLoading = ref(false);
+const keyword = ref("");
 
-// ========================
-// ✅ LOGIC LẤY NGÀY HÔM NAY
-// ========================
 const getTodayYMD = () => {
   const d = new Date();
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`; // Định dạng chuẩn YYYY-MM-DD cho thẻ input date
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 };
 
-// Khai báo biến và gán mặc định là hôm nay
 const tuNgay = ref(getTodayYMD());
 const denNgay = ref(getTodayYMD());
-
 
 const loadData = async () => {
   isLoading.value = true;
   try {
     const res = await getLichSuGiaoCa(0, 100);
-    
-    if (res && res.content) {
-      rawData.value = res.content;                     
-    } else if (res && res.data && res.data.content) {
-      rawData.value = res.data.content;                
-    } else if (res && res.data && Array.isArray(res.data)) {
-      rawData.value = res.data;                        
+
+    if (res?.content) {
+      rawData.value = res.content;
+    } else if (res?.data?.content) {
+      rawData.value = res.data.content;
+    } else if (Array.isArray(res?.data)) {
+      rawData.value = res.data;
     } else if (Array.isArray(res)) {
-      rawData.value = res;                             
+      rawData.value = res;
     } else {
       rawData.value = [];
     }
   } catch (error) {
-    console.error("❌ Lỗi lấy danh sách lịch sử giao ca:", error);
+    console.error("❌ Lỗi lấy lịch sử hoạt động:", error);
+    rawData.value = [];
   } finally {
     isLoading.value = false;
   }
@@ -160,234 +206,371 @@ onMounted(() => {
   loadData();
 });
 
-// ========================
-// CÁC HÀM FORMAT HIỂN THỊ
-// ========================
-const getMauCaLam = (tenCa) => {
-  if (!tenCa) return 'badge-xam';
-  const name = String(tenCa).toLowerCase();
-  if (name.includes('chiều')) return 'badge-hong';
-  return 'badge-xam'; 
+const getStartTime = (item) =>
+  item?.thoiGianPhatSinh || item?.thoiGianNhanCa || item?.ngayTao || null;
+
+const displayData = computed(() => {
+  const kw = keyword.value.trim().toLowerCase();
+  const fromDate = tuNgay.value ? new Date(`${tuNgay.value}T00:00:00`) : null;
+  const toDate = denNgay.value ? new Date(`${denNgay.value}T23:59:59`) : null;
+
+  return (rawData.value || []).filter((item) => {
+    const searchText = [
+      item?.tenNhanVien,
+      item?.maGiaoCa,
+      item?.tenCaLam,
+      item?.maHoaDon,
+      item?.ghiChu,
+      item?.loaiBanGhi,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    const matchesKeyword = !kw || searchText.includes(kw);
+
+    const timeValue = getStartTime(item);
+    const itemDate = timeValue ? new Date(timeValue) : null;
+
+    const matchesFrom = !fromDate || (itemDate && itemDate >= fromDate);
+    const matchesTo = !toDate || (itemDate && itemDate <= toDate);
+
+    return matchesKeyword && matchesFrom && matchesTo;
+  });
+});
+
+const getCaDisplay = (item) => {
+  if (item?.loaiBanGhi === "ADMIN_CASH") return "ADMIN";
+  return item?.tenCaLam || item?.maGiaoCa || "—";
+};
+
+const getCaBadgeClass = (item) => {
+  if (item?.loaiBanGhi === "ADMIN_CASH") return "ls-pill ls-pill-admin";
+
+  const text = String(item?.tenCaLam || "").toLowerCase();
+  if (text.includes("chiều")) return "ls-pill ls-pill-afternoon";
+  if (text.includes("sáng")) return "ls-pill ls-pill-morning";
+  return "ls-pill ls-pill-default";
+};
+
+const getTrangThaiText = (item) => {
+  if (item?.loaiBanGhi === "ADMIN_CASH") return "Hoàn tất";
+  return item?.trangThai === 1 ? "Đã đóng" : "Đang làm";
+};
+
+const getTrangThaiBadgeClass = (item) => {
+  if (item?.loaiBanGhi === "ADMIN_CASH") return "ls-status-done";
+  return item?.trangThai === 1 ? "ls-status-closed" : "ls-status-active";
+};
+
+const getChenhLechDisplay = (item) => {
+  if (item?.loaiBanGhi === "ADMIN_CASH") return 0;
+  if (item?.trangThai !== 1) return null;
+
+  const dauCa = Number(item?.tienDauCaNhap || 0);
+  const duKien = Number(item?.tienBanGiaoDuKien || 0);
+  return dauCa - duKien;
 };
 
 const formatTime = (isoString) => {
-  if (!isoString) return '';
+  if (!isoString) return "";
   const d = new Date(isoString);
-  return d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  return d.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
 };
 
 const formatDate = (isoString) => {
-  if (!isoString) return '';
+  if (!isoString) return "";
   const d = new Date(isoString);
-  return d.toLocaleDateString('vi-VN');
+  return d.toLocaleDateString("vi-VN");
 };
 
 const formatMoney = (amount) => {
-  if (!amount && amount !== 0) return '0';
-  return Number(amount).toLocaleString('vi-VN');
-};
-
-const calcChenhLech = (item) => {
-  const tienMat = item.tienMatTrongCa || 0;
-  const tienCk = item.tienChuyenKhoanTrongCa || 0;
-  const tongThu = item.tongTienTrongCa || 0;
-  return (tienMat + tienCk) - tongThu;
+  if (amount === null || amount === undefined || amount === "") return "0";
+  return Number(amount).toLocaleString("vi-VN");
 };
 </script>
 
 <style scoped>
-/* Base page styling theo chuẩn SevenStrike */
-.ss-page {
-  padding: 20px;
-  background-color: #f8f9fa;
+.ls-page {
   min-height: 100vh;
+  padding: 20px;
+  background: #f6f7fb;
 }
-.ss-mb-16 { margin-bottom: 16px; }
 
-/* Header */
-.ss-head {
-  margin-bottom: 24px;
+.ls-head {
+  margin-bottom: 16px;
 }
-.ss-title {
+
+.ls-title {
   font-size: 20px;
-  font-weight: 700;
-  color: #212529; 
+  line-height: 1.25;
+  font-weight: 600;
+  color: #202632;
   text-transform: uppercase;
 }
-.ss-subtitle {
+
+.ls-subtitle {
+  margin-top: 6px;
   font-size: 13px;
-  color: #6c757d;
-  margin-top: 4px;
+  line-height: 1.4;
+  font-weight: 400;
+  color: #7b8391;
 }
 
-/* Card */
-.ss-card {
+.ls-card {
   background: #fff;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  border: 1px solid #eceef3;
+  border-radius: 18px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
 }
-.ss-border {
-  border: 1px solid #e9ecef;
-}
-.ss-card-body {
+
+.ls-filter-card {
+  margin-bottom: 16px;
   padding: 16px;
 }
 
-/* Filter Grid */
-.ss-filter-grid {
+.ls-filter-grid {
   display: grid;
-  grid-template-columns: 2fr 1fr 1fr auto;
-  gap: 16px;
+  grid-template-columns: 2.2fr 1.1fr 1.1fr auto;
+  gap: 14px;
   align-items: end;
 }
-.ss-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #495057;
-  margin-bottom: 6px;
+
+.ls-field {
+  min-width: 0;
+}
+
+.ls-label {
   display: block;
-}
-.ss-input {
-  height: 38px;
-  border-radius: 8px;
-  border: 1px solid #ced4da;
+  margin-bottom: 8px;
   font-size: 13px;
+  line-height: 1.2;
+  font-weight: 500;
+  color: #566070;
 }
-.ss-input:focus {
-  border-color: #b91c1c;
-  box-shadow: 0 0 0 0.2rem rgba(185, 28, 28, 0.1);
-}
-.ss-input-group {
+
+.ls-input-wrap {
   position: relative;
 }
-.ss-input-icon {
+
+.ls-input-icon {
   position: absolute;
-  left: 10px;
   top: 50%;
+  left: 12px;
   transform: translateY(-50%);
-  color: #adb5bd;
   font-size: 18px;
+  color: #9aa3b2;
 }
-.ss-input-with-icon {
-  padding-left: 36px;
-}
-.ss-btn-outline {
-  height: 38px;
-  padding: 0 20px;
-  border-radius: 8px;
-  border: 1px solid #ced4da;
+
+.ls-input {
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid #d9deea;
   background: #fff;
-  color: #495057;
-  font-weight: 600;
-  font-size: 13px;
-  transition: all 0.2s;
+  color: #2a3140;
+  font-size: 14px;
+  font-weight: 400;
+  box-shadow: none;
+}
+
+.ls-input:focus {
+  border-color: #d8dde8;
+  box-shadow: none;
+}
+
+.ls-input-search {
+  padding-left: 38px;
+}
+
+.ls-btn-field {
   display: flex;
+}
+
+.ls-btn-refresh {
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 12px;
+  border: 1px solid #d9deea;
+  background: #fff;
+  color: #4c5563;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
   align-items: center;
-}
-.ss-btn-outline:hover {
-  background: #f8f9fa;
-  color: #212529;
+  gap: 8px;
 }
 
-/* Table */
-.ss-table {
+.ls-btn-refresh:hover {
+  background: #f8fafc;
+  border-color: #d9deea;
+  color: #2f3745;
+}
+
+.ls-table-card {
+  overflow: hidden;
+}
+
+.ls-table {
   width: 100%;
+  table-layout: fixed;
+  margin-bottom: 0;
+  color: #27303f;
+  font-size: 14px;
+}
+
+.ls-table thead th {
+  padding: 16px 14px;
+  background: #fafbfc;
+  border-bottom: 1px solid #eceef3;
   font-size: 13px;
-  color: #212529;
-}
-.ss-table thead th {
-  background: #f8f9fa;
-  color: #495057;
-  font-weight: 700;
-  border-bottom: 2px solid #e9ecef;
-  padding: 12px 16px;
+  line-height: 1.2;
+  font-weight: 600;
+  color: #576172;
   white-space: nowrap;
-}
-.ss-table tbody td {
-  padding: 12px 16px;
   vertical-align: middle;
-  border-bottom: 1px solid #f1f3f5;
-}
-.ss-table tbody tr:hover {
-  background-color: rgba(185, 28, 28, 0.02);
 }
 
-/* Typography & Tags */
-.ss-time {
-  font-weight: 500;
-  color: #212529;
-}
-.ss-date {
-  font-size: 11px;
-  color: #868e96;
-}
-.ss-tag {
-  display: inline-block;
-  padding: 4px 10px;
-  background: #f1f3f5;
-  border: 1px solid #dee2e6;
-  border-radius: 6px;
-  font-size: 12px;
-  color: #495057;
+.ls-table tbody td {
+  padding: 16px 14px;
+  border-bottom: 1px solid #f0f2f6;
+  vertical-align: middle;
+  font-size: 14px;
+  line-height: 1.35;
+  font-weight: 400;
+  color: #2b3342;
 }
 
-/* CSS CHO BADGE CA SÁNG / CA CHIỀU */
-.badge-xam {
-  background-color: #f9fafb;
-  color: #374151;
-  border: 1px solid #e5e7eb;
-  padding: 4px 14px;
-  border-radius: 9999px; 
-  font-size: 13px;
-  font-weight: 500;
-  display: inline-block;
+.ls-table tbody tr:hover {
+  background: #fcfcfd;
+}
+
+.ls-account {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 14px;
+  font-weight: 400;
+  color: #2b3342;
 }
 
-.badge-hong {
-  background-color: #fef2f2;
-  color: #b91c1c;
-  border: 1px solid #fecaca;
-  padding: 4px 14px;
-  border-radius: 9999px; 
-  font-size: 13px;
-  font-weight: 500;
-  display: inline-block;
+.ls-subline {
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 400;
+  color: #8a93a2;
 }
 
-/* Badges Trạng thái */
-.ss-badge {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
+.ls-code {
+  color: #687283;
+}
+
+.ls-time {
+  font-size: 14px;
+  line-height: 1.25;
+  font-weight: 500;
+  color: #2b3342;
+}
+
+.ls-date {
+  margin-top: 3px;
   font-size: 12px;
+  line-height: 1.2;
+  font-weight: 400;
+  color: #9ca3af;
+}
+
+.ls-money {
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 600;
+  color: #2b3342;
+}
+
+.ls-diff {
+  font-size: 14px;
+  line-height: 1.2;
   font-weight: 600;
 }
-.badge-closed {
-  background: rgba(220, 53, 69, 0.1);
-  color: #dc3545;
-  border: 1px solid rgba(220, 53, 69, 0.2);
-}
-.badge-active {
-  background: rgba(217, 119, 6, 0.1);
-  color: #d97706;
-  border: 1px solid rgba(217, 119, 6, 0.2);
+
+.ls-diff-green {
+  color: #1f9d61;
 }
 
-.text-danger { color: #dc3545 !important; }
-.text-success { color: #198754 !important; }
-
-/* Hiển thị rõ icon lịch trong ô chọn ngày */
-.ss-input[type="date"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  /* Ép icon thành màu đen và làm mờ một chút cho thanh lịch */
-  filter: brightness(0) opacity(0.6); 
-  transition: 0.2s;
+.ls-diff-red {
+  color: #dc5d5d;
 }
 
-/* Khi di chuột vào icon lịch sẽ đậm lên */
-.ss-input[type="date"]::-webkit-calendar-picker-indicator:hover {
-  filter: brightness(0) opacity(0.9);
+.ls-pill,
+.ls-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 74px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  line-height: 1;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.ls-pill-default,
+.ls-pill-morning {
+  background: #f4f5f8;
+  color: #727b89;
+  border: 1px solid #eaedf2;
+}
+
+.ls-pill-afternoon {
+  background: #fff4f2;
+  color: #cf6d5e;
+  border: 1px solid #f6ddd8;
+}
+
+.ls-pill-admin {
+  background: #fff4f4;
+  color: #d66060;
+  border: 1px solid #f5d9d9;
+}
+
+.ls-status-active {
+  background: #fff7ed;
+  color: #d8a14e;
+  border: 1px solid #f4dfbf;
+}
+
+.ls-status-closed {
+  background: #fff1f3;
+  color: #d67684;
+  border: 1px solid #f3d6dc;
+}
+
+.ls-status-done {
+  background: #f0fcf5;
+  color: #59a677;
+  border: 1px solid #d5efdf;
+}
+
+@media (max-width: 1100px) {
+  .ls-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .ls-btn-field,
+  .ls-btn-refresh {
+    width: 100%;
+  }
+
+  .ls-table {
+    min-width: 980px;
+  }
 }
 </style>

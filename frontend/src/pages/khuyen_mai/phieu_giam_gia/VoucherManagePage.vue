@@ -3,13 +3,12 @@
   <div class="p-4 ss-page ss-font">
     <h2 class="h5 mb-4">Quản lý giảm giá/ Phiếu giảm giá</h2>
 
-    <!-- FILTER BOX (buttons nằm trong bộ lọc) -->
+    <!-- FILTER BOX -->
     <div class="ss-filter-container mb-4 p-4">
       <div class="ss-filter-top">
         <VoucherFilter v-model="filters" @reset="resetFilters" />
 
         <div class="ss-filter-actions">
-          <!-- ✅ Đặt lại bộ lọc: icon + màu theo ChatLieu/HoaDon (dark) -->
           <button
             class="btn ss-btn-dark"
             type="button"
@@ -20,7 +19,6 @@
             Đặt lại bộ lọc
           </button>
 
-          <!-- ✅ Xuất Excel: icon + màu theo ChatLieu/HoaDon (lite) -->
           <button
             class="btn ss-btn-lite"
             type="button"
@@ -48,7 +46,6 @@
     <section class="ss-custom-box p-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="h6 m-0">Danh sách phiếu giảm giá</h3>
-        <!-- ✅ bỏ phần "Hiển thị x/y kết quả" -->
       </div>
 
       <VoucherTable
@@ -63,7 +60,7 @@
       />
     </section>
 
-    <!-- PAGINATION (ngoài danh sách như mẫu) -->
+    <!-- PAGINATION -->
     <div class="ss-pagination-wrap" v-if="totalPages > 0">
       <button
         class="ss-page-btn"
@@ -102,7 +99,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import Swal from "sweetalert2";
@@ -115,44 +112,150 @@ const router = useRouter();
 const API_URL = "http://localhost:8080/api/admin/phieu-giam-gia";
 
 const vouchers = ref([]);
-const filters = ref({ keyword: "", startDate: "", endDate: "", status: "" });
+const filters = ref({
+  keyword: "",
+  startDate: "",
+  endDate: "",
+  status: "",
+});
+
 const currentPage = ref(1);
 const pageSize = ref(10);
 
-// ✅ khóa theo id khi đang cập nhật (chống gạt nhanh)
-const dangCapNhatTrangThai = ref(new Set()); // Set<id>
-// ✅ lưu trạng thái gốc theo DB để revert khi cancel/lỗi
-const trangThaiGocMap = ref(new Map()); // Map<id, boolean>
+// khóa theo id khi đang cập nhật
+const dangCapNhatTrangThai = ref(new Set());
+// lưu trạng thái gốc theo DB để revert khi cancel/lỗi
+const trangThaiGocMap = ref(new Map());
+
+let fetchTimer = null;
+let lastShownFilterError = "";
 
 const normalizeTrangThai = (v) => v === true || Number(v) === 1;
 
+const getErrorMessage = (e) => {
+  return (
+    e?.response?.data?.message ||
+    e?.response?.data?.error ||
+    e?.message ||
+    "Đã có lỗi xảy ra"
+  );
+};
+
+const parseApiDate = (value) => {
+  if (!value) return null;
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value;
+  }
+
+  const s = String(value).trim();
+  if (!s) return null;
+
+  // yyyy-MM-dd
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
+    const [yyyy, mm, dd] = s.split("-").map(Number);
+    return new Date(yyyy, mm - 1, dd);
+  }
+
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return null;
+  return d;
+};
+
+const normalizeDateForApi = (value) => {
+  if (!value) return null;
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const yyyy = value.getFullYear();
+    const mm = String(value.getMonth() + 1).padStart(2, "0");
+    const dd = String(value.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  const s = String(value).trim();
+  if (!s) return null;
+
+  // đã đúng format BE cần
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+
+  // dd/MM/yyyy
+  const m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (m1) {
+    const dd = String(Number(m1[1])).padStart(2, "0");
+    const mm = String(Number(m1[2])).padStart(2, "0");
+    const yyyy = m1[3];
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  return null;
+};
+
+const buildServerParams = () => {
+  const params = {};
+
+  const keyword = (filters.value.keyword || "").trim();
+  const ngayBatDau = normalizeDateForApi(filters.value.startDate);
+  const ngayKetThuc = normalizeDateForApi(filters.value.endDate);
+
+  if (keyword) params.keyword = keyword;
+  if (ngayBatDau) params.ngayBatDau = ngayBatDau;
+  if (ngayKetThuc) params.ngayKetThuc = ngayKetThuc;
+
+  return params;
+};
+
 const fetchData = async () => {
   try {
-    const res = await axios.get(API_URL);
+    const params = buildServerParams();
+
+    const res = await axios.get(API_URL, { params });
     const arr = Array.isArray(res.data) ? res.data : res.data?.content || [];
+
     vouchers.value = arr;
 
     const m = new Map();
     for (const it of arr) {
-      if (it?.id != null) m.set(it.id, normalizeTrangThai(it.trangThai));
+      if (it?.id != null) {
+        m.set(it.id, normalizeTrangThai(it.trangThai));
+      }
     }
     trangThaiGocMap.value = m;
+    lastShownFilterError = "";
   } catch (e) {
     console.error(e);
+
+    const msg = getErrorMessage(e);
+    const errorKey = `${filters.value.startDate}|${filters.value.endDate}|${msg}`;
+
+    if (lastShownFilterError !== errorKey) {
+      lastShownFilterError = errorKey;
+
+      await Swal.fire({
+        title: "Bộ lọc không hợp lệ",
+        text: msg,
+        icon: "warning",
+        confirmButtonText: "Đóng",
+      });
+    }
   }
 };
 
-// ✅ normalize ended flag: trangThai false hoặc 0 => kết thúc
+// trangThai=false hoặc 0 => kết thúc
 const isEndedByFlag = (p) => p?.trangThai === false || Number(p?.trangThai) === 0;
 
 const getStatusText = (p) => {
-  const now = new Date().setHours(0, 0, 0, 0);
-  const start = new Date(p.ngayBatDau).setHours(0, 0, 0, 0);
-  const end = new Date(p.ngayKetThuc).setHours(0, 0, 0, 0);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const startDate = parseApiDate(p?.ngayBatDau);
+  const endDate = parseApiDate(p?.ngayKetThuc);
+
+  const start = startDate ? new Date(startDate).setHours(0, 0, 0, 0) : null;
+  const end = endDate ? new Date(endDate).setHours(0, 0, 0, 0) : null;
 
   if (isEndedByFlag(p)) return "Đã kết thúc";
-  if (now < start) return "Chưa bắt đầu";
-  if (now > end) return "Đã kết thúc";
+  if (start != null && now.getTime() < start) return "Chưa bắt đầu";
+  if (end != null && now.getTime() > end) return "Đã kết thúc";
   return "Đang hoạt động";
 };
 
@@ -169,21 +272,23 @@ const getStatusStyle = (p) => {
     boxShadow: "0 2px 4px rgba(0,0,0,0.02)",
   };
 
-  if (s === "Đang hoạt động")
+  if (s === "Đang hoạt động") {
     return {
       ...baseStyle,
       background: "linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%)",
       color: "#e11d48",
       border: "1px solid #fecdd3",
     };
+  }
 
-  if (s === "Chưa bắt đầu")
+  if (s === "Chưa bắt đầu") {
     return {
       ...baseStyle,
       background: "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)",
       color: "#475569",
       border: "1px solid #e2e8f0",
     };
+  }
 
   return {
     ...baseStyle,
@@ -193,26 +298,27 @@ const getStatusStyle = (p) => {
   };
 };
 
-const formatDate = (d) => (d ? new Date(d).toLocaleDateString("vi-VN") : "---");
+const formatDate = (d) => {
+  const date = parseApiDate(d);
+  return date ? date.toLocaleDateString("vi-VN") : "---";
+};
 
+// keyword + ngày đã lọc ở BE
+// status hiển thị vẫn lọc ở FE vì nó là trạng thái nghiệp vụ suy ra từ ngày + flag
 const filteredVouchers = computed(() => {
+  const statusFilter = (filters.value.status || "").trim();
+
   return vouchers.value
     .filter((p) => {
-      const kw = (filters.value.keyword || "").toLowerCase().trim();
-
-      const matchesKey =
-        !kw ||
-        p.maPhieuGiamGia?.toLowerCase().includes(kw) ||
-        p.tenPhieuGiamGia?.toLowerCase().includes(kw);
-
-      const matchesStatus = !filters.value.status || getStatusText(p) === filters.value.status;
-
-      return matchesKey && matchesStatus;
+      if (!statusFilter || statusFilter === "Tất cả") return true;
+      return getStatusText(p) === statusFilter;
     })
     .sort((a, b) => Number(a.id) - Number(b.id));
 });
 
-const totalPages = computed(() => Math.ceil(filteredVouchers.value.length / pageSize.value));
+const totalPages = computed(() => {
+  return Math.ceil(filteredVouchers.value.length / pageSize.value);
+});
 
 const paginatedVouchers = computed(() => {
   const start = (currentPage.value - 1) * pageSize.value;
@@ -224,12 +330,27 @@ const gotoPage = (p) => {
   currentPage.value = p;
 };
 
+const scheduleFetchData = () => {
+  currentPage.value = 1;
+
+  if (fetchTimer) clearTimeout(fetchTimer);
+  fetchTimer = setTimeout(() => {
+    fetchData();
+  }, 300);
+};
+
 watch(
-  filters,
+  () => [filters.value.keyword, filters.value.startDate, filters.value.endDate],
+  () => {
+    scheduleFetchData();
+  },
+);
+
+watch(
+  () => filters.value.status,
   () => {
     currentPage.value = 1;
   },
-  { deep: true },
 );
 
 watch(totalPages, (tp) => {
@@ -240,9 +361,15 @@ watch(totalPages, (tp) => {
   if (currentPage.value > tp) currentPage.value = tp;
 });
 
-const resetFilters = () => {
-  filters.value = { keyword: "", startDate: "", endDate: "", status: "" };
+const resetFilters = async () => {
+  filters.value = {
+    keyword: "",
+    startDate: "",
+    endDate: "",
+    status: "",
+  };
   currentPage.value = 1;
+  await fetchData();
 };
 
 const exportToExcel = () => {
@@ -263,10 +390,8 @@ const exportToExcel = () => {
 const buildNewTrangThai = (p, oldValue, argChecked) => {
   if (typeof argChecked === "boolean") return argChecked;
 
-  // trường hợp VoucherTable dùng v-model và emit sau khi đã đổi => p.trangThai là giá trị mới
   if (typeof p?.trangThai === "boolean") return p.trangThai;
 
-  // fallback
   const n = normalizeTrangThai(p?.trangThai);
   if (n !== oldValue) return n;
 
@@ -277,9 +402,7 @@ const toggleVoucherStatus = async (p, checked) => {
   const id = p?.id;
   if (!id) return;
 
-  // đang cập nhật thì chặn gạt nhanh
   if (dangCapNhatTrangThai.value.has(id)) {
-    // revert UI về trạng thái gốc (tránh nhảy)
     const oldValue = trangThaiGocMap.value.get(id) ?? normalizeTrangThai(p?.trangThai);
     p.trangThai = oldValue;
     return;
@@ -288,8 +411,6 @@ const toggleVoucherStatus = async (p, checked) => {
   const oldValue = trangThaiGocMap.value.get(id) ?? normalizeTrangThai(p?.trangThai);
   const newValue = buildNewTrangThai(p, oldValue, checked);
 
-  // yêu cầu: gạt OFF => đang hoạt động -> đã kết thúc
-  // (newValue=false là kết thúc)
   const result = await Swal.fire({
     title: "Xác nhận đổi trạng thái?",
     icon: "info",
@@ -299,34 +420,29 @@ const toggleVoucherStatus = async (p, checked) => {
   });
 
   if (!result.isConfirmed) {
-    // revert nếu user hủy
     p.trangThai = oldValue;
     return;
   }
 
-  // optimistic để nhãn đổi ngay (getStatusText sẽ ra "Đã kết thúc" khi newValue=false)
   p.trangThai = newValue;
-
   dangCapNhatTrangThai.value.add(id);
 
   try {
-    // ✅ ưu tiên gửi đúng field cần cập nhật
     try {
       await axios.put(`${API_URL}/${id}`, { trangThai: newValue });
     } catch (e1) {
-      // ✅ fallback nếu BE validate cần nhiều field: gửi full object kèm trangThai
       const payload = { ...p, trangThai: newValue };
       await axios.put(`${API_URL}/${id}`, payload);
     }
 
-    // ✅ reload từ server để đảm bảo SQL đã cập nhật thật và lọc ra đúng
     await fetchData();
   } catch (e) {
     console.error(e);
-    // revert nếu lỗi
     p.trangThai = oldValue;
+
     await Swal.fire({
       title: "Không thể cập nhật trạng thái",
+      text: getErrorMessage(e),
       icon: "error",
       confirmButtonText: "Đóng",
     });
@@ -339,10 +455,13 @@ const goCreate = () => router.push("/admin/giam-gia/phieu/them");
 const viewDetail = (p) => router.push(`/admin/giam-gia/phieu/${p.id}`);
 
 onMounted(fetchData);
+
+onBeforeUnmount(() => {
+  if (fetchTimer) clearTimeout(fetchTimer);
+});
 </script>
 
 <style scoped>
-/* ===== Font đồng bộ (giống ChatLieuPage) ===== */
 .ss-page {
   padding: 16px;
 }
@@ -351,7 +470,6 @@ onMounted(fetchData);
   color: rgba(17, 24, 39, 0.82);
 }
 
-/* ✅ tuyệt đối không in đậm trong trang */
 :deep(.fw-bold),
 :deep(.fw-semibold),
 :deep(b),
@@ -359,7 +477,6 @@ onMounted(fetchData);
   font-weight: 400 !important;
 }
 
-/* ===== Title chuẩn size ===== */
 h2.h5 {
   font-size: 20px;
   font-weight: 500 !important;
@@ -374,7 +491,6 @@ h3.h6 {
   color: rgba(17, 24, 39, 0.82);
 }
 
-/* ===== Card style ===== */
 .ss-filter-container,
 .ss-custom-box {
   background-color: #fff;
@@ -383,7 +499,6 @@ h3.h6 {
   box-shadow: none !important;
 }
 
-/* ===== Filter layout: actions nằm trong filter, canh phải ===== */
 .ss-filter-top {
   display: flex;
   flex-direction: column;
@@ -397,7 +512,6 @@ h3.h6 {
   flex-wrap: wrap;
 }
 
-/* ===== Buttons chuẩn 13px ===== */
 .btn {
   height: 36px;
   padding: 0 14px;
@@ -418,7 +532,6 @@ h3.h6 {
   background: rgba(17, 24, 39, 0.04);
 }
 
-/* ✅ Icon trong button (Material Icons Outlined) */
 .ss-btn-ico {
   font-size: 18px;
   line-height: 1;
@@ -428,7 +541,6 @@ h3.h6 {
   color: currentColor;
 }
 
-/* ✅ Xuất Excel: style y hệt ChatLieu/HoaDon (lite) */
 .ss-btn-lite {
   background: #f3f4f6 !important;
   color: rgba(17, 24, 39, 0.88) !important;
@@ -438,7 +550,6 @@ h3.h6 {
   background: #eef0f3 !important;
 }
 
-/* ✅ Đặt lại bộ lọc: style y hệt ChatLieu/HoaDon (dark) */
 .ss-btn-dark {
   background: #4b5563 !important;
   color: #fff !important;
@@ -448,7 +559,6 @@ h3.h6 {
   filter: brightness(0.98);
 }
 
-/* ===== Primary (màu chủ đạo SevenStrike) ===== */
 .ss-btn-primary {
   border: none !important;
   color: #fff !important;
@@ -459,7 +569,6 @@ h3.h6 {
   filter: brightness(0.98);
 }
 
-/* ===== Pagination ngoài danh sách, ký hiệu < > ===== */
 .ss-pagination-wrap {
   margin-top: 12px;
   display: flex;

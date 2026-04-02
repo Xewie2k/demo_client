@@ -252,7 +252,6 @@ import { useRouter } from 'vue-router';
 import { useCart } from '@/services/cart';
 import { useClientAuth } from '@/services/authClient';
 import ChatWidget from '@/chatAI/components/ChatWidget.vue';
-import Swal from 'sweetalert2';
 
 const router = useRouter();
 const { cart } = useCart();
@@ -288,21 +287,9 @@ onBeforeUnmount(() => {
   document.removeEventListener('click', onClickOutside);
 });
 
-const handleLogout = async () => {
-  const result = await Swal.fire({
-    icon: 'question',
-    title: 'Đăng xuất',
-    text: 'Bạn có chắc muốn đăng xuất không?',
-    showCancelButton: true,
-    confirmButtonText: 'Đăng xuất',
-    cancelButtonText: 'Hủy',
-    confirmButtonColor: '#dc3545',
-    cancelButtonColor: '#6c757d',
-  });
-  if (result.isConfirmed) {
-    logout();
-    router.push('/client');
-  }
+const handleLogout = () => {
+  logout();
+  router.push('/client');
 };
 </script>
 

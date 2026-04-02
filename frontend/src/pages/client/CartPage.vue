@@ -61,7 +61,7 @@
                         <td class="text-center">
                             <div class="d-inline-flex border rounded bg-white">
                                 <button class="btn btn-sm btn-link text-dark text-decoration-none px-2 border-end" @click="updateQuantity(item.variantId, item.quantity - 1)" :disabled="item.quantity <= 1">-</button>
-                                <input type="number" class="form-control form-control-sm text-center border-0 bg-transparent" :value="item.quantity" @change="onQuantityInput(item, $event)" min="1" :max="item.maxStock" style="width: 50px; height: 30px;">
+                                <input type="text" class="form-control form-control-sm text-center border-0 bg-transparent" :value="item.quantity" readonly style="width: 40px; height: 30px;">
                                 <button class="btn btn-sm btn-link text-dark text-decoration-none px-2 border-start" @click="updateQuantity(item.variantId, item.quantity + 1)" :disabled="item.quantity >= item.maxStock">+</button>
                             </div>
                         </td>
@@ -111,17 +111,6 @@ import { useRouter } from 'vue-router';
 import Swal from 'sweetalert2';
 
 const { cart, removeFromCart, updateQuantity } = useCart();
-
-const onQuantityInput = (item, e) => {
-    let val = parseInt(e.target.value, 10);
-    if (isNaN(val) || val < 1) val = 1;
-    if (val > item.maxStock) {
-        Swal.fire("Thông báo", "Số lượng sản phẩm trong kho không đủ.", "warning");
-        val = item.maxStock;
-    }
-    updateQuantity(item.variantId, val);
-    e.target.value = val;
-};
 const router = useRouter();
 
 // By default select all

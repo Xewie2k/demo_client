@@ -7,7 +7,11 @@
         {{ isEdit ? "SỬA CHI TIẾT SẢN PHẨM" : "THÊM CHI TIẾT SẢN PHẨM" }}
       </div>
       <div class="d-flex gap-2">
-        <button class="btn btn-outline-secondary ss-btn" @click="back" type="button">
+        <button
+          class="btn btn-outline-secondary ss-btn"
+          @click="back"
+          type="button"
+        >
           ← Quay lại danh sách
         </button>
       </div>
@@ -20,20 +24,21 @@
         <div class="ss-card ss-border p-3 h-100">
           <div class="ss-card-title">Thêm thông tin sản phẩm</div>
 
-          <!-- ✅ Mã (đặt trước tên/sản phẩm) -->
           <div class="mb-3">
             <label class="form-label mb-1">Mã</label>
-            <input class="form-control" :value="form.maSanPham || '(Tự sinh)'" disabled />
+            <input
+              class="form-control"
+              :value="form.maSanPham || '(Tự sinh)'"
+              disabled
+            />
           </div>
 
-          <!-- Sản phẩm -->
           <div class="mb-3">
             <label class="form-label mb-1">
               Sản phẩm
               <span class="ss-required" :title="requiredTooltip">*</span>
             </label>
 
-            <!-- ✅ Combobox: vừa tìm vừa nhập + dấu X nằm trong input (đồng nhất các ô thuộc tính) -->
             <v-select
               v-model="selectedProduct"
               :options="productOptions"
@@ -45,22 +50,35 @@
               @option:created="onCreateProductTag"
             >
               <template #option="opt">
-                <div v-if="opt.__isNew" class="d-flex align-items-center justify-content-between">
+                <div
+                  v-if="opt.__isNew"
+                  class="d-flex align-items-center justify-content-between"
+                >
                   <span>Thêm mới "{{ opt.tenSanPham }}"</span>
                   <small class="text-muted">Sản phẩm</small>
                 </div>
 
-                <!-- ✅ Mã trước tên -->
-                <div v-else class="d-flex justify-content-between" style="gap:10px">
-                  <span class="text-truncate">{{ opt.maSanPham ?? opt.ma }}</span>
-                  <small class="text-muted">{{ opt.tenSanPham ?? opt.ten }}</small>
+                <div
+                  v-else
+                  class="d-flex justify-content-between"
+                  style="gap: 10px"
+                >
+                  <span class="text-truncate">{{
+                    opt.maSanPham ?? opt.ma
+                  }}</span>
+                  <small class="text-muted">{{
+                    opt.tenSanPham ?? opt.ten
+                  }}</small>
                 </div>
               </template>
 
-              <!-- ✅ Mã trước tên -->
               <template #selected-option="opt">
                 <span>
-                  {{ (opt.maSanPham ?? opt.ma) ? (opt.maSanPham ?? opt.ma) + " - " : "" }}
+                  {{
+                    (opt.maSanPham ?? opt.ma)
+                      ? (opt.maSanPham ?? opt.ma) + " - "
+                      : ""
+                  }}
                   {{ opt.tenSanPham ?? opt.ten }}
                 </span>
               </template>
@@ -82,21 +100,36 @@
                 placeholder="Chọn hoặc nhập thương hiệu..."
                 taggable
                 :clearable="true"
-                :create-option="(label) => createTagOption(label, 'tenThuongHieu')"
+                :create-option="
+                  (label) => createTagOption(label, 'tenThuongHieu')
+                "
                 @option:created="(opt) => onCreateRef('thuongHieu', opt)"
               >
                 <template #option="opt">
-                  <div v-if="opt.__isNew" class="d-flex align-items-center justify-content-between">
+                  <div
+                    v-if="opt.__isNew"
+                    class="d-flex align-items-center justify-content-between"
+                  >
                     <span>Thêm mới "{{ opt.tenThuongHieu ?? opt.ten }}"</span>
                     <small class="text-muted">Thương hiệu</small>
                   </div>
-                  <div v-else class="d-flex justify-content-between" style="gap:10px">
-                    <span class="text-truncate">{{ opt.tenThuongHieu ?? opt.ten }}</span>
-                    <small class="text-muted">{{ opt.maThuongHieu ?? opt.ma }}</small>
+                  <div
+                    v-else
+                    class="d-flex justify-content-between"
+                    style="gap: 10px"
+                  >
+                    <span class="text-truncate">{{
+                      opt.tenThuongHieu ?? opt.ten
+                    }}</span>
+                    <small class="text-muted">{{
+                      opt.maThuongHieu ?? opt.ma
+                    }}</small>
                   </div>
                 </template>
               </v-select>
-              <div v-if="errors.thuongHieu" class="ss-err">{{ errors.thuongHieu }}</div>
+              <div v-if="errors.thuongHieu" class="ss-err">
+                {{ errors.thuongHieu }}
+              </div>
             </div>
 
             <div class="col-md-6">
@@ -112,13 +145,24 @@
                 @option:created="(opt) => onCreateRef('xuatXu', opt)"
               >
                 <template #option="opt">
-                  <div v-if="opt.__isNew" class="d-flex align-items-center justify-content-between">
+                  <div
+                    v-if="opt.__isNew"
+                    class="d-flex align-items-center justify-content-between"
+                  >
                     <span>Thêm mới "{{ opt.tenXuatXu ?? opt.ten }}"</span>
                     <small class="text-muted">Xuất xứ</small>
                   </div>
-                  <div v-else class="d-flex justify-content-between" style="gap:10px">
-                    <span class="text-truncate">{{ opt.tenXuatXu ?? opt.ten }}</span>
-                    <small class="text-muted">{{ opt.maXuatXu ?? opt.ma }}</small>
+                  <div
+                    v-else
+                    class="d-flex justify-content-between"
+                    style="gap: 10px"
+                  >
+                    <span class="text-truncate">{{
+                      opt.tenXuatXu ?? opt.ten
+                    }}</span>
+                    <small class="text-muted">{{
+                      opt.maXuatXu ?? opt.ma
+                    }}</small>
                   </div>
                 </template>
               </v-select>
@@ -137,13 +181,24 @@
                 @option:created="(opt) => onCreateRef('coGiay', opt)"
               >
                 <template #option="opt">
-                  <div v-if="opt.__isNew" class="d-flex align-items-center justify-content-between">
+                  <div
+                    v-if="opt.__isNew"
+                    class="d-flex align-items-center justify-content-between"
+                  >
                     <span>Thêm mới "{{ opt.tenCoGiay ?? opt.ten }}"</span>
                     <small class="text-muted">Cổ giày</small>
                   </div>
-                  <div v-else class="d-flex justify-content-between" style="gap:10px">
-                    <span class="text-truncate">{{ opt.tenCoGiay ?? opt.ten }}</span>
-                    <small class="text-muted">{{ opt.maCoGiay ?? opt.ma }}</small>
+                  <div
+                    v-else
+                    class="d-flex justify-content-between"
+                    style="gap: 10px"
+                  >
+                    <span class="text-truncate">{{
+                      opt.tenCoGiay ?? opt.ten
+                    }}</span>
+                    <small class="text-muted">{{
+                      opt.maCoGiay ?? opt.ma
+                    }}</small>
                   </div>
                 </template>
               </v-select>
@@ -158,17 +213,30 @@
                 placeholder="Chọn hoặc nhập chất liệu..."
                 taggable
                 :clearable="true"
-                :create-option="(label) => createTagOption(label, 'tenChatLieu')"
+                :create-option="
+                  (label) => createTagOption(label, 'tenChatLieu')
+                "
                 @option:created="(opt) => onCreateRef('chatLieu', opt)"
               >
                 <template #option="opt">
-                  <div v-if="opt.__isNew" class="d-flex align-items-center justify-content-between">
+                  <div
+                    v-if="opt.__isNew"
+                    class="d-flex align-items-center justify-content-between"
+                  >
                     <span>Thêm mới "{{ opt.tenChatLieu ?? opt.ten }}"</span>
                     <small class="text-muted">Chất liệu</small>
                   </div>
-                  <div v-else class="d-flex justify-content-between" style="gap:10px">
-                    <span class="text-truncate">{{ opt.tenChatLieu ?? opt.ten }}</span>
-                    <small class="text-muted">{{ opt.maChatLieu ?? opt.ma }}</small>
+                  <div
+                    v-else
+                    class="d-flex justify-content-between"
+                    style="gap: 10px"
+                  >
+                    <span class="text-truncate">{{
+                      opt.tenChatLieu ?? opt.ten
+                    }}</span>
+                    <small class="text-muted">{{
+                      opt.maChatLieu ?? opt.ma
+                    }}</small>
                   </div>
                 </template>
               </v-select>
@@ -179,26 +247,69 @@
               <v-select
                 v-model="selectedViTriThiDau"
                 :options="viTriThiDauOptions"
-                :get-option-label="(o) => pickLabel(o, ['tenViTri','tenViTriThiDau','ten_vi_tri_thi_dau','ten','name'])"
+                :get-option-label="
+                  (o) =>
+                    pickLabel(o, [
+                      'tenViTri',
+                      'tenViTriThiDau',
+                      'ten_vi_tri_thi_dau',
+                      'ten',
+                      'name',
+                    ])
+                "
                 placeholder="Chọn hoặc nhập vị trí..."
                 taggable
-                :taggable="false"
                 :clearable="true"
                 :create-option="(label) => createTagOption(label, 'tenViTri')"
                 @option:created="(opt) => onCreateRef('viTriThiDau', opt)"
               >
                 <template #option="opt">
-                  <div v-if="opt.__isNew" class="d-flex align-items-center justify-content-between">
-                    <span>Thêm mới "{{ pickLabel(opt, ['tenViTri','tenViTriThiDau','ten_vi_tri_thi_dau','ten','name']) }}"</span>
+                  <div
+                    v-if="opt.__isNew"
+                    class="d-flex align-items-center justify-content-between"
+                  >
+                    <span
+                      >Thêm mới "{{
+                        pickLabel(opt, [
+                          "tenViTri",
+                          "tenViTriThiDau",
+                          "ten_vi_tri_thi_dau",
+                          "ten",
+                          "name",
+                        ])
+                      }}"</span
+                    >
                     <small class="text-muted">Vị trí</small>
                   </div>
-                  <div v-else class="d-flex justify-content-between" style="gap:10px">
-                    <span class="text-truncate">{{ pickLabel(opt, ['tenViTri','tenViTriThiDau','ten_vi_tri_thi_dau','ten','name']) }}</span>
-                    <small class="text-muted">{{ opt.maViTri ?? opt.ma ?? '' }}</small>
+                  <div
+                    v-else
+                    class="d-flex justify-content-between"
+                    style="gap: 10px"
+                  >
+                    <span class="text-truncate">{{
+                      pickLabel(opt, [
+                        "tenViTri",
+                        "tenViTriThiDau",
+                        "ten_vi_tri_thi_dau",
+                        "ten",
+                        "name",
+                      ])
+                    }}</span>
+                    <small class="text-muted">{{
+                      opt.maViTri ?? opt.ma ?? ""
+                    }}</small>
                   </div>
                 </template>
                 <template #selected-option="opt">
-                  <span>{{ pickLabel(opt, ['tenViTri','tenViTriThiDau','ten_vi_tri_thi_dau','ten','name']) }}</span>
+                  <span>{{
+                    pickLabel(opt, [
+                      "tenViTri",
+                      "tenViTriThiDau",
+                      "ten_vi_tri_thi_dau",
+                      "ten",
+                      "name",
+                    ])
+                  }}</span>
                 </template>
               </v-select>
             </div>
@@ -208,33 +319,82 @@
               <v-select
                 v-model="selectedPhongCachChoi"
                 :options="phongCachChoiOptions"
-                :get-option-label="(o) => pickLabel(o, ['tenPhongCach','tenPhongCachChoi','ten_phong_cach_choi','ten','name'])"
+                :get-option-label="
+                  (o) =>
+                    pickLabel(o, [
+                      'tenPhongCach',
+                      'tenPhongCachChoi',
+                      'ten_phong_cach_choi',
+                      'ten',
+                      'name',
+                    ])
+                "
                 placeholder="Chọn hoặc nhập phong cách..."
                 taggable
-                :taggable="false"
                 :clearable="true"
-                :create-option="(label) => createTagOption(label, 'tenPhongCach')"
+                :create-option="
+                  (label) => createTagOption(label, 'tenPhongCach')
+                "
                 @option:created="(opt) => onCreateRef('phongCachChoi', opt)"
               >
                 <template #option="opt">
-                  <div v-if="opt.__isNew" class="d-flex align-items-center justify-content-between">
-                    <span>Thêm mới "{{ pickLabel(opt, ['tenPhongCach','tenPhongCachChoi','ten_phong_cach_choi','ten','name']) }}"</span>
+                  <div
+                    v-if="opt.__isNew"
+                    class="d-flex align-items-center justify-content-between"
+                  >
+                    <span
+                      >Thêm mới "{{
+                        pickLabel(opt, [
+                          "tenPhongCach",
+                          "tenPhongCachChoi",
+                          "ten_phong_cach_choi",
+                          "ten",
+                          "name",
+                        ])
+                      }}"</span
+                    >
                     <small class="text-muted">Phong cách</small>
                   </div>
-                  <div v-else class="d-flex justify-content-between" style="gap:10px">
-                    <span class="text-truncate">{{ pickLabel(opt, ['tenPhongCach','tenPhongCachChoi','ten_phong_cach_choi','ten','name']) }}</span>
-                    <small class="text-muted">{{ opt.maPhongCach ?? opt.ma ?? '' }}</small>
+                  <div
+                    v-else
+                    class="d-flex justify-content-between"
+                    style="gap: 10px"
+                  >
+                    <span class="text-truncate">{{
+                      pickLabel(opt, [
+                        "tenPhongCach",
+                        "tenPhongCachChoi",
+                        "ten_phong_cach_choi",
+                        "ten",
+                        "name",
+                      ])
+                    }}</span>
+                    <small class="text-muted">{{
+                      opt.maPhongCach ?? opt.ma ?? ""
+                    }}</small>
                   </div>
                 </template>
                 <template #selected-option="opt">
-                  <span>{{ pickLabel(opt, ['tenPhongCach','tenPhongCachChoi','ten_phong_cach_choi','ten','name']) }}</span>
+                  <span>{{
+                    pickLabel(opt, [
+                      "tenPhongCach",
+                      "tenPhongCachChoi",
+                      "ten_phong_cach_choi",
+                      "ten",
+                      "name",
+                    ])
+                  }}</span>
                 </template>
               </v-select>
             </div>
 
             <div class="col-12">
               <label class="form-label">Mô tả ngắn</label>
-              <textarea class="form-control" rows="3" v-model="form.moTaNgan" />
+              <textarea
+                class="form-control"
+                rows="3"
+                v-model="form.moTaNgan"
+              />
             </div>
           </div>
         </div>
@@ -245,14 +405,18 @@
         <div class="ss-card ss-border p-3 h-100">
           <div class="ss-card-title">Biến thể sản phẩm</div>
 
-          <!-- Màu sắc -->
           <div class="mb-3">
             <div class="d-flex align-items-center justify-content-between">
               <label class="form-label mb-1">
                 Màu sắc
                 <span class="ss-required" :title="requiredTooltip">*</span>
               </label>
-              <button class="btn btn-outline-secondary ss-btn-sm" type="button" @click="openAddColor" :disabled="loading">
+              <button
+                class="btn btn-outline-secondary ss-btn-sm"
+                type="button"
+                @click="openAddColor"
+                :disabled="loading"
+              >
                 Thêm màu
               </button>
             </div>
@@ -267,28 +431,40 @@
               :close-on-select="false"
             >
               <template #option="opt">
-                <div class="d-flex align-items-center justify-content-between" style="gap:10px">
-                  <div class="d-flex align-items-center" style="gap:10px;min-width:0">
+                <div
+                  class="d-flex align-items-center justify-content-between"
+                  style="gap: 10px"
+                >
+                  <div
+                    class="d-flex align-items-center"
+                    style="gap: 10px; min-width: 0"
+                  >
                     <span
                       class="ss-color-dot"
                       :style="{
                         background: pickColorHex(opt),
-                        borderColor: isLight(pickColorHex(opt)) ? 'rgba(17,24,39,0.25)' : 'transparent'
+                        borderColor: isLight(pickColorHex(opt))
+                          ? 'rgba(17,24,39,0.25)'
+                          : 'transparent',
                       }"
                     />
-                    <span class="text-truncate">{{ opt.tenMauSac ?? opt.ten }}</span>
+                    <span class="text-truncate">{{
+                      opt.tenMauSac ?? opt.ten
+                    }}</span>
                   </div>
                   <small class="text-muted">{{ opt.maMauSac ?? opt.ma }}</small>
                 </div>
               </template>
 
               <template #selected-option="opt">
-                <span class="d-inline-flex align-items-center" style="gap:8px">
+                <span class="d-inline-flex align-items-center" style="gap: 8px">
                   <span
                     class="ss-color-dot"
                     :style="{
                       background: pickColorHex(opt),
-                      borderColor: isLight(pickColorHex(opt)) ? 'rgba(17,24,39,0.25)' : 'transparent'
+                      borderColor: isLight(pickColorHex(opt))
+                        ? 'rgba(17,24,39,0.25)'
+                        : 'transparent',
                     }"
                   />
                   <span>{{ opt.tenMauSac ?? opt.ten }}</span>
@@ -299,7 +475,6 @@
             <div v-if="errors.mauSac" class="ss-err">{{ errors.mauSac }}</div>
           </div>
 
-          <!-- Kích cỡ -->
           <div class="mb-3">
             <div class="d-flex align-items-center justify-content-between">
               <label class="form-label mb-1">
@@ -308,22 +483,39 @@
               </label>
             </div>
             <div class="ss-size-line">
-              <button class="btn btn-outline-secondary ss-btn-sm" type="button" @click="openSizeModal" :disabled="loading">
+              <button
+                class="btn btn-outline-secondary ss-btn-sm"
+                type="button"
+                @click="openSizeModal"
+                :disabled="loading"
+              >
                 Chọn kích cỡ
               </button>
               <div class="ss-chip-wrap" v-if="selectedKichThuoc?.length">
-                <div v-for="s in selectedKichThuoc" :key="s.id" class="ss-chip ss-chip-sm">
-                  <span class="ss-chip-text">{{ pickTen(s, 'tenKichThuoc', 'maKichThuoc') }}</span>
-                  <button class="ss-chip-x" type="button" @click="removeSelectedSize(s)" title="Bỏ size">
+                <div
+                  v-for="s in selectedKichThuoc"
+                  :key="s.id"
+                  class="ss-chip ss-chip-sm"
+                >
+                  <span class="ss-chip-text">{{
+                    pickTen(s, "tenKichThuoc", "maKichThuoc")
+                  }}</span>
+                  <button
+                    class="ss-chip-x"
+                    type="button"
+                    @click="removeSelectedSize(s)"
+                    title="Bỏ size"
+                  >
                     <span class="material-icons-outlined">close</span>
                   </button>
                 </div>
               </div>
             </div>
-            <div v-if="errors.kichThuoc" class="ss-err">{{ errors.kichThuoc }}</div>
+            <div v-if="errors.kichThuoc" class="ss-err">
+              {{ errors.kichThuoc }}
+            </div>
           </div>
 
-          <!-- Loại sân -->
           <div class="mb-3">
             <label class="form-label mb-1">
               Loại sân
@@ -341,20 +533,30 @@
               @option:created="(opt) => onCreateRef('loaiSan', opt)"
             >
               <template #option="opt">
-                <div v-if="opt.__isNew" class="d-flex align-items-center justify-content-between">
+                <div
+                  v-if="opt.__isNew"
+                  class="d-flex align-items-center justify-content-between"
+                >
                   <span>Thêm mới "{{ opt.tenLoaiSan ?? opt.ten }}"</span>
                   <small class="text-muted">Loại sân</small>
                 </div>
-                <div v-else class="d-flex justify-content-between" style="gap:10px">
-                  <span class="text-truncate">{{ opt.tenLoaiSan ?? opt.ten }}</span>
-                  <small class="text-muted">{{ opt.maLoaiSan ?? opt.ma }}</small>
+                <div
+                  v-else
+                  class="d-flex justify-content-between"
+                  style="gap: 10px"
+                >
+                  <span class="text-truncate">{{
+                    opt.tenLoaiSan ?? opt.ten
+                  }}</span>
+                  <small class="text-muted">{{
+                    opt.maLoaiSan ?? opt.ma
+                  }}</small>
                 </div>
               </template>
             </v-select>
             <div v-if="errors.loaiSan" class="ss-err">{{ errors.loaiSan }}</div>
           </div>
 
-          <!-- Form chân -->
           <div class="mb-3">
             <label class="form-label mb-1">
               Form chân
@@ -372,20 +574,38 @@
               @option:created="(opt) => onCreateRef('formChan', opt)"
             >
               <template #option="opt">
-                <div v-if="opt.__isNew" class="d-flex align-items-center justify-content-between">
+                <div
+                  v-if="opt.__isNew"
+                  class="d-flex align-items-center justify-content-between"
+                >
                   <span>Thêm mới "{{ opt.tenFormChan ?? opt.ten }}"</span>
                   <small class="text-muted">Form chân</small>
                 </div>
-                <div v-else class="d-flex justify-content-between" style="gap:10px">
-                  <span class="text-truncate">{{ opt.tenFormChan ?? opt.ten }}</span>
-                  <small class="text-muted">{{ opt.maFormChan ?? opt.ma }}</small>
+                <div
+                  v-else
+                  class="d-flex justify-content-between"
+                  style="gap: 10px"
+                >
+                  <span class="text-truncate">{{
+                    opt.tenFormChan ?? opt.ten
+                  }}</span>
+                  <small class="text-muted">{{
+                    opt.maFormChan ?? opt.ma
+                  }}</small>
                 </div>
               </template>
             </v-select>
-            <div v-if="errors.formChan" class="ss-err">{{ errors.formChan }}</div>
+            <div v-if="errors.formChan" class="ss-err">
+              {{ errors.formChan }}
+            </div>
           </div>
 
-          <button class="btn btn-primary ss-btn ss-generate" type="button" @click="generateVariants" :disabled="loading">
+          <button
+            class="btn btn-primary ss-btn ss-generate"
+            type="button"
+            @click="generateVariants"
+            :disabled="loading"
+          >
             Tạo biến thể tự động
           </button>
         </div>
@@ -400,11 +620,21 @@
           <span>Danh sách biến thể</span>
         </div>
         <div class="ss-bar-right">
-          <button class="btn ss-bar-btn ss-bar-btn-dark" type="button" @click="openBulkAll" :disabled="!rows.length || loading">
+          <button
+            class="btn ss-bar-btn ss-bar-btn-dark"
+            type="button"
+            @click="openBulkAll"
+            :disabled="!rows.length || loading"
+          >
             <span class="material-icons-outlined">bolt</span>
             <span>Thêm nhanh tất cả</span>
           </button>
-          <button class="btn ss-bar-btn ss-bar-btn-danger" type="button" @click="clearAllVariants" :disabled="!rows.length || loading">
+          <button
+            class="btn ss-bar-btn ss-bar-btn-danger"
+            type="button"
+            @click="clearAllVariants"
+            :disabled="!rows.length || loading"
+          >
             <span class="material-icons-outlined">delete_outline</span>
             <span>Xóa tất cả</span>
           </button>
@@ -416,18 +646,27 @@
       </div>
 
       <div class="p-3" v-else>
-        <!-- Group theo màu -->
         <div v-for="g in groupedRows" :key="g.groupKey" class="ss-color-group">
           <div class="ss-color-header">
-            <div class="d-flex align-items-center gap-2" style="min-width:0">
+            <div class="d-flex align-items-center gap-2" style="min-width: 0">
               <span
                 class="ss-dot"
-                :style="{ background: g.colorHex, borderColor: isLight(g.colorHex) ? 'rgba(17,24,39,0.20)' : 'transparent' }"
+                :style="{
+                  background: g.colorHex,
+                  borderColor: isLight(g.colorHex)
+                    ? 'rgba(17,24,39,0.20)'
+                    : 'transparent',
+                }"
               ></span>
               <span class="text-truncate">{{ g.colorName }}</span>
               <span class="ss-muted">({{ g.items.length }} biến thể)</span>
             </div>
-            <button class="btn ss-bar-btn ss-bar-btn-dark" type="button" @click="openBulkColor(g)" :disabled="loading">
+            <button
+              class="btn ss-bar-btn ss-bar-btn-dark"
+              type="button"
+              @click="openBulkColor(g)"
+              :disabled="loading"
+            >
               <span class="material-icons-outlined">bolt</span>
               <span>Thêm nhanh</span>
             </button>
@@ -437,10 +676,10 @@
             <table class="table ss-table-lite align-middle mb-0">
               <thead>
                 <tr>
-                  <th style="min-width:320px">Kích cỡ</th>
-                  <th style="min-width:240px">Số lượng</th>
-                  <th style="min-width:260px">Giá bán (VNĐ)</th>
-                  <th style="width:90px" class="text-center">Hành động</th>
+                  <th style="min-width: 320px">Kích cỡ</th>
+                  <th style="min-width: 240px">Số lượng</th>
+                  <th style="min-width: 260px">Giá bán (VNĐ)</th>
+                  <th style="width: 90px" class="text-center">Hành động</th>
                 </tr>
               </thead>
               <tbody>
@@ -464,7 +703,9 @@
                       @input="(e) => onNumberInputRow(r, 'soLuong', e)"
                       @blur="() => validateRow(r)"
                     />
-                    <div v-if="r.errSoLuong" class="ss-err">{{ r.errSoLuong }}</div>
+                    <div v-if="r.errSoLuong" class="ss-err">
+                      {{ r.errSoLuong }}
+                    </div>
                   </td>
                   <td>
                     <input
@@ -479,8 +720,16 @@
                     <div v-if="r.errGia" class="ss-err">{{ r.errGia }}</div>
                   </td>
                   <td class="text-center">
-                    <button class="btn ss-del" type="button" title="Xóa" @click="removeRow(r)" :disabled="loading">
-                      <span class="material-icons-outlined">delete_outline</span>
+                    <button
+                      class="btn ss-del"
+                      type="button"
+                      title="Xóa"
+                      @click="removeRow(r)"
+                      :disabled="loading"
+                    >
+                      <span class="material-icons-outlined"
+                        >delete_outline</span
+                      >
                     </button>
                   </td>
                 </tr>
@@ -489,7 +738,6 @@
           </div>
         </div>
 
-        <!-- Ảnh theo màu sắc -->
         <div class="ss-image-block ss-image-block-bottom">
           <div class="ss-image-title">
             <span class="material-icons-outlined">image</span>
@@ -498,15 +746,22 @@
           <div class="ss-image-grid">
             <div v-for="c in selectedMauSac" :key="c.id" class="ss-image-card">
               <div class="ss-image-head">
-                <div class="d-flex align-items-center gap-2" style="min-width:0">
+                <div
+                  class="d-flex align-items-center gap-2"
+                  style="min-width: 0"
+                >
                   <span
                     class="ss-dot"
                     :style="{
                       background: pickColorHex(c),
-                      borderColor: isLight(pickColorHex(c)) ? 'rgba(17,24,39,0.20)' : 'transparent'
+                      borderColor: isLight(pickColorHex(c))
+                        ? 'rgba(17,24,39,0.20)'
+                        : 'transparent',
                     }"
                   ></span>
-                  <span class="text-truncate">{{ pickTen(c, 'tenMauSac', 'maMauSac') }}</span>
+                  <span class="text-truncate">{{
+                    pickTen(c, "tenMauSac", "maMauSac")
+                  }}</span>
                 </div>
                 <button
                   v-if="colorFiles[String(c.id)]?.file"
@@ -534,7 +789,9 @@
                 type="file"
                 :id="`file-ms-${c.id}`"
                 accept="image/*"
-                @change="(e) => onColorFileChange(e, { groupKey: String(c.id) })"
+                @change="
+                  (e) => onColorFileChange(e, { groupKey: String(c.id) })
+                "
               />
               <button
                 class="btn btn-outline-secondary ss-img-btn"
@@ -542,7 +799,7 @@
                 @click="triggerColorFile(String(c.id))"
                 :disabled="loading"
               >
-                Thêm ảnh {{ pickTen(c, 'tenMauSac', 'maMauSac') }}
+                Thêm ảnh {{ pickTen(c, "tenMauSac", "maMauSac") }}
               </button>
             </div>
           </div>
@@ -550,16 +807,26 @@
       </div>
 
       <div class="ss-footer-actions">
-        <button class="btn btn-outline-secondary ss-btn" type="button" @click="back" :disabled="loading">
+        <button
+          class="btn btn-outline-secondary ss-btn"
+          type="button"
+          @click="back"
+          :disabled="loading"
+        >
           Hủy bỏ
         </button>
-        <button class="btn btn-primary ss-btn" type="button" :disabled="loading" @click="openConfirm">
+        <button
+          class="btn btn-primary ss-btn"
+          type="button"
+          :disabled="loading"
+          @click="openConfirm"
+        >
           {{ isEdit ? "Lưu chi tiết sản phẩm" : "Thêm chi tiết sản phẩm" }}
         </button>
       </div>
     </div>
 
-    <!-- ✅ MODAL: CHỌN KÍCH CỠ 38-45 (1 ô input + chọn nhanh) -->
+    <!-- MODAL: CHỌN KÍCH CỠ -->
     <div v-if="sizeModal.open" class="ss-overlay" @click.self="closeSizeModal">
       <div class="ss-modal">
         <div class="ss-modal-head">
@@ -571,7 +838,9 @@
             <v-select
               v-model="sizeModal.tempSelected"
               :options="sizeModal.options"
-              :get-option-label="(o) => pickTen(o, 'tenKichThuoc', 'maKichThuoc')"
+              :get-option-label="
+                (o) => pickTen(o, 'tenKichThuoc', 'maKichThuoc')
+              "
               placeholder="Chọn hoặc tìm kích cỡ (38 - 45)..."
               multiple
               :clearable="true"
@@ -606,10 +875,18 @@
         </div>
 
         <div class="ss-modal-foot">
-          <button class="btn btn-outline-secondary ss-btn" type="button" @click="closeSizeModal">
+          <button
+            class="btn btn-outline-secondary ss-btn"
+            type="button"
+            @click="closeSizeModal"
+          >
             Hủy bỏ
           </button>
-          <button class="btn btn-primary ss-btn" type="button" @click="confirmSizeModal">
+          <button
+            class="btn btn-primary ss-btn"
+            type="button"
+            @click="confirmSizeModal"
+          >
             Xác nhận
           </button>
         </div>
@@ -628,13 +905,21 @@
               Tên màu
               <span class="ss-required" :title="requiredTooltip">*</span>
             </label>
-            <input v-model="addColor.ten" class="form-control" placeholder="Ví dụ: Đỏ, Trắng, Xanh lá..." />
+            <input
+              v-model="addColor.ten"
+              class="form-control"
+              placeholder="Ví dụ: Đỏ, Trắng, Xanh lá..."
+            />
           </div>
 
           <div class="mb-2">
             <label class="form-label">Chọn màu</label>
             <div class="d-flex align-items-center gap-2">
-              <input v-model="addColor.hex" type="color" class="form-control form-control-color" />
+              <input
+                v-model="addColor.hex"
+                type="color"
+                class="form-control form-control-color"
+              />
               <div class="ss-muted">{{ addColor.hex }}</div>
             </div>
           </div>
@@ -642,10 +927,19 @@
           <div v-if="addColor.err" class="ss-err">{{ addColor.err }}</div>
         </div>
         <div class="ss-modal-foot">
-          <button class="btn btn-outline-secondary ss-btn" type="button" @click="closeAddColor">
+          <button
+            class="btn btn-outline-secondary ss-btn"
+            type="button"
+            @click="closeAddColor"
+          >
             Hủy bỏ
           </button>
-          <button class="btn btn-primary ss-btn" type="button" @click="confirmAddColor" :disabled="loading">
+          <button
+            class="btn btn-primary ss-btn"
+            type="button"
+            @click="confirmAddColor"
+            :disabled="loading"
+          >
             Xác nhận
           </button>
         </div>
@@ -663,15 +957,23 @@
             <div class="ss-bulk-line">
               <span class="ss-muted">Màu:</span>
               <div class="ss-chip-wrap ss-chip-wrap-sm">
-                <div v-for="c in selectedMauSac" :key="c.id" class="ss-chip ss-chip-sm">
+                <div
+                  v-for="c in selectedMauSac"
+                  :key="c.id"
+                  class="ss-chip ss-chip-sm"
+                >
                   <span
                     class="ss-dot"
                     :style="{
                       background: pickColorHex(c),
-                      borderColor: isLight(pickColorHex(c)) ? 'rgba(17,24,39,0.20)' : 'transparent'
+                      borderColor: isLight(pickColorHex(c))
+                        ? 'rgba(17,24,39,0.20)'
+                        : 'transparent',
                     }"
                   ></span>
-                  <span class="ss-chip-text">{{ pickTen(c, "tenMauSac", "maMauSac") }}</span>
+                  <span class="ss-chip-text">{{
+                    pickTen(c, "tenMauSac", "maMauSac")
+                  }}</span>
                 </div>
               </div>
             </div>
@@ -707,10 +1009,19 @@
           <div v-if="bulkAll.err" class="ss-err">{{ bulkAll.err }}</div>
         </div>
         <div class="ss-modal-foot">
-          <button class="btn btn-outline-secondary ss-btn" type="button" @click="closeBulkAll">
+          <button
+            class="btn btn-outline-secondary ss-btn"
+            type="button"
+            @click="closeBulkAll"
+          >
             Hủy bỏ
           </button>
-          <button class="btn btn-primary ss-btn" type="button" @click="applyBulkAll" :disabled="loading">
+          <button
+            class="btn btn-primary ss-btn"
+            type="button"
+            @click="applyBulkAll"
+            :disabled="loading"
+          >
             Áp dụng
           </button>
         </div>
@@ -721,7 +1032,9 @@
     <div v-if="bulkColor.open" class="ss-overlay" @click.self="closeBulkColor">
       <div class="ss-modal">
         <div class="ss-modal-head">
-          <div class="ss-modal-title">Thêm nhanh: {{ bulkColor.colorName }}</div>
+          <div class="ss-modal-title">
+            Thêm nhanh: {{ bulkColor.colorName }}
+          </div>
         </div>
         <div class="ss-modal-body">
           <div class="ss-bulk-preview">
@@ -733,7 +1046,9 @@
                     class="ss-dot"
                     :style="{
                       background: bulkColor.colorHex,
-                      borderColor: isLight(bulkColor.colorHex) ? 'rgba(17,24,39,0.20)' : 'transparent'
+                      borderColor: isLight(bulkColor.colorHex)
+                        ? 'rgba(17,24,39,0.20)'
+                        : 'transparent',
                     }"
                   ></span>
                   <span class="ss-chip-text">{{ bulkColor.colorName }}</span>
@@ -770,13 +1085,24 @@
             />
           </div>
           <div class="ss-muted">Áp dụng cho tất cả biến thể thuộc màu này.</div>
-          <div v-if="bulkColor.err" class="ss-err mt-2">{{ bulkColor.err }}</div>
+          <div v-if="bulkColor.err" class="ss-err mt-2">
+            {{ bulkColor.err }}
+          </div>
         </div>
         <div class="ss-modal-foot">
-          <button class="btn btn-outline-secondary ss-btn" type="button" @click="closeBulkColor">
+          <button
+            class="btn btn-outline-secondary ss-btn"
+            type="button"
+            @click="closeBulkColor"
+          >
             Hủy bỏ
           </button>
-          <button class="btn btn-primary ss-btn" type="button" @click="applyBulkColor" :disabled="loading">
+          <button
+            class="btn btn-primary ss-btn"
+            type="button"
+            @click="applyBulkColor"
+            :disabled="loading"
+          >
             Áp dụng
           </button>
         </div>
@@ -791,7 +1117,8 @@
         </div>
         <div class="ss-confirm-body">
           <div class="ss-confirm-text">
-            Bạn có chắc chắn muốn {{ isEdit ? "cập nhật" : "thêm mới" }} chi tiết sản phẩm cho "{{ confirmProductName }}" không?
+            Bạn có chắc chắn muốn {{ isEdit ? "cập nhật" : "thêm mới" }} chi
+            tiết sản phẩm cho "{{ confirmProductName }}" không?
           </div>
           <div class="ss-confirm-sub">
             <template v-if="isEdit">
@@ -803,10 +1130,20 @@
           </div>
         </div>
         <div class="ss-confirm-footer">
-          <button class="btn btn-outline-secondary ss-btn" type="button" :disabled="loading" @click="closeConfirm">
+          <button
+            class="btn btn-outline-secondary ss-btn"
+            type="button"
+            :disabled="loading"
+            @click="closeConfirm"
+          >
             Hủy bỏ
           </button>
-          <button class="btn btn-primary ss-btn" type="button" :disabled="loading" @click="confirmSubmit">
+          <button
+            class="btn btn-primary ss-btn"
+            type="button"
+            :disabled="loading"
+            @click="confirmSubmit"
+          >
             {{ loading ? "Đang lưu..." : "Xác nhận" }}
           </button>
         </div>
@@ -828,13 +1165,28 @@ const primeToast = useToast();
 const requiredTooltip = "Trường bắt buộc";
 
 function toastSuccess(detail) {
-  primeToast.add({ severity: "success", summary: "Thành công", detail, life: 3000 });
+  primeToast.add({
+    severity: "success",
+    summary: "Thành công",
+    detail,
+    life: 3000,
+  });
 }
 function toastError(detail) {
-  primeToast.add({ severity: "error", summary: "Thất bại", detail, life: 3500 });
+  primeToast.add({
+    severity: "error",
+    summary: "Thất bại",
+    detail,
+    life: 3500,
+  });
 }
 function toastInfo(detail) {
-  primeToast.add({ severity: "info", summary: "Thông báo", detail, life: 3000 });
+  primeToast.add({
+    severity: "info",
+    summary: "Thông báo",
+    detail,
+    life: 3000,
+  });
 }
 function stopWithError(msg) {
   toastError(msg);
@@ -844,7 +1196,9 @@ function stopWithError(msg) {
 const route = useRoute();
 const router = useRouter();
 const id = computed(() => route.params?.id);
-const isEdit = computed(() => !!id.value && String(id.value).toLowerCase() !== "new");
+const isEdit = computed(
+  () => !!id.value && String(id.value).toLowerCase() !== "new"
+);
 const productIdQuery = computed(() => {
   const v = route.query?.productId;
   const n = Number(v);
@@ -902,15 +1256,25 @@ const errors = reactive({
 
 // ===== confirm state =====
 const confirm = reactive({ open: false });
-const confirmProductName = computed(() => String(form.tenSanPham || "").trim() || "(chưa đặt tên)");
+const confirmProductName = computed(
+  () => String(form.tenSanPham || "").trim() || "(chưa đặt tên)"
+);
 const confirmCount = computed(() => (rows.value || []).length || 0);
 
 function openConfirm() {
   if (loading.value) return;
   if (!validateRequiredTop()) return;
-  if (!rows.value.length) return stopWithError('Bạn chưa tạo biến thể. Hãy bấm “Tạo biến thể tự động”.');
-  const bad = rows.value.find((r) => !isValidNonNeg(r.soLuong) || !isValidNonNeg(r.gia));
-  if (bad) return stopWithError("Vui lòng nhập Số lượng/Giá hợp lệ (>= 0) cho tất cả biến thể.");
+  if (!rows.value.length)
+    return stopWithError(
+      'Bạn chưa tạo biến thể. Hãy bấm “Tạo biến thể tự động”.'
+    );
+  const bad = rows.value.find(
+    (r) => !isValidNonNeg(r.soLuong) || !isValidNonNeg(r.gia)
+  );
+  if (bad)
+    return stopWithError(
+      "Vui lòng nhập Số lượng/Giá hợp lệ (>= 0) cho tất cả biến thể."
+    );
   confirm.open = true;
 }
 
@@ -971,7 +1335,9 @@ function fmtNumberInput(v) {
   const n = parseVnNumber(v);
   if (!Number.isFinite(n)) return String(v ?? "");
   try {
-    return new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 0 }).format(n);
+    return new Intl.NumberFormat("vi-VN", {
+      maximumFractionDigits: 0,
+    }).format(n);
   } catch {
     return String(n);
   }
@@ -1063,7 +1429,11 @@ function extractColorHex(m) {
   return "";
 }
 
-function findColorOptionAfterCreate({ createdId = null, ten = "", pickedHex = "" } = {}) {
+function findColorOptionAfterCreate({
+  createdId = null,
+  ten = "",
+  pickedHex = "",
+} = {}) {
   const list = mauSacOptions.value || [];
   const idNum = Number(createdId);
   const nameNorm = lc(ten);
@@ -1084,11 +1454,15 @@ function findColorOptionAfterCreate({ createdId = null, ten = "", pickedHex = ""
   }
 
   if (nameNorm) {
-    const exactNameList = list.filter((x) => lc(x?.tenMauSac ?? x?.ten) === nameNorm);
+    const exactNameList = list.filter(
+      (x) => lc(x?.tenMauSac ?? x?.ten) === nameNorm
+    );
     if (exactNameList.length === 1) return exactNameList[0];
 
     if (exactNameList.length > 1) {
-      const withHighestId = [...exactNameList].sort((a, b) => Number(b?.id || 0) - Number(a?.id || 0))[0];
+      const withHighestId = [...exactNameList].sort(
+        (a, b) => Number(b?.id || 0) - Number(a?.id || 0)
+      )[0];
       if (withHighestId) return withHighestId;
     }
   }
@@ -1104,16 +1478,42 @@ function pickColorHex(m) {
   if (stored) return stored;
 
   const name = (m?.tenMauSac || m?.ten || "").toLowerCase().trim();
-  if (name.includes("trắng") || name.includes("trang") || name.includes("white")) return "#ffffff";
-  if (name.includes("đen") || name.includes("den") || name.includes("black")) return "#111827";
-  if (name.includes("hồng") || name.includes("hong") || name.includes("pink") || name.includes("rose")) return "#fb7185";
-  if (name.includes("tím") || name.includes("tim") || name.includes("purple")) return "#a855f7";
-  if (name.includes("xanh lá") || name.includes("xanh la") || name.includes("green")) return "#22c55e";
-  if (name.includes("xanh dương") || name.includes("xanh duong") || name.includes("blue")) return "#2563eb";
-  if (name.includes("xanh da trời") || name.includes("xanh da troi") || name.includes("sky")) return "#38bdf8";
+  if (name.includes("trắng") || name.includes("trang") || name.includes("white"))
+    return "#ffffff";
+  if (name.includes("đen") || name.includes("den") || name.includes("black"))
+    return "#111827";
+  if (
+    name.includes("hồng") ||
+    name.includes("hong") ||
+    name.includes("pink") ||
+    name.includes("rose")
+  )
+    return "#fb7185";
+  if (name.includes("tím") || name.includes("tim") || name.includes("purple"))
+    return "#a855f7";
+  if (
+    name.includes("xanh lá") ||
+    name.includes("xanh la") ||
+    name.includes("green")
+  )
+    return "#22c55e";
+  if (
+    name.includes("xanh dương") ||
+    name.includes("xanh duong") ||
+    name.includes("blue")
+  )
+    return "#2563eb";
+  if (
+    name.includes("xanh da trời") ||
+    name.includes("xanh da troi") ||
+    name.includes("sky")
+  )
+    return "#38bdf8";
   if (name.includes("xanh")) return "#2563eb";
-  if (name.includes("đỏ") || name.includes("do") || name.includes("red")) return "#ff4d4f";
-  if (name.includes("vàng") || name.includes("vang") || name.includes("yellow")) return "#f59e0b";
+  if (name.includes("đỏ") || name.includes("do") || name.includes("red"))
+    return "#ff4d4f";
+  if (name.includes("vàng") || name.includes("vang") || name.includes("yellow"))
+    return "#f59e0b";
   return "#e5e7eb";
 }
 
@@ -1131,27 +1531,271 @@ function isLight(hex) {
   }
 }
 
-function setSelectedById(optionsRef, selectedRef, idValue) {
+function findById(list, idValue) {
   const idNum = Number(idValue);
-  if (!Number.isFinite(idNum) || idNum <= 0) return;
-  const found = (optionsRef.value || []).find((x) => Number(x?.id) === idNum) || null;
+  if (!Number.isFinite(idNum) || idNum <= 0) return null;
+  return (list || []).find((x) => Number(x?.id) === idNum) || null;
+}
+
+function mergeOptionIntoList(optionsRef, option) {
+  const idNum = Number(option?.id);
+  if (!Number.isFinite(idNum) || idNum <= 0) return null;
+
+  const current = Array.isArray(optionsRef.value) ? optionsRef.value : [];
+  const existed = current.find((x) => Number(x?.id) === idNum);
+  if (existed) return existed;
+
+  optionsRef.value = [...current, option];
+  return option;
+}
+
+function buildOptionFromSource({
+  source,
+  currentId,
+  nestedKeys = [],
+  flatNameKeys = [],
+  preferredNameKey = "ten",
+}) {
+  if (!source) return null;
+
+  for (const nestedKey of nestedKeys) {
+    const nested = source?.[nestedKey];
+    if (nested && typeof nested === "object") {
+      return {
+        ...nested,
+        id: nested?.id ?? currentId,
+      };
+    }
+  }
+
+  const name = pickLabel(source, flatNameKeys);
+  if (!name) return null;
+
+  return {
+    id: currentId,
+    [preferredNameKey]: name,
+    ten: name,
+    __inactive: true,
+  };
+}
+
+const fallbackListCache = {};
+
+async function getFallbackList(cacheKey, getter) {
+  if (Array.isArray(fallbackListCache[cacheKey]))
+    return fallbackListCache[cacheKey];
+  const list = normalizeArr(await getter());
+  fallbackListCache[cacheKey] = list;
+  return list;
+}
+
+async function ensureOptionPresent({
+  currentId,
+  optionsRef,
+  fallbackKey,
+  fallbackGetter,
+  source = null,
+  nestedKeys = [],
+  flatNameKeys = [],
+  preferredNameKey = "ten",
+}) {
+  const idNum = Number(currentId);
+  if (!Number.isFinite(idNum) || idNum <= 0) return null;
+
+  const existed = findById(optionsRef.value, idNum);
+  if (existed) return existed;
+
+  const built = buildOptionFromSource({
+    source,
+    currentId: idNum,
+    nestedKeys,
+    flatNameKeys,
+    preferredNameKey,
+  });
+  if (built) {
+    return mergeOptionIntoList(optionsRef, built) || built;
+  }
+
+  if (typeof fallbackGetter !== "function") return null;
+
+  try {
+    const fullList = await getFallbackList(fallbackKey, fallbackGetter);
+    const found = findById(fullList, idNum);
+    if (!found) return null;
+    return mergeOptionIntoList(optionsRef, found) || found;
+  } catch (e) {
+    console.warn(`Không merge được option ${fallbackKey}:`, e);
+    return null;
+  }
+}
+
+function setSelectedById(optionsRef, selectedRef, idValue) {
+  const found = findById(optionsRef.value, idValue);
   if (found) selectedRef.value = found;
 }
 
-function syncAttributesFromProduct(p) {
+const optionResolvers = {
+  thuongHieu: {
+    optionsRef: thuongHieuOptions,
+    fallbackKey: "thuongHieu",
+    fallbackGetter: refDataService.getThuongHieu,
+    nestedKeys: ["thuongHieu"],
+    flatNameKeys: ["tenThuongHieu", "thuongHieuTen", "ten_thuong_hieu"],
+    preferredNameKey: "tenThuongHieu",
+  },
+  xuatXu: {
+    optionsRef: xuatXuOptions,
+    fallbackKey: "xuatXu",
+    fallbackGetter: refDataService.getXuatXu,
+    nestedKeys: ["xuatXu"],
+    flatNameKeys: ["tenXuatXu", "xuatXuTen", "ten_xuat_xu"],
+    preferredNameKey: "tenXuatXu",
+  },
+  coGiay: {
+    optionsRef: coGiayOptions,
+    fallbackKey: "coGiay",
+    fallbackGetter: refDataService.getCoGiay,
+    nestedKeys: ["coGiay"],
+    flatNameKeys: ["tenCoGiay", "coGiayTen", "ten_co_giay"],
+    preferredNameKey: "tenCoGiay",
+  },
+  chatLieu: {
+    optionsRef: chatLieuOptions,
+    fallbackKey: "chatLieu",
+    fallbackGetter: refDataService.getChatLieu,
+    nestedKeys: ["chatLieu"],
+    flatNameKeys: ["tenChatLieu", "chatLieuTen", "ten_chat_lieu"],
+    preferredNameKey: "tenChatLieu",
+  },
+  viTriThiDau: {
+    optionsRef: viTriThiDauOptions,
+    fallbackKey: "viTriThiDau",
+    fallbackGetter: refDataService.getViTriThiDau,
+    nestedKeys: ["viTriThiDau", "viTri"],
+    flatNameKeys: [
+      "tenViTriThiDau",
+      "tenViTri",
+      "viTriThiDauTen",
+      "ten_vi_tri_thi_dau",
+    ],
+    preferredNameKey: "tenViTriThiDau",
+  },
+  phongCachChoi: {
+    optionsRef: phongCachChoiOptions,
+    fallbackKey: "phongCachChoi",
+    fallbackGetter: refDataService.getPhongCachChoi,
+    nestedKeys: ["phongCachChoi"],
+    flatNameKeys: [
+      "tenPhongCachChoi",
+      "tenPhongCach",
+      "phongCachChoiTen",
+      "ten_phong_cach_choi",
+    ],
+    preferredNameKey: "tenPhongCachChoi",
+  },
+  mauSac: {
+    optionsRef: mauSacOptions,
+    fallbackKey: "mauSac",
+    fallbackGetter: refDataService.getMauSac,
+    nestedKeys: ["mauSac"],
+    flatNameKeys: ["tenMauSac", "mauSacTen", "ten_mau_sac"],
+    preferredNameKey: "tenMauSac",
+  },
+  kichThuoc: {
+    optionsRef: kichThuocOptions,
+    fallbackKey: "kichThuoc",
+    fallbackGetter: refDataService.getKichThuoc,
+    nestedKeys: ["kichThuoc"],
+    flatNameKeys: ["tenKichThuoc", "kichThuocTen", "ten_kich_thuoc"],
+    preferredNameKey: "tenKichThuoc",
+  },
+  loaiSan: {
+    optionsRef: loaiSanOptions,
+    fallbackKey: "loaiSan",
+    fallbackGetter: refDataService.getLoaiSan,
+    nestedKeys: ["loaiSan"],
+    flatNameKeys: ["tenLoaiSan", "loaiSanTen", "ten_loai_san"],
+    preferredNameKey: "tenLoaiSan",
+  },
+  formChan: {
+    optionsRef: formChanOptions,
+    fallbackKey: "formChan",
+    fallbackGetter: refDataService.getFormChan,
+    nestedKeys: ["formChan"],
+    flatNameKeys: ["tenFormChan", "formChanTen", "ten_form_chan"],
+    preferredNameKey: "tenFormChan",
+  },
+};
+
+async function syncAttributesFromProduct(p) {
   if (!p) return;
-  const idThuongHieu = pickIdFrom(p, ["idThuongHieu", "thuongHieuId", "id_thuong_hieu"]);
+
+  const idThuongHieu = pickIdFrom(p, [
+    "idThuongHieu",
+    "thuongHieuId",
+    "id_thuong_hieu",
+  ]);
   const idXuatXu = pickIdFrom(p, ["idXuatXu", "xuatXuId", "id_xuat_xu"]);
   const idCoGiay = pickIdFrom(p, ["idCoGiay", "coGiayId", "id_co_giay"]);
-  const idChatLieu = pickIdFrom(p, ["idChatLieu", "chatLieuId", "id_chat_lieu"]);
-  const idViTriThiDau = pickIdFrom(p, ["idViTriThiDau", "viTriThiDauId", "id_vi_tri_thi_dau"]);
-  const idPhongCachChoi = pickIdFrom(p, ["idPhongCachChoi", "phongCachChoiId", "id_phong_cach_choi"]);
+  const idChatLieu = pickIdFrom(p, [
+    "idChatLieu",
+    "chatLieuId",
+    "id_chat_lieu",
+  ]);
+  const idViTriThiDau = pickIdFrom(p, [
+    "idViTriThiDau",
+    "viTriThiDauId",
+    "id_vi_tri_thi_dau",
+  ]);
+  const idPhongCachChoi = pickIdFrom(p, [
+    "idPhongCachChoi",
+    "phongCachChoiId",
+    "id_phong_cach_choi",
+  ]);
+
+  await Promise.all([
+    ensureOptionPresent({
+      currentId: idThuongHieu,
+      source: p,
+      ...optionResolvers.thuongHieu,
+    }),
+    ensureOptionPresent({
+      currentId: idXuatXu,
+      source: p,
+      ...optionResolvers.xuatXu,
+    }),
+    ensureOptionPresent({
+      currentId: idCoGiay,
+      source: p,
+      ...optionResolvers.coGiay,
+    }),
+    ensureOptionPresent({
+      currentId: idChatLieu,
+      source: p,
+      ...optionResolvers.chatLieu,
+    }),
+    ensureOptionPresent({
+      currentId: idViTriThiDau,
+      source: p,
+      ...optionResolvers.viTriThiDau,
+    }),
+    ensureOptionPresent({
+      currentId: idPhongCachChoi,
+      source: p,
+      ...optionResolvers.phongCachChoi,
+    }),
+  ]);
+
   setSelectedById(thuongHieuOptions, selectedThuongHieu, idThuongHieu);
   setSelectedById(xuatXuOptions, selectedXuatXu, idXuatXu);
   setSelectedById(coGiayOptions, selectedCoGiay, idCoGiay);
   setSelectedById(chatLieuOptions, selectedChatLieu, idChatLieu);
   setSelectedById(viTriThiDauOptions, selectedViTriThiDau, idViTriThiDau);
-  setSelectedById(phongCachChoiOptions, selectedPhongCachChoi, idPhongCachChoi);
+  setSelectedById(
+    phongCachChoiOptions,
+    selectedPhongCachChoi,
+    idPhongCachChoi
+  );
 }
 
 // ===== PRODUCT SELECT =====
@@ -1172,13 +1816,14 @@ const selectedProduct = computed({
       form.maSanPham = val.maSanPham ?? val.ma ?? "";
       form.tenSanPham = val.tenSanPham ?? val.ten ?? "";
       form.moTaNgan = val.moTaNgan ?? val.moTa ?? "";
-      syncAttributesFromProduct(val);
+      void syncAttributesFromProduct(val);
       clearVariantsOnly();
       return;
     }
     form.idSanPham = null;
     form.maSanPham = "";
     form.tenSanPham = val.tenSanPham ?? val.ten ?? "";
+    form.moTaNgan = "";
     applyDefaultProductAttributes();
     clearVariantsOnly();
   },
@@ -1203,12 +1848,18 @@ function resetProduct() {
 }
 
 function applyDefaultProductAttributes() {
-  if (!selectedThuongHieu.value && thuongHieuOptions.value.length) selectedThuongHieu.value = thuongHieuOptions.value[0];
-  if (!selectedXuatXu.value && xuatXuOptions.value.length) selectedXuatXu.value = xuatXuOptions.value[0];
-  if (!selectedCoGiay.value && coGiayOptions.value.length) selectedCoGiay.value = coGiayOptions.value[0];
-  if (!selectedChatLieu.value && chatLieuOptions.value.length) selectedChatLieu.value = chatLieuOptions.value[0];
-  if (!selectedViTriThiDau.value && viTriThiDauOptions.value.length) selectedViTriThiDau.value = viTriThiDauOptions.value[0];
-  if (!selectedPhongCachChoi.value && phongCachChoiOptions.value.length) selectedPhongCachChoi.value = phongCachChoiOptions.value[0];
+  if (!selectedThuongHieu.value && thuongHieuOptions.value.length)
+    selectedThuongHieu.value = thuongHieuOptions.value[0];
+  if (!selectedXuatXu.value && xuatXuOptions.value.length)
+    selectedXuatXu.value = xuatXuOptions.value[0];
+  if (!selectedCoGiay.value && coGiayOptions.value.length)
+    selectedCoGiay.value = coGiayOptions.value[0];
+  if (!selectedChatLieu.value && chatLieuOptions.value.length)
+    selectedChatLieu.value = chatLieuOptions.value[0];
+  if (!selectedViTriThiDau.value && viTriThiDauOptions.value.length)
+    selectedViTriThiDau.value = viTriThiDauOptions.value[0];
+  if (!selectedPhongCachChoi.value && phongCachChoiOptions.value.length)
+    selectedPhongCachChoi.value = phongCachChoiOptions.value[0];
 }
 
 // ======= CREATE REF =======
@@ -1230,73 +1881,93 @@ const refConfig = {
     label: "Thương hiệu",
     listRef: thuongHieuOptions,
     selectedRef: selectedThuongHieu,
-    getter: () => refDataService.getThuongHieu(),
-    creator: (name) => refDataService.createThuongHieu({ tenThuongHieu: name }),
-    nameField: "tenThuongHieu",
+    getter: () => refDataService.getThuongHieuActive(),
+    creator: (name) =>
+      refDataService.createThuongHieu({ tenThuongHieu: name }),
+    matchFields: ["tenThuongHieu", "ten"],
   },
   xuatXu: {
     label: "Xuất xứ",
     listRef: xuatXuOptions,
     selectedRef: selectedXuatXu,
-    getter: () => refDataService.getXuatXu(),
-    creator: (name) => refDataService.createXuatXu({ tenXuatXu: name, trangThai: true, xoaMem: false }),
-    nameField: "tenXuatXu",
+    getter: () => refDataService.getXuatXuActive(),
+    creator: (name) =>
+      refDataService.createXuatXu({
+        tenXuatXu: name,
+        trangThai: true,
+        xoaMem: false,
+      }),
+    matchFields: ["tenXuatXu", "ten"],
   },
   coGiay: {
     label: "Cổ giày",
     listRef: coGiayOptions,
     selectedRef: selectedCoGiay,
-    getter: () => refDataService.getCoGiay(),
+    getter: () => refDataService.getCoGiayActive(),
     creator: (name) => refDataService.createCoGiay({ tenCoGiay: name }),
-    nameField: "tenCoGiay",
+    matchFields: ["tenCoGiay", "ten"],
   },
   chatLieu: {
     label: "Chất liệu",
     listRef: chatLieuOptions,
     selectedRef: selectedChatLieu,
-    getter: () => refDataService.getChatLieu(),
+    getter: () => refDataService.getChatLieuActive(),
     creator: (name) => refDataService.createChatLieu({ tenChatLieu: name }),
-    nameField: "tenChatLieu",
+    matchFields: ["tenChatLieu", "ten"],
   },
   viTriThiDau: {
     label: "Vị trí thi đấu",
     listRef: viTriThiDauOptions,
     selectedRef: selectedViTriThiDau,
-    getter: () => refDataService.getViTriThiDau(),
-    creator: (name) => refDataService.createViTriThiDau({
-      tenViTri: name,
-      trangThai: true,
-      xoaMem: false
-    }),
-    nameField: "tenViTriThiDau",
+    getter: () => refDataService.getViTriThiDauActive(),
+    creator: (name) =>
+      refDataService.createViTriThiDau({
+        tenViTri: name,
+        trangThai: true,
+        xoaMem: false,
+      }),
+    matchFields: [
+      "tenViTri",
+      "tenViTriThiDau",
+      "ten_vi_tri_thi_dau",
+      "ten",
+      "name",
+    ],
   },
   phongCachChoi: {
     label: "Phong cách chơi",
     listRef: phongCachChoiOptions,
     selectedRef: selectedPhongCachChoi,
-    getter: () => refDataService.getPhongCachChoi(),
-    creator: (name) => refDataService.createPhongCachChoi({
-      tenPhongCach: name,
-      trangThai: true,
-      xoaMem: false
-    }),
-    nameField: "tenPhongCachChoi",
+    getter: () => refDataService.getPhongCachChoiActive(),
+    creator: (name) =>
+      refDataService.createPhongCachChoi({
+        tenPhongCach: name,
+        trangThai: true,
+        xoaMem: false,
+      }),
+    matchFields: [
+      "tenPhongCach",
+      "tenPhongCachChoi",
+      "ten_phong_cach_choi",
+      "ten",
+      "name",
+    ],
   },
   loaiSan: {
     label: "Loại sân",
     listRef: loaiSanOptions,
     selectedRef: selectedLoaiSan,
-    getter: () => refDataService.getLoaiSan(),
+    getter: () => refDataService.getLoaiSanActive(),
     creator: (name) => refDataService.createLoaiSan({ tenLoaiSan: name }),
-    nameField: "tenLoaiSan",
+    matchFields: ["tenLoaiSan", "ten"],
   },
   formChan: {
     label: "Form chân",
     listRef: formChanOptions,
     selectedRef: selectedFormChan,
-    getter: () => refDataService.getFormChan(),
+    getter: () => refDataService.getFormChanActive(),
     creator: (name) => refDataService.createFormChan({ tenFormChan: name }),
-    nameField: "tenFormChan",
+    matchFields: ["tenFormChan", "ten"],
   },
 };
 
@@ -1304,14 +1975,16 @@ async function onCreateRef(key, opt) {
   const cfg = refConfig[key];
   if (!cfg) return;
 
-  const name = String(opt?.[cfg.nameField] ?? opt?.ten ?? "").trim();
+  const name = pickLabel(opt, cfg.matchFields);
   if (!name) return;
 
   const token = _lockCreate(key, name);
   if (!token) return;
 
   try {
-    const existed = (cfg.listRef.value || []).find((x) => lc(x?.[cfg.nameField] ?? x?.ten) === lc(name));
+    const existed = (cfg.listRef.value || []).find(
+      (x) => lc(pickLabel(x, cfg.matchFields)) === lc(name)
+    );
     if (existed) {
       if (!Array.isArray(cfg.selectedRef.value)) cfg.selectedRef.value = existed;
       toastInfo(`"${name}" đã tồn tại trong ${cfg.label}.`);
@@ -1324,11 +1997,16 @@ async function onCreateRef(key, opt) {
     const fresh = await cfg.getter();
     cfg.listRef.value = normalizeArr(fresh);
 
-    const found = (cfg.listRef.value || []).find((x) => lc(x?.[cfg.nameField] ?? x?.ten) === lc(name)) || null;
+    const found =
+      (cfg.listRef.value || []).find(
+        (x) => lc(pickLabel(x, cfg.matchFields)) === lc(name)
+      ) || null;
 
     if (Array.isArray(cfg.selectedRef.value)) {
       const prev = cfg.selectedRef.value || [];
-      cfg.selectedRef.value = Array.from(new Set([...prev, ...(found ? [found] : [])]));
+      cfg.selectedRef.value = Array.from(
+        new Set([...prev, ...(found ? [found] : [])])
+      );
     } else {
       cfg.selectedRef.value = found;
     }
@@ -1336,7 +2014,10 @@ async function onCreateRef(key, opt) {
     toastSuccess(`Thêm mới ${cfg.label}: "${name}" thành công`);
   } catch (e) {
     console.error(`Lỗi tạo ${cfg.label}:`, e);
-    const msg = e?.response?.data?.message || e?.message || "Lỗi server không xác định. Vui lòng kiểm tra backend.";
+    const msg =
+      e?.response?.data?.message ||
+      e?.message ||
+      "Lỗi server không xác định. Vui lòng kiểm tra backend.";
     toastError(`Không tạo được ${cfg.label} "${name}". ${msg}`);
   } finally {
     loading.value = false;
@@ -1344,12 +2025,24 @@ async function onCreateRef(key, opt) {
   }
 }
 
-watch(selectedThuongHieu, (v) => { if (v?.__isNew) onCreateRef("thuongHieu", v); });
-watch(selectedXuatXu, (v) => { if (v?.__isNew) onCreateRef("xuatXu", v); });
-watch(selectedCoGiay, (v) => { if (v?.__isNew) onCreateRef("coGiay", v); });
-watch(selectedChatLieu, (v) => { if (v?.__isNew) onCreateRef("chatLieu", v); });
-watch(selectedViTriThiDau, (v) => { if (v?.__isNew) onCreateRef("viTriThiDau", v); });
-watch(selectedPhongCachChoi, (v) => { if (v?.__isNew) onCreateRef("phongCachChoi", v); });
+watch(selectedThuongHieu, (v) => {
+  if (v?.__isNew) onCreateRef("thuongHieu", v);
+});
+watch(selectedXuatXu, (v) => {
+  if (v?.__isNew) onCreateRef("xuatXu", v);
+});
+watch(selectedCoGiay, (v) => {
+  if (v?.__isNew) onCreateRef("coGiay", v);
+});
+watch(selectedChatLieu, (v) => {
+  if (v?.__isNew) onCreateRef("chatLieu", v);
+});
+watch(selectedViTriThiDau, (v) => {
+  if (v?.__isNew) onCreateRef("viTriThiDau", v);
+});
+watch(selectedPhongCachChoi, (v) => {
+  if (v?.__isNew) onCreateRef("phongCachChoi", v);
+});
 
 // ====== Required validation ======
 function clearErrors() {
@@ -1364,12 +2057,18 @@ function clearErrors() {
 function validateRequiredTop() {
   clearErrors();
 
-  if (!String(form.tenSanPham || "").trim()) errors.sanPham = "Vui lòng chọn hoặc nhập tên sản phẩm.";
-  if (!selectedThuongHieu.value?.id) errors.thuongHieu = "Vui lòng chọn thương hiệu.";
-  if (!selectedMauSac.value?.length) errors.mauSac = "Vui lòng chọn ít nhất 1 màu sắc.";
-  if (!selectedKichThuoc.value?.length) errors.kichThuoc = "Vui lòng chọn ít nhất 1 kích cỡ.";
-  if (!selectedLoaiSan.value?.length) errors.loaiSan = "Vui lòng chọn ít nhất 1 loại sân.";
-  if (!selectedFormChan.value?.length) errors.formChan = "Vui lòng chọn ít nhất 1 form chân.";
+  if (!String(form.tenSanPham || "").trim())
+    errors.sanPham = "Vui lòng chọn hoặc nhập tên sản phẩm.";
+  if (!selectedThuongHieu.value?.id)
+    errors.thuongHieu = "Vui lòng chọn thương hiệu.";
+  if (!selectedMauSac.value?.length)
+    errors.mauSac = "Vui lòng chọn ít nhất 1 màu sắc.";
+  if (!selectedKichThuoc.value?.length)
+    errors.kichThuoc = "Vui lòng chọn ít nhất 1 kích cỡ.";
+  if (!selectedLoaiSan.value?.length)
+    errors.loaiSan = "Vui lòng chọn ít nhất 1 loại sân.";
+  if (!selectedFormChan.value?.length)
+    errors.formChan = "Vui lòng chọn ít nhất 1 form chân.";
 
   const ok = !Object.values(errors).some(Boolean);
   if (!ok) toastError("Vui lòng kiểm tra các trường bắt buộc (*).");
@@ -1394,7 +2093,9 @@ const sizeModalFilteredOptions = computed(() => {
   });
 });
 
-const sizeModalTempIds = computed(() => new Set((sizeModal.tempSelected || []).map((x) => x.id)));
+const sizeModalTempIds = computed(
+  () => new Set((sizeModal.tempSelected || []).map((x) => x.id))
+);
 
 function onSizeModalSearch(q) {
   sizeModal.keyword = String(q ?? "");
@@ -1406,9 +2107,14 @@ function openSizeModal() {
     const n = Number(t);
     return Number.isFinite(n) && n >= 38 && n <= 45;
   });
-  sizeModal.options = list.sort((a, b) => Number(pickTen(a, "tenKichThuoc")) - Number(pickTen(b, "tenKichThuoc")));
+  sizeModal.options = list.sort(
+    (a, b) =>
+      Number(pickTen(a, "tenKichThuoc")) - Number(pickTen(b, "tenKichThuoc"))
+  );
   const selectedIds = new Set((selectedKichThuoc.value || []).map((x) => x.id));
-  sizeModal.tempSelected = sizeModal.options.filter((x) => selectedIds.has(x.id));
+  sizeModal.tempSelected = sizeModal.options.filter((x) =>
+    selectedIds.has(x.id)
+  );
   sizeModal.keyword = "";
   sizeModal.open = true;
 }
@@ -1433,7 +2139,9 @@ function confirmSizeModal() {
 }
 
 function removeSelectedSize(s) {
-  selectedKichThuoc.value = (selectedKichThuoc.value || []).filter((x) => x.id !== s.id);
+  selectedKichThuoc.value = (selectedKichThuoc.value || []).filter(
+    (x) => x.id !== s.id
+  );
   onVariantSelectionChanged();
 }
 
@@ -1447,14 +2155,11 @@ function onVariantSelectionChanged() {
   variantsGenerated.value = false;
   rows.value = [];
   removedKeys.value = new Set();
-  toastInfo("Bạn vừa thay đổi thuộc tính biến thể. Vui lòng bấm “Tạo biến thể tự động” để sinh lại.");
+  toastInfo(
+    "Bạn vừa thay đổi thuộc tính biến thể. Vui lòng bấm “Tạo biến thể tự động” để sinh lại."
+  );
 }
 
-/**
- * ✅ Khi bỏ chọn màu trong v-select, cần:
- * - dọn ảnh theo màu (revoke objectURL)
- * - reset biến thể (nếu đã generate)
- */
 watch(
   selectedMauSac,
   (nv, ov) => {
@@ -1473,7 +2178,9 @@ watch(
   { deep: true }
 );
 
-watch([selectedLoaiSan, selectedFormChan], onVariantSelectionChanged, { deep: true });
+watch([selectedLoaiSan, selectedFormChan], onVariantSelectionChanged, {
+  deep: true,
+});
 
 function clearVariantsOnly() {
   selectedMauSac.value = [];
@@ -1483,6 +2190,8 @@ function clearVariantsOnly() {
   rows.value = [];
   removedKeys.value = new Set();
   variantsGenerated.value = false;
+
+  Object.keys(colorFiles).forEach((k) => clearColorImage(k));
   Object.keys(colorFiles).forEach((k) => delete colorFiles[k]);
 }
 
@@ -1491,20 +2200,27 @@ function buildKey(ms, kt, ls, fc) {
 }
 
 function sortByName(a, b, field) {
-  return String(a?.[field] ?? a?.ten ?? "").localeCompare(String(b?.[field] ?? b?.ten ?? ""), "vi");
+  return String(a?.[field] ?? a?.ten ?? "").localeCompare(
+    String(b?.[field] ?? b?.ten ?? ""),
+    "vi"
+  );
 }
 
 function ensureColorFileKey(colorId) {
   const k = String(colorId);
   if (!k) return;
-  if (colorFiles[k] == null) colorFiles[k] = { file: null, fileName: "", previewUrl: "" };
+  if (colorFiles[k] == null)
+    colorFiles[k] = { file: null, fileName: "", previewUrl: "" };
 }
 
 function dedupeById(list = []) {
   const seen = new Set();
   const out = [];
   for (const it of list) {
-    const key = it?.id != null ? String(it.id) : `name:${lc(it?.tenMauSac ?? it?.ten ?? "")}`;
+    const key =
+      it?.id != null
+        ? String(it.id)
+        : `name:${lc(it?.tenMauSac ?? it?.ten ?? "")}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(it);
@@ -1516,10 +2232,18 @@ function generateVariants() {
   if (loading.value) return;
   if (!validateRequiredTop()) return;
 
-  const colors = (selectedMauSac.value || []).slice().sort((a, b) => sortByName(a, b, "tenMauSac"));
-  const sizes = (selectedKichThuoc.value || []).slice().sort((a, b) => sortByName(a, b, "tenKichThuoc"));
-  const loais = (selectedLoaiSan.value || []).slice().sort((a, b) => sortByName(a, b, "tenLoaiSan"));
-  const forms = (selectedFormChan.value || []).slice().sort((a, b) => sortByName(a, b, "tenFormChan"));
+  const colors = (selectedMauSac.value || [])
+    .slice()
+    .sort((a, b) => sortByName(a, b, "tenMauSac"));
+  const sizes = (selectedKichThuoc.value || [])
+    .slice()
+    .sort((a, b) => sortByName(a, b, "tenKichThuoc"));
+  const loais = (selectedLoaiSan.value || [])
+    .slice()
+    .sort((a, b) => sortByName(a, b, "tenLoaiSan"));
+  const forms = (selectedFormChan.value || [])
+    .slice()
+    .sort((a, b) => sortByName(a, b, "tenFormChan"));
 
   if (!colors.length || !sizes.length || !loais.length || !forms.length) return;
 
@@ -1561,7 +2285,8 @@ function generateVariants() {
 function validateRow(r) {
   r.errSoLuong = "";
   r.errGia = "";
-  if (!isValidNonNeg(r.soLuong)) r.errSoLuong = "Vui lòng nhập số lượng (>= 0).";
+  if (!isValidNonNeg(r.soLuong))
+    r.errSoLuong = "Vui lòng nhập số lượng (>= 0).";
   if (!isValidNonNeg(r.gia)) r.errGia = "Vui lòng nhập giá bán (>= 0).";
 }
 
@@ -1591,7 +2316,9 @@ const groupedRows = computed(() => {
   for (const colorId of order) {
     const items = groups.get(colorId);
     if (!items?.length) continue;
-    const colorObj = (selectedMauSac.value || []).find((x) => String(x.id) === colorId);
+    const colorObj = (selectedMauSac.value || []).find(
+      (x) => String(x.id) === colorId
+    );
     const colorName = pickTen(colorObj, "tenMauSac", "maMauSac");
     result.push({
       groupKey: String(colorId),
@@ -1681,7 +2408,7 @@ function applyBulkColor() {
 }
 
 // ===== FILE per color =====
-const colorFiles = reactive({}); // { [colorId]: { file, fileName, previewUrl } }
+const colorFiles = reactive({});
 
 function triggerColorFile(colorId) {
   const el = document.getElementById(`file-ms-${colorId}`);
@@ -1691,7 +2418,15 @@ function triggerColorFile(colorId) {
 function onColorFileChange(e, group) {
   const f = e.target.files?.[0];
   const key = String(group.groupKey);
-  if (!colorFiles[key]) colorFiles[key] = { file: null, fileName: "", previewUrl: "" };
+  if (!colorFiles[key])
+    colorFiles[key] = { file: null, fileName: "", previewUrl: "" };
+
+  if (colorFiles[key].previewUrl) {
+    try {
+      URL.revokeObjectURL(colorFiles[key].previewUrl);
+    } catch {}
+  }
+
   colorFiles[key].file = f || null;
   colorFiles[key].fileName = f?.name || "";
   colorFiles[key].previewUrl = f ? URL.createObjectURL(f) : "";
@@ -1740,13 +2475,18 @@ async function confirmAddColor() {
   const pickedHex = asHexColor(addColor.hex) || "#e5e7eb";
   addColor.hex = pickedHex;
 
-  const existed = (mauSacOptions.value || []).find((x) => lc(x.tenMauSac ?? x.ten) === lc(ten));
+  const existed = (mauSacOptions.value || []).find(
+    (x) => lc(x.tenMauSac ?? x.ten) === lc(ten)
+  );
   if (existed) {
     if (!extractColorHex(existed)) {
       setColorHexOverride(existed, pickedHex);
     }
 
-    selectedMauSac.value = dedupeById([...(selectedMauSac.value || []), existed]);
+    selectedMauSac.value = dedupeById([
+      ...(selectedMauSac.value || []),
+      existed,
+    ]);
     if (existed?.id != null) ensureColorFileKey(String(existed.id));
     addColor.open = false;
     toastInfo(`"${ten}" đã tồn tại.`);
@@ -1760,9 +2500,14 @@ async function confirmAddColor() {
     const payload = { tenMauSac: ten, maMau: pickedHex };
     const createRes = await refDataService.createMauSac(payload);
     const created = createRes?.data ?? createRes ?? null;
-    const createdId = pickIdFrom(created, ["id", "idMauSac", "mauSacId", "id_mau_sac"]);
+    const createdId = pickIdFrom(created, [
+      "id",
+      "idMauSac",
+      "mauSacId",
+      "id_mau_sac",
+    ]);
 
-    const fresh = await refDataService.getMauSac();
+    const fresh = await refDataService.getMauSacActive();
     mauSacOptions.value = normalizeArr(fresh);
 
     let found = findColorOptionAfterCreate({
@@ -1792,7 +2537,11 @@ async function confirmAddColor() {
     onVariantSelectionChanged();
   } catch (e) {
     console.error(e);
-    const msg = e?.userMessage || e?.response?.data?.message || e?.message || "Lỗi không xác định";
+    const msg =
+      e?.userMessage ||
+      e?.response?.data?.message ||
+      e?.message ||
+      "Lỗi không xác định";
     toastError(`Không thêm được màu. ${msg}`);
   } finally {
     loading.value = false;
@@ -1836,7 +2585,10 @@ async function uploadImageAfterEdit(ctspId) {
   try {
     const res = await anhChiTietSanPhamService.byChiTietSanPham(ctspId);
     const imgs = normalizeArr(res);
-    const daiDien = imgs.find((x) => (x?.laAnhDaiDien ?? x?.la_anh_dai_dien) === true) || imgs[0] || null;
+    const daiDien =
+      imgs.find((x) => (x?.laAnhDaiDien ?? x?.la_anh_dai_dien) === true) ||
+      imgs[0] ||
+      null;
     const imgId = daiDien?.id ? Number(daiDien.id) : null;
 
     if (imgId) {
@@ -1896,18 +2648,56 @@ async function loadEditIfNeeded() {
   const idFormChan = row.idFormChan ?? row.formChanId ?? row.id_form_chan;
 
   form.idSanPham = Number(idSanPham) || null;
-  const p = productOptions.value.find((x) => Number(x.id) === Number(form.idSanPham));
+
+  let p = productOptions.value.find(
+    (x) => Number(x.id) === Number(form.idSanPham)
+  );
+
+  if (!p && form.idSanPham) {
+    try {
+      const pRes = await productService.getOne(form.idSanPham);
+      p = pRes?.data ?? pRes ?? null;
+
+      if (p?.id) {
+        const existed = productOptions.value.find(
+          (x) => Number(x.id) === Number(p.id)
+        );
+        if (!existed) {
+          productOptions.value = [...productOptions.value, p];
+        }
+      }
+    } catch (e) {
+      console.warn("Không lấy được sản phẩm hiện tại từ getOne:", e);
+    }
+  }
+
   if (p) {
     form.maSanPham = p.maSanPham ?? p.ma ?? "";
     form.tenSanPham = p.tenSanPham ?? p.ten ?? "";
     form.moTaNgan = p.moTaNgan ?? p.moTa ?? "";
-    syncAttributesFromProduct(p);
+    await syncAttributesFromProduct(p);
   }
 
-  const ms = mauSacOptions.value.find((x) => Number(x.id) === Number(idMauSac));
-  const kt = kichThuocOptions.value.find((x) => Number(x.id) === Number(idKichThuoc));
-  const ls = loaiSanOptions.value.find((x) => Number(x.id) === Number(idLoaiSan));
-  const fc = formChanOptions.value.find((x) => Number(x.id) === Number(idFormChan));
+  const ms = await ensureOptionPresent({
+    currentId: idMauSac,
+    source: row,
+    ...optionResolvers.mauSac,
+  });
+  const kt = await ensureOptionPresent({
+    currentId: idKichThuoc,
+    source: row,
+    ...optionResolvers.kichThuoc,
+  });
+  const ls = await ensureOptionPresent({
+    currentId: idLoaiSan,
+    source: row,
+    ...optionResolvers.loaiSan,
+  });
+  const fc = await ensureOptionPresent({
+    currentId: idFormChan,
+    source: row,
+    ...optionResolvers.formChan,
+  });
 
   selectedMauSac.value = ms ? [ms] : [];
   selectedKichThuoc.value = kt ? [kt] : [];
@@ -1915,21 +2705,23 @@ async function loadEditIfNeeded() {
   selectedFormChan.value = fc ? [fc] : [];
 
   variantsGenerated.value = true;
-  rows.value = [{
-    key: buildKey(ms?.id, kt?.id, ls?.id, fc?.id),
-    idSanPham: form.idSanPham,
-    idMauSac: ms?.id,
-    idKichThuoc: kt?.id,
-    idLoaiSan: ls?.id,
-    idFormChan: fc?.id,
-    labelKichThuoc: pickTen(kt, "tenKichThuoc", "maKichThuoc"),
-    labelLoaiSan: pickTen(ls, "tenLoaiSan", "maLoaiSan"),
-    labelFormChan: pickTen(fc, "tenFormChan", "maFormChan"),
-    soLuong: String(row.soLuong ?? ""),
-    gia: String(row.giaBan ?? row.giaNiemYet ?? row.gia ?? ""),
-    errSoLuong: "",
-    errGia: "",
-  }];
+  rows.value = [
+    {
+      key: buildKey(ms?.id, kt?.id, ls?.id, fc?.id),
+      idSanPham: form.idSanPham,
+      idMauSac: ms?.id,
+      idKichThuoc: kt?.id,
+      idLoaiSan: ls?.id,
+      idFormChan: fc?.id,
+      labelKichThuoc: pickTen(kt, "tenKichThuoc", "maKichThuoc"),
+      labelLoaiSan: pickTen(ls, "tenLoaiSan", "maLoaiSan"),
+      labelFormChan: pickTen(fc, "tenFormChan", "maFormChan"),
+      soLuong: String(row.soLuong ?? ""),
+      gia: String(row.giaBan ?? row.giaNiemYet ?? row.gia ?? ""),
+      errSoLuong: "",
+      errGia: "",
+    },
+  ];
 
   if (ms?.id) ensureColorFileKey(ms.id);
 }
@@ -1938,20 +2730,18 @@ async function loadEditIfNeeded() {
 onMounted(async () => {
   loading.value = true;
   try {
-    const [
-      p, th, xx, cg, cl, vt, pc, ms, kt, ls, fc,
-    ] = await Promise.all([
+    const [p, th, xx, cg, cl, vt, pc, ms, kt, ls, fc] = await Promise.all([
       productService.getAll(),
-      refDataService.getThuongHieu(),
-      refDataService.getXuatXu(),
-      refDataService.getCoGiay(),
-      refDataService.getChatLieu(),
-      refDataService.getViTriThiDau(),
-      refDataService.getPhongCachChoi(),
-      refDataService.getMauSac(),
-      refDataService.getKichThuoc(),
-      refDataService.getLoaiSan(),
-      refDataService.getFormChan(),
+      refDataService.getThuongHieuActive(),
+      refDataService.getXuatXuActive(),
+      refDataService.getCoGiayActive(),
+      refDataService.getChatLieuActive(),
+      refDataService.getViTriThiDauActive(),
+      refDataService.getPhongCachChoiActive(),
+      refDataService.getMauSacActive(),
+      refDataService.getKichThuocActive(),
+      refDataService.getLoaiSanActive(),
+      refDataService.getFormChanActive(),
     ]);
 
     productOptions.value = normalizeArr(p);
@@ -1967,7 +2757,9 @@ onMounted(async () => {
     formChanOptions.value = normalizeArr(fc);
 
     if (!isEdit.value && productIdQuery.value) {
-      const found = productOptions.value.find((x) => Number(x.id) === Number(productIdQuery.value));
+      const found = productOptions.value.find(
+        (x) => Number(x.id) === Number(productIdQuery.value)
+      );
       if (found) selectedProduct.value = found;
       else form.idSanPham = productIdQuery.value;
     }
@@ -1976,12 +2768,18 @@ onMounted(async () => {
     await loadEditIfNeeded();
 
     if (form.idSanPham) {
-      const p2 = productOptions.value.find((x) => Number(x.id) === Number(form.idSanPham));
-      if (p2) syncAttributesFromProduct(p2);
+      const p2 = productOptions.value.find(
+        (x) => Number(x.id) === Number(form.idSanPham)
+      );
+      if (p2) await syncAttributesFromProduct(p2);
     }
   } catch (e) {
     console.error(e);
-    const msg = e?.userMessage || e?.response?.data?.message || e?.message || "Lỗi không xác định";
+    const msg =
+      e?.userMessage ||
+      e?.response?.data?.message ||
+      e?.message ||
+      "Lỗi không xác định";
     toastError(`Không tải được dữ liệu tham chiếu. ${msg}`);
   } finally {
     loading.value = false;
@@ -1994,7 +2792,8 @@ async function createProductIfNeeded() {
 
   const ten = String(form.tenSanPham || "").trim();
   if (!ten) throw new Error("Vui lòng nhập tên sản phẩm.");
-  if (!selectedThuongHieu.value?.id) throw new Error("Vui lòng chọn Thương hiệu.");
+  if (!selectedThuongHieu.value?.id)
+    throw new Error("Vui lòng chọn Thương hiệu.");
 
   const payload = {
     tenSanPham: ten,
@@ -2013,12 +2812,17 @@ async function createProductIfNeeded() {
   const created = res?.data ?? res;
   const createdId = created?.id;
 
-  if (!createdId) throw new Error("Tạo sản phẩm thành công nhưng không nhận được id.");
+  if (!createdId)
+    throw new Error("Tạo sản phẩm thành công nhưng không nhận được id.");
 
   const list = await productService.getAll();
   productOptions.value = normalizeArr(list);
 
-  const found = productOptions.value.find((x) => Number(x.id) === Number(createdId)) || { ...created, id: createdId };
+  const found =
+    productOptions.value.find((x) => Number(x.id) === Number(createdId)) || {
+      ...created,
+      id: createdId,
+    };
   form.idSanPham = found.id;
   form.maSanPham = found.maSanPham ?? found.ma ?? form.maSanPham;
   form.tenSanPham = found.tenSanPham ?? found.ten ?? form.tenSanPham;
@@ -2035,8 +2839,13 @@ async function submitReal() {
     if (!form.idSanPham) return stopWithError("Không xác định được sản phẩm.");
     if (!rows.value.length) return stopWithError("Chưa có biến thể nào để lưu.");
 
-    const bad = rows.value.find((r) => !isValidNonNeg(r.soLuong) || !isValidNonNeg(r.gia));
-    if (bad) return stopWithError("Vui lòng nhập Số lượng/Giá hợp lệ (>= 0) cho tất cả biến thể.");
+    const bad = rows.value.find(
+      (r) => !isValidNonNeg(r.soLuong) || !isValidNonNeg(r.gia)
+    );
+    if (bad)
+      return stopWithError(
+        "Vui lòng nhập Số lượng/Giá hợp lệ (>= 0) cho tất cả biến thể."
+      );
 
     loading.value = true;
 
@@ -2059,7 +2868,9 @@ async function submitReal() {
       await uploadImageAfterEdit(Number(id.value));
 
       toastSuccess("Lưu chi tiết sản phẩm thành công");
-      router.push(`/admin/chi-tiet-san-pham?productId=${form.idSanPham}&saved=1&mode=update`);
+      router.push(
+        `/admin/chi-tiet-san-pham?productId=${form.idSanPham}&saved=1&mode=update`
+      );
       return;
     }
 
@@ -2081,14 +2892,22 @@ async function submitReal() {
       })
     );
 
-    const createdCtspList = createdResList.map((x) => x?.data ?? x).filter(Boolean);
+    const createdCtspList = createdResList
+      .map((x) => x?.data ?? x)
+      .filter(Boolean);
     await uploadImagesAfterCreate(createdCtspList);
 
     toastSuccess("Thêm chi tiết sản phẩm thành công");
-    router.push(`/admin/chi-tiet-san-pham?productId=${form.idSanPham}&saved=1&mode=create`);
+    router.push(
+      `/admin/chi-tiet-san-pham?productId=${form.idSanPham}&saved=1&mode=create`
+    );
   } catch (e) {
     console.error(e);
-    const msg = e?.userMessage || e?.response?.data?.message || e?.message || (isEdit.value ? "Lưu thất bại." : "Thêm thất bại.");
+    const msg =
+      e?.userMessage ||
+      e?.response?.data?.message ||
+      e?.message ||
+      (isEdit.value ? "Lưu thất bại." : "Thêm thất bại.");
     toastError(msg);
   } finally {
     loading.value = false;
@@ -2097,13 +2916,11 @@ async function submitReal() {
 </script>
 
 <style scoped>
-/* ===== ÉP 1 font + không in đậm ===== */
 .ss-one-font,
 .ss-one-font * {
   font-weight: 400 !important;
 }
 
-/* ===== Vue Select: đồng nhất dấu X (clear) như các ô thuộc tính ===== */
 :deep(.vs__clear) {
   opacity: 1 !important;
   width: 28px !important;
@@ -2126,7 +2943,6 @@ async function submitReal() {
   color: rgba(17, 24, 39, 0.45) !important;
 }
 
-/* ===== Layout ===== */
 .ss-page-title {
   font-size: 18px;
   letter-spacing: 0.2px;
@@ -2137,7 +2953,6 @@ async function submitReal() {
   color: rgba(17, 24, 39, 0.92);
 }
 
-/* ✅ note validate */
 .ss-note {
   padding: 10px 12px;
   border-radius: 12px;
@@ -2146,33 +2961,33 @@ async function submitReal() {
   margin-bottom: 12px;
 }
 .ss-note-line {
-  color: rgba(17, 24, 39, 0.70);
+  color: rgba(17, 24, 39, 0.7);
   font-size: 12.5px;
   line-height: 1.45;
 }
 
-/* ===== required star ===== */
 .ss-required {
   color: #ff4d4f;
   margin-left: 4px;
   cursor: help;
 }
 
-/* ===== error ===== */
 .ss-err {
   margin-top: 6px;
   color: #ff4d4f;
   font-size: 12.5px;
 }
 
-/* ===== Chips ===== */
 .ss-chip-wrap {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 10px;
 }
-.ss-chip-wrap-sm { gap: 8px; margin-bottom: 0; }
+.ss-chip-wrap-sm {
+  gap: 8px;
+  margin-bottom: 0;
+}
 .ss-chip {
   display: inline-flex;
   align-items: center;
@@ -2209,7 +3024,7 @@ async function submitReal() {
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  border: 1px solid rgba(17, 24, 39, 0.10);
+  border: 1px solid rgba(17, 24, 39, 0.1);
 }
 
 .ss-color-dot {
@@ -2227,7 +3042,6 @@ async function submitReal() {
   flex-wrap: wrap;
 }
 
-/* ===== Buttons ===== */
 .ss-btn {
   border-radius: 10px;
   padding: 10px 14px;
@@ -2251,7 +3065,6 @@ async function submitReal() {
   color: rgba(17, 24, 39, 0.6);
 }
 
-/* ===== Variant bar ===== */
 .ss-variant-bar {
   padding: 12px 14px;
   display: flex;
@@ -2268,7 +3081,9 @@ async function submitReal() {
   gap: 10px;
   color: #fff;
 }
-.ss-bar-ic { font-size: 18px; }
+.ss-bar-ic {
+  font-size: 18px;
+}
 .ss-bar-right {
   display: inline-flex;
   align-items: center;
@@ -2283,23 +3098,28 @@ async function submitReal() {
   border: 1px solid transparent;
   font-size: 13px;
 }
-.ss-bar-btn span.material-icons-outlined { font-size: 18px; }
+.ss-bar-btn span.material-icons-outlined {
+  font-size: 18px;
+}
 .ss-bar-btn-dark {
   background: rgba(17, 24, 39, 0.92);
   color: #fff;
   border-color: rgba(255, 255, 255, 0.14);
 }
-.ss-bar-btn-dark:hover { filter: brightness(1.02); }
+.ss-bar-btn-dark:hover {
+  filter: brightness(1.02);
+}
 .ss-bar-btn-danger {
   background: rgba(255, 77, 79, 0.96);
   color: #fff;
   border-color: rgba(255, 255, 255, 0.16);
 }
-.ss-bar-btn-danger:hover { filter: brightness(0.98); }
+.ss-bar-btn-danger:hover {
+  filter: brightness(0.98);
+}
 
-/* ===== Color group ===== */
 .ss-color-group {
-  border: 1px solid rgba(17, 24, 39, 0.10);
+  border: 1px solid rgba(17, 24, 39, 0.1);
   border-radius: 14px;
   overflow: hidden;
   margin-bottom: 14px;
@@ -2313,15 +3133,21 @@ async function submitReal() {
   justify-content: space-between;
 }
 
-/* ===== Table ===== */
 .ss-table-lite thead th {
   background: rgba(17, 24, 39, 0.03);
-  border-bottom: 1px solid rgba(17, 24, 39, 0.10);
+  border-bottom: 1px solid rgba(17, 24, 39, 0.1);
 }
-.ss-table-lite td, .ss-table-lite th { vertical-align: middle; }
-.ss-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ss-table-lite td,
+.ss-table-lite th {
+  vertical-align: middle;
+}
+.ss-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 
-/* ===== Delete button ===== */
 .ss-del {
   width: 38px;
   height: 38px;
@@ -2334,18 +3160,19 @@ async function submitReal() {
   padding: 0;
   color: #fff;
 }
-.ss-del:hover { filter: brightness(0.98); }
+.ss-del:hover {
+  filter: brightness(0.98);
+}
 
-/* ===== Image block ===== */
 .ss-image-block {
   padding: 12px;
-  border-top: 1px solid rgba(17, 24, 39, 0.10);
+  border-top: 1px solid rgba(17, 24, 39, 0.1);
   background: #fff;
   margin-top: 10px;
   border-radius: 14px;
 }
 .ss-image-block-bottom {
-  border: 1px solid rgba(17,24,39,0.10);
+  border: 1px solid rgba(17, 24, 39, 0.1);
 }
 .ss-image-title {
   display: inline-flex;
@@ -2360,10 +3187,12 @@ async function submitReal() {
   gap: 12px;
 }
 @media (min-width: 992px) {
-  .ss-image-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ss-image-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .ss-image-card {
-  border: 1px solid rgba(17, 24, 39, 0.10);
+  border: 1px solid rgba(17, 24, 39, 0.1);
   border-radius: 14px;
   overflow: hidden;
   background: #fff;
@@ -2386,7 +3215,9 @@ async function submitReal() {
   padding: 0;
   color: rgba(17, 24, 39, 0.88);
 }
-.ss-img-x:hover { background: rgba(17, 24, 39, 0.04); }
+.ss-img-x:hover {
+  background: rgba(17, 24, 39, 0.04);
+}
 .ss-image-preview {
   height: 210px;
   background: rgba(17, 24, 39, 0.03);
@@ -2409,11 +3240,10 @@ async function submitReal() {
 .ss-img-btn {
   width: 100%;
   border-radius: 0;
-  border-top: 1px solid rgba(17, 24, 39, 0.10) !important;
+  border-top: 1px solid rgba(17, 24, 39, 0.1) !important;
   padding: 10px 12px;
 }
 
-/* ===== Footer actions ===== */
 .ss-footer-actions {
   display: flex;
   justify-content: flex-end;
@@ -2421,7 +3251,6 @@ async function submitReal() {
   margin-top: 12px;
 }
 
-/* ===== Buttons palette ===== */
 .btn-primary {
   border: none !important;
   background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%) !important;
@@ -2430,7 +3259,9 @@ async function submitReal() {
 }
 .btn-primary:hover {
   filter: brightness(0.98);
-  box-shadow: 0 12px 26px rgba(17, 24, 39, 0.18), 0 10px 22px rgba(255, 77, 79, 0.14);
+  box-shadow:
+    0 12px 26px rgba(17, 24, 39, 0.18),
+    0 10px 22px rgba(255, 77, 79, 0.14);
 }
 .btn-primary:disabled,
 .btn-primary.disabled {
@@ -2450,7 +3281,6 @@ async function submitReal() {
   color: rgba(17, 24, 39, 0.92) !important;
 }
 
-/* ===== Modal ===== */
 .ss-overlay {
   position: fixed;
   inset: 0;
@@ -2472,8 +3302,12 @@ async function submitReal() {
   padding: 14px 16px;
   border-bottom: 1px solid rgba(17, 24, 39, 0.08);
 }
-.ss-modal-title { color: rgba(17, 24, 39, 0.92); }
-.ss-modal-body { padding: 16px; }
+.ss-modal-title {
+  color: rgba(17, 24, 39, 0.92);
+}
+.ss-modal-body {
+  padding: 16px;
+}
 .ss-modal-foot {
   padding: 14px 16px;
   display: flex;
@@ -2482,13 +3316,11 @@ async function submitReal() {
   border-top: 1px solid rgba(17, 24, 39, 0.08);
 }
 
-/* ===== Size select in modal ===== */
 .ss-size-select :deep(.vs__dropdown-toggle) {
   min-height: 42px;
   border-radius: 10px;
 }
 
-/* ===== Size grid ===== */
 .ss-size-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -2501,24 +3333,25 @@ async function submitReal() {
   background: #fff;
   color: rgba(17, 24, 39, 0.92);
 }
-.ss-size-item:hover { background: rgba(17, 24, 39, 0.04); }
+.ss-size-item:hover {
+  background: rgba(17, 24, 39, 0.04);
+}
 .ss-size-item.active {
   border-color: rgba(255, 77, 79, 0.75);
   background: rgba(255, 77, 79, 0.08);
 }
 .ss-size-empty {
   margin-top: 10px;
-  color: rgba(17, 24, 39, 0.60);
+  color: rgba(17, 24, 39, 0.6);
   font-size: 13px;
 }
 
-/* ===== Bulk preview ===== */
 .ss-bulk-preview {
-  border: 1px dashed rgba(17,24,39,0.16);
+  border: 1px dashed rgba(17, 24, 39, 0.16);
   border-radius: 12px;
   padding: 10px 12px;
   margin-bottom: 12px;
-  background: rgba(17,24,39,0.02);
+  background: rgba(17, 24, 39, 0.02);
 }
 .ss-bulk-line {
   display: flex;
@@ -2527,7 +3360,6 @@ async function submitReal() {
   flex-wrap: wrap;
 }
 
-/* ===== Confirm ===== */
 .ss-confirm {
   width: 560px;
   max-width: calc(100vw - 28px);
@@ -2540,8 +3372,12 @@ async function submitReal() {
   padding: 14px 16px;
   border-bottom: 1px solid rgba(17, 24, 39, 0.08);
 }
-.ss-confirm-title { color: rgba(17, 24, 39, 0.92); }
-.ss-confirm-body { padding: 16px; }
+.ss-confirm-title {
+  color: rgba(17, 24, 39, 0.92);
+}
+.ss-confirm-body {
+  padding: 16px;
+}
 .ss-confirm-text {
   color: rgba(17, 24, 39, 0.86);
   font-size: 14px;

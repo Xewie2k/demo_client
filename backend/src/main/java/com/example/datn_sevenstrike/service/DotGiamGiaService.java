@@ -72,9 +72,6 @@ public class DotGiamGiaService {
         // ✅ CHO PHÉP overlap thời gian => KHÔNG validate trùng thời gian
         validate(e);
 
-        if (repo.existsByTenDotGiamGiaIgnoreCaseAndXoaMemFalse(e.getTenDotGiamGia().trim()))
-            throw new BadRequestEx("Tên đợt giảm giá đã tồn tại");
-
         return toResponse(repo.save(e));
     }
 
@@ -97,10 +94,6 @@ public class DotGiamGiaService {
         db.setLoaiGiamGia(false);
 
         validate(db);
-
-        if (repo.existsByTenDotGiamGiaIgnoreCaseAndXoaMemFalseAndIdNot(db.getTenDotGiamGia().trim(), id))
-            throw new BadRequestEx("Tên đợt giảm giá đã tồn tại");
-
         return toResponse(repo.save(db));
     }
 
@@ -126,13 +119,6 @@ public class DotGiamGiaService {
         if (e.getTenDotGiamGia() == null || e.getTenDotGiamGia().isBlank())
             throw new BadRequestEx("Thiếu ten_dot_giam_gia");
 
-        String ten = e.getTenDotGiamGia().trim();
-        if (ten.length() < 5 || ten.length() > 100)
-            throw new BadRequestEx("Tên đợt giảm giá phải có từ 5 đến 100 ký tự");
-
-        if (!ten.matches("^[\\p{L}\\p{N}\\s\\-.,()%/]+$"))
-            throw new BadRequestEx("Tên đợt giảm giá không được chứa ký tự đặc biệt");
-
         if (e.getNgayBatDau() == null || e.getNgayKetThuc() == null)
             throw new BadRequestEx("Thiếu ngay_bat_dau/ngay_ket_thuc");
 
@@ -142,9 +128,10 @@ public class DotGiamGiaService {
         if (e.getGiaTriGiamGia() == null)
             throw new BadRequestEx("Thiếu gia_tri_giam_gia");
 
-        if (e.getGiaTriGiamGia().compareTo(BigDecimal.ONE) < 0)
-            throw new BadRequestEx("Giá trị giảm phải nằm trong khoảng 1 - 100 (%)");
+        if (e.getGiaTriGiamGia().compareTo(BigDecimal.ZERO) < 0)
+            throw new BadRequestEx("Giá trị giảm phải >= 0");
 
+        // ✅ vì chốt %: 0..100
         if (e.getGiaTriGiamGia().compareTo(new BigDecimal("100")) > 0)
             throw new BadRequestEx("Giảm % phải nằm trong 0..100");
     }

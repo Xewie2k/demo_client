@@ -1,6 +1,30 @@
 <!-- File: src/pages/product/ProductManagePage.vue -->
 <template>
   <div class="ss-page ss-font">
+    <!-- TOAST -->
+    <transition name="ss-toast-fade">
+      <div
+        v-if="toast.show"
+        class="ss-toast"
+        :class="toast.type === 'success' ? 'is-success' : 'is-error'"
+      >
+        <div class="ss-toast-icon">
+          <span class="material-icons-outlined">
+            {{ toast.type === "success" ? "check_circle" : "error" }}
+          </span>
+        </div>
+        <div class="ss-toast-content">
+          <div class="ss-toast-title">
+            {{ toast.type === "success" ? "Thành công" : "Có lỗi xảy ra" }}
+          </div>
+          <div class="ss-toast-message">{{ toast.message }}</div>
+        </div>
+        <button class="ss-toast-close" type="button" @click="hideToast">
+          <span class="material-icons-outlined">close</span>
+        </button>
+      </div>
+    </transition>
+
     <!-- HEAD -->
     <div class="ss-head">
       <div class="ss-head-left">
@@ -55,7 +79,7 @@
           </div>
         </div>
 
-        <!-- ✅ Combobox: vừa search vừa nhập (Chất liệu) -->
+        <!-- Combobox: Chất liệu -->
         <div class="ss-field ss-field-select">
           <div class="ss-filter-label">Chất liệu</div>
 
@@ -99,7 +123,7 @@
           </div>
         </div>
 
-        <!-- ✅ Combobox: vừa search vừa nhập (Thương hiệu) -->
+        <!-- Combobox: Thương hiệu -->
         <div class="ss-field ss-field-select">
           <div class="ss-filter-label">Thương hiệu</div>
 
@@ -147,7 +171,7 @@
       <!-- Row 2 -->
       <div class="ss-filter-row2">
         <div class="ss-filter-actions">
-          <button class="btn ss-btn-lite" type="button" @click="exportExcel" :disabled="loading">
+          <button class="btn ss-btn-outline" type="button" @click="exportExcel" :disabled="loading">
             <span class="material-icons-outlined ss-btn-ic">description</span>
             Tải Excel
           </button>
@@ -157,12 +181,12 @@
             Thêm chi tiết sản phẩm
           </button>
 
-          <button class="btn ss-btn-warn" type="button" @click="openQr" :disabled="loading">
+          <button class="btn ss-btn-soft" type="button" @click="openQr" :disabled="loading">
             <span class="material-icons-outlined ss-btn-ic">qr_code_scanner</span>
             Quét QR
           </button>
 
-          <button class="btn ss-btn-dark" type="button" @click="resetFilter" :disabled="loading">
+          <button class="btn ss-btn-outline" type="button" @click="resetFilter" :disabled="loading">
             <span class="material-icons-outlined ss-btn-ic">restart_alt</span>
             Đặt lại bộ lọc
           </button>
@@ -203,13 +227,11 @@
                 <span v-else>{{ qtyMap[p.id] ?? 0 }}</span>
               </td>
 
-              <!-- ✅ Khoảng giá màu đỏ -->
               <td class="ss-td col-gia">
                 <span v-if="priceLoadingIds.has(p.id)" class="ss-muted">...</span>
                 <span v-else class="ss-money">{{ getPriceRangeText(p.id) }}</span>
               </td>
 
-              <!-- ✅ Trạng thái: Kinh doanh màu đỏ, Ngừng KD giữ nguyên -->
               <td class="text-center col-tt">
                 <span class="ss-badge" :class="getTrangThaiKinhDoanh(p) ? 'ss-badge-on' : 'ss-badge-off'">
                   {{ getTrangThaiKinhDoanh(p) ? "Kinh doanh" : "Ngừng kinh doanh" }}
@@ -272,39 +294,46 @@
       <div class="ss-pageinfo">Trang <span>{{ page }}</span> / <span>{{ totalPages }}</span></div>
     </div>
 
-    <!-- ✅ CONFIRM MODAL: chuyển trạng thái nhanh -->
+    <!-- CONFIRM MODAL -->
     <div v-if="confirmToggle.open" class="ss-overlay" @click.self="closeConfirmToggle">
-      <div class="ss-modal" style="width: 520px">
+      <div class="ss-modal ss-confirm-modal">
         <div class="ss-modal-header">
           <div class="ss-modal-title">Xác nhận chuyển trạng thái</div>
-          <button class="btn btn-sm btn-outline-secondary" type="button" @click="closeConfirmToggle" :disabled="confirmToggle.loading">
-            X
+          <button
+            class="ss-modal-close"
+            type="button"
+            @click="closeConfirmToggle"
+            :disabled="confirmToggle.loading"
+          >
+            <span class="material-icons-outlined">close</span>
           </button>
         </div>
 
         <div class="ss-modal-body">
-          <div style="font-size: 13px; color: rgba(17, 24, 39, 0.78); line-height: 1.55">
+          <div class="ss-confirm-text">
             Bạn có chắc muốn
-            <b style="color: rgba(17, 24, 39, 0.9)">
-              {{ confirmToggle.next ? "bật kinh doanh" : "ngừng kinh doanh" }}
-            </b>
+            <b>{{ confirmToggle.next ? "bật kinh doanh" : "ngừng kinh doanh" }}</b>
             cho sản phẩm:
-            <div style="margin-top: 8px">
-              <div>
-                <b>{{ confirmProductTen }}</b>
-              </div>
-              <div class="ss-muted" style="margin-top: 2px">Mã sản phẩm: <b>{{ confirmProductMa }}</b></div>
+          </div>
+
+          <div class="ss-confirm-box">
+            <div class="ss-confirm-name">{{ confirmProductTen }}</div>
+            <div class="ss-confirm-code">Mã sản phẩm: <b>{{ confirmProductMa }}</b></div>
+            <div class="ss-confirm-change">
+              Trạng thái sẽ đổi từ
+              <span class="from">{{ confirmToggle.fromLabel }}</span>
+              sang
+              <span class="to">{{ confirmToggle.toLabel }}</span>
             </div>
           </div>
         </div>
 
         <div class="ss-modal-footer">
-          <button class="btn ss-btn-dark" type="button" @click="closeConfirmToggle" :disabled="confirmToggle.loading">
+          <button class="btn ss-btn-outline" type="button" @click="closeConfirmToggle" :disabled="confirmToggle.loading">
             Hủy
           </button>
           <button
-            class="btn"
-            :class="confirmToggle.next ? 'ss-btn-primary' : 'ss-btn-warn'"
+            class="btn ss-btn-primary"
             type="button"
             @click="confirmToggleTrangThai"
             :disabled="confirmToggle.loading"
@@ -320,7 +349,9 @@
       <div class="ss-modal ss-qr-modal">
         <div class="ss-modal-header">
           <div class="ss-modal-title">Quét QR sản phẩm</div>
-          <button class="btn btn-sm btn-outline-secondary" @click="closeQr">X</button>
+          <button class="ss-modal-close" type="button" @click="closeQr">
+            <span class="material-icons-outlined">close</span>
+          </button>
         </div>
 
         <div class="ss-modal-body">
@@ -330,7 +361,7 @@
         </div>
 
         <div class="ss-modal-footer">
-          <button class="btn ss-btn-dark" type="button" @click="closeQr">Đóng</button>
+          <button class="btn ss-btn-outline" type="button" @click="closeQr">Đóng</button>
         </div>
       </div>
     </div>
@@ -353,13 +384,12 @@ const loading = ref(false);
 const products = ref([]);
 const keyword = ref("");
 
-/** ✅ Combobox (vừa search vừa nhập) */
 const chatLieuFilterText = ref("");
 const thuongHieuFilterText = ref("");
 const chatLieuSelectedId = ref(null);
 const thuongHieuSelectedId = ref(null);
 
-const stockFilter = ref("all"); // all | in_stock | out_stock  (in_stock=kinh_doanh, out_stock=ngung)
+const stockFilter = ref("all");
 
 const page = ref(1);
 const pageSize = ref(10);
@@ -376,11 +406,30 @@ const thuongHieuMap = reactive({});
 const chatLieuMap = reactive({});
 
 const switchLoadingIds = reactive(new Set());
-
-/** ✅ map CTSP -> id SP cha (để quét QR CTSP vẫn ra SP) */
 const ctspToProductId = reactive(new Map());
 
-/** ✅ confirm chuyển trạng thái nhanh */
+const toast = reactive({
+  show: false,
+  type: "success",
+  message: "",
+});
+let toastTimer = 0;
+
+function showToast(message, type = "success", duration = 3200) {
+  clearTimeout(toastTimer);
+  toast.show = true;
+  toast.type = type;
+  toast.message = String(message || "");
+  toastTimer = window.setTimeout(() => {
+    toast.show = false;
+  }, duration);
+}
+
+function hideToast() {
+  clearTimeout(toastTimer);
+  toast.show = false;
+}
+
 const confirmToggle = reactive({
   open: false,
   p: null,
@@ -393,10 +442,32 @@ const confirmProductTen = computed(() => {
   const ten = p ? getTenSanPham(p) : "";
   return ten || "—";
 });
+
 const confirmProductMa = computed(() => {
   const p = confirmToggle.p;
   const ma = p ? getMaSanPham(p) : "";
   return ma || "—";
+});
+
+const confirmToggleFrom = computed(() => {
+  const p = confirmToggle.p;
+  return p ? getTrangThaiKinhDoanh(p) : false;
+});
+
+const confirmToggleTo = computed(() => confirmToggle.next);
+
+const confirmToggleFromLabel = computed(() => getTrangThaiLabel(confirmToggleFrom.value));
+const confirmToggleToLabel = computed(() => getTrangThaiLabel(confirmToggleTo.value));
+
+Object.defineProperty(confirmToggle, "fromLabel", {
+  get() {
+    return confirmToggleFromLabel.value;
+  },
+});
+Object.defineProperty(confirmToggle, "toLabel", {
+  get() {
+    return confirmToggleToLabel.value;
+  },
 });
 
 function openConfirmToggle(p) {
@@ -409,12 +480,16 @@ function openConfirmToggle(p) {
   confirmToggle.loading = false;
 }
 
-function closeConfirmToggle() {
-  if (confirmToggle.loading) return;
+function resetConfirmToggle() {
   confirmToggle.open = false;
   confirmToggle.p = null;
   confirmToggle.next = true;
   confirmToggle.loading = false;
+}
+
+function closeConfirmToggle() {
+  if (confirmToggle.loading) return;
+  resetConfirmToggle();
 }
 
 async function confirmToggleTrangThai() {
@@ -427,7 +502,7 @@ async function confirmToggleTrangThai() {
   confirmToggle.loading = true;
   try {
     await toggleTrangThai(p, confirmToggle.next);
-    closeConfirmToggle();
+    resetConfirmToggle();
   } catch (e) {
     console.error(e);
   } finally {
@@ -452,6 +527,7 @@ function lc(s) {
 function getMaSanPham(p) {
   return p?.maSanPham ?? p?.ma_san_pham ?? p?.ma ?? "--";
 }
+
 function getTenSanPham(p) {
   return p?.tenSanPham ?? p?.ten_san_pham ?? p?.ten ?? "";
 }
@@ -467,6 +543,7 @@ function getThuongHieuId(p) {
     null
   );
 }
+
 function getChatLieuId(p) {
   return (
     p?.idChatLieu ??
@@ -488,6 +565,7 @@ function getThuongHieuTen(p) {
     p?.thuongHieu?.ten ??
     p?.thuong_hieu?.ten_thuong_hieu ??
     p?.thuong_hieu?.ten;
+
   if (direct) return direct;
 
   const id = getThuongHieuId(p);
@@ -503,6 +581,7 @@ function getChatLieuTen(p) {
     p?.chatLieu?.ten ??
     p?.chat_lieu?.ten_chat_lieu ??
     p?.chat_lieu?.ten;
+
   if (direct) return direct;
 
   const id = getChatLieuId(p);
@@ -544,12 +623,14 @@ function getTrangThaiKinhDoanh(p) {
   return true;
 }
 
-/** ✅ lấy mã CTSP từ detail */
+function getTrangThaiLabel(value) {
+  return value ? "Kinh doanh" : "Ngừng kinh doanh";
+}
+
 function pickMaCtsp(d) {
   return d?.maChiTietSanPham ?? d?.ma_chi_tiet_san_pham ?? d?.maCtsp ?? d?.ma ?? "";
 }
 
-/** ✅ Combobox state */
 const combo = reactive({ clOpen: false, thOpen: false });
 let clCloseT = 0;
 let thCloseT = 0;
@@ -558,16 +639,19 @@ function openChatLieuCombo() {
   if (loading.value) return;
   combo.clOpen = true;
 }
+
 function closeChatLieuCombo() {
   clearTimeout(clCloseT);
   clCloseT = window.setTimeout(() => {
     combo.clOpen = false;
   }, 140);
 }
+
 function onChatLieuInput() {
-  chatLieuSelectedId.value = null; // gõ tay => lọc theo text
+  chatLieuSelectedId.value = null;
   combo.clOpen = true;
 }
+
 function selectChatLieu(opt) {
   if (!opt) {
     chatLieuSelectedId.value = null;
@@ -583,16 +667,19 @@ function openThuongHieuCombo() {
   if (loading.value) return;
   combo.thOpen = true;
 }
+
 function closeThuongHieuCombo() {
   clearTimeout(thCloseT);
   thCloseT = window.setTimeout(() => {
     combo.thOpen = false;
   }, 140);
 }
+
 function onThuongHieuInput() {
   thuongHieuSelectedId.value = null;
   combo.thOpen = true;
 }
+
 function selectThuongHieu(opt) {
   if (!opt) {
     thuongHieuSelectedId.value = null;
@@ -608,18 +695,14 @@ const chatLieuSuggest = computed(() => {
   const q = lc(chatLieuFilterText.value);
   const list = chatLieuOptions.value || [];
   if (!q) return list.slice(0, 50);
-  return list
-    .filter((x) => lc(x.ten).includes(q) || String(x.id).includes(q))
-    .slice(0, 50);
+  return list.filter((x) => lc(x.ten).includes(q) || String(x.id).includes(q)).slice(0, 50);
 });
 
 const thuongHieuSuggest = computed(() => {
   const q = lc(thuongHieuFilterText.value);
   const list = thuongHieuOptions.value || [];
   if (!q) return list.slice(0, 50);
-  return list
-    .filter((x) => lc(x.ten).includes(q) || String(x.id).includes(q))
-    .slice(0, 50);
+  return list.filter((x) => lc(x.ten).includes(q) || String(x.id).includes(q)).slice(0, 50);
 });
 
 const filteredProducts = computed(() => {
@@ -658,12 +741,17 @@ const filteredProducts = computed(() => {
 });
 
 const totalPages = computed(() => Math.max(1, Math.ceil((filteredProducts.value.length || 0) / pageSize.value)));
+
 const pagedProducts = computed(() => {
   const start = (page.value - 1) * pageSize.value;
   return filteredProducts.value.slice(start, start + pageSize.value);
 });
 
-watch([keyword, chatLieuFilterText, thuongHieuFilterText, chatLieuSelectedId, thuongHieuSelectedId, stockFilter], () => (page.value = 1));
+watch(
+  [keyword, chatLieuFilterText, thuongHieuFilterText, chatLieuSelectedId, thuongHieuSelectedId, stockFilter],
+  () => (page.value = 1)
+);
+
 watch(
   () => filteredProducts.value.length,
   () => {
@@ -700,17 +788,14 @@ function goPage(p) {
 
 function resetFilter() {
   keyword.value = "";
-
   chatLieuFilterText.value = "";
   thuongHieuFilterText.value = "";
   chatLieuSelectedId.value = null;
   thuongHieuSelectedId.value = null;
-
   stockFilter.value = "all";
   page.value = 1;
 }
 
-/** ✅ icon mắt: qua trang biến thể, mặc định lọc theo SP */
 function viewVariants(p) {
   const id = p?.id;
   if (!id) return;
@@ -787,12 +872,14 @@ function calcMinMaxGia(details) {
   const list = Array.isArray(details) ? details : [];
   let min = null;
   let max = null;
+
   for (const x of list) {
     const g = getGiaBienThe(x);
     if (g === null) continue;
     if (min === null || g < min) min = g;
     if (max === null || g > max) max = g;
   }
+
   return { min, max };
 }
 
@@ -813,7 +900,6 @@ async function loadAggFromDetails(list) {
         const details = await productDetailService.getBySanPham(id);
         const arr = unwrapList(details);
 
-        // ✅ build map CTSP -> SP
         arr.forEach((d) => {
           const code = String(pickMaCtsp(d) || "").trim();
           if (code) ctspToProductId.set(code.toUpperCase(), Number(id));
@@ -841,19 +927,29 @@ async function loadRefOptions() {
   try {
     const thRes = await refDataService.getThuongHieu?.();
     const thList = unwrapList(thRes)
-      .map((x) => ({ id: x?.id, ten: x?.tenThuongHieu ?? x?.ten_thuong_hieu ?? x?.ten ?? "--" }))
+      .map((x) => ({
+        id: x?.id,
+        ten: x?.tenThuongHieu ?? x?.ten_thuong_hieu ?? x?.ten ?? "--",
+      }))
       .filter((x) => x.id != null);
 
     thuongHieuOptions.value = thList;
-    thList.forEach((x) => (thuongHieuMap[x.id] = x.ten));
+    thList.forEach((x) => {
+      thuongHieuMap[x.id] = x.ten;
+    });
 
     const clRes = await refDataService.getChatLieu?.();
     const clList = unwrapList(clRes)
-      .map((x) => ({ id: x?.id, ten: x?.tenChatLieu ?? x?.ten_chat_lieu ?? x?.ten ?? "--" }))
+      .map((x) => ({
+        id: x?.id,
+        ten: x?.tenChatLieu ?? x?.ten_chat_lieu ?? x?.ten ?? "--",
+      }))
       .filter((x) => x.id != null);
 
     chatLieuOptions.value = clList;
-    clList.forEach((x) => (chatLieuMap[x.id] = x.ten));
+    clList.forEach((x) => {
+      chatLieuMap[x.id] = x.ten;
+    });
   } catch (e) {
     console.error(e);
   }
@@ -863,9 +959,11 @@ async function toggleTrangThai(p, forcedNext = null) {
   const id = p?.id;
   if (!id || switchLoadingIds.has(id)) return;
 
+  const current = getTrangThaiKinhDoanh(p);
+  const next = typeof forcedNext === "boolean" ? forcedNext : !current;
+
   try {
     switchLoadingIds.add(id);
-    const next = typeof forcedNext === "boolean" ? forcedNext : !getTrangThaiKinhDoanh(p);
 
     const payload = {
       ...p,
@@ -880,10 +978,31 @@ async function toggleTrangThai(p, forcedNext = null) {
 
     await productService.update(id, payload);
 
-    const idx = (products.value || []).findIndex((x) => x.id === id);
-    if (idx >= 0) products.value[idx] = { ...products.value[idx], ...payload };
+    const idx = (products.value || []).findIndex((x) => Number(x.id) === Number(id));
+    let updatedProduct = payload;
+
+    if (idx >= 0) {
+      updatedProduct = {
+        ...products.value[idx],
+        ...payload,
+      };
+      products.value[idx] = updatedProduct;
+    }
+
+    if (confirmToggle.p && Number(confirmToggle.p.id) === Number(id)) {
+      confirmToggle.p = updatedProduct;
+    }
+
+    showToast(
+      `Đã thay đổi trạng thái sản phẩm "${getTenSanPham(updatedProduct) || getMaSanPham(updatedProduct)}" từ "${getTrangThaiLabel(current)}" sang "${getTrangThaiLabel(next)}".`,
+      "success"
+    );
   } catch (e) {
     console.error(e);
+    showToast(
+      `Không thể thay đổi trạng thái sản phẩm "${getTenSanPham(p) || getMaSanPham(p)}".`,
+      "error"
+    );
     throw e;
   } finally {
     switchLoadingIds.delete(id);
@@ -916,7 +1035,10 @@ async function openQr() {
   qr.open = true;
 
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: false,
+    });
     qrStream = stream;
 
     const video = videoRef.value;
@@ -948,7 +1070,10 @@ function fillFromQr(raw) {
 
   const upper = val.toUpperCase();
 
-  const hitSp = (products.value || []).find((p) => String(getMaSanPham(p) || "").trim().toUpperCase() === upper);
+  const hitSp = (products.value || []).find(
+    (p) => String(getMaSanPham(p) || "").trim().toUpperCase() === upper
+  );
+
   if (hitSp) {
     keyword.value = String(getMaSanPham(hitSp) || "").trim();
     closeQr();
@@ -1033,18 +1158,24 @@ function closeQr() {
   stopQr();
 }
 
-onBeforeUnmount(() => stopQr());
+onBeforeUnmount(() => {
+  stopQr();
+  clearTimeout(clCloseT);
+  clearTimeout(thCloseT);
+  clearTimeout(toastTimer);
+});
 
 onMounted(async () => {
   loading.value = true;
   try {
     await loadRefOptions();
     const list = await productService.getAll();
-    products.value = unwrapList(list); // ✅ fix case API trả object
+    products.value = unwrapList(list);
     await loadAggFromDetails(products.value);
   } catch (e) {
     console.error(e);
     products.value = [];
+    showToast("Không thể tải danh sách sản phẩm.", "error");
   } finally {
     loading.value = false;
   }
@@ -1052,10 +1183,98 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* giữ nguyên toàn bộ CSS bạn đang có */
 .ss-font {
   font-family: inherit;
   color: rgba(17, 24, 39, 0.82);
+}
+
+/* theme */
+:root {
+  --ss-brand-red: #ff4d4f;
+  --ss-brand-red-dark: #e13c3f;
+  --ss-brand-ink: #111827;
+  --ss-brand-soft: rgba(255, 77, 79, 0.08);
+  --ss-brand-soft-2: rgba(255, 77, 79, 0.12);
+  --ss-brand-border: rgba(255, 77, 79, 0.22);
+  --ss-text-main: rgba(17, 24, 39, 0.88);
+  --ss-text-muted: rgba(17, 24, 39, 0.55);
+}
+
+/* toast */
+.ss-toast {
+  position: fixed;
+  top: 20px;
+  right: 22px;
+  z-index: 5000;
+  min-width: 340px;
+  max-width: 520px;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px rgba(17, 24, 39, 0.16);
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 14px 14px 12px;
+}
+.ss-toast.is-success {
+  border-left: 5px solid var(--ss-brand-red);
+}
+.ss-toast.is-error {
+  border-left: 5px solid #dc2626;
+}
+.ss-toast-icon {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+.ss-toast.is-success .ss-toast-icon .material-icons-outlined {
+  color: var(--ss-brand-red);
+}
+.ss-toast.is-error .ss-toast-icon .material-icons-outlined {
+  color: #dc2626;
+}
+.ss-toast-content {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.ss-toast-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ss-text-main);
+  margin-bottom: 4px;
+}
+.ss-toast-message {
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(17, 24, 39, 0.76);
+}
+.ss-toast-close {
+  width: 30px;
+  height: 30px;
+  border: none;
+  background: transparent;
+  color: rgba(17, 24, 39, 0.5);
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.18s ease;
+}
+.ss-toast-close:hover {
+  background: rgba(17, 24, 39, 0.05);
+  color: rgba(17, 24, 39, 0.8);
+}
+.ss-toast-close .material-icons-outlined {
+  font-size: 18px;
+}
+.ss-toast-fade-enter-active,
+.ss-toast-fade-leave-active {
+  transition: all 0.24s ease;
+}
+.ss-toast-fade-enter-from,
+.ss-toast-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
 /* HEAD */
@@ -1168,6 +1387,11 @@ onMounted(async () => {
   border-radius: 10px !important;
   border: 1px solid rgba(17, 24, 39, 0.14);
 }
+.ss-search-input:focus,
+.ss-combo-input:focus {
+  border-color: rgba(255, 77, 79, 0.35);
+  box-shadow: 0 0 0 4px rgba(255, 77, 79, 0.08);
+}
 
 /* Select */
 .ss-select {
@@ -1176,7 +1400,7 @@ onMounted(async () => {
   border: 1px solid rgba(17, 24, 39, 0.14);
 }
 
-/* ✅ Combobox (search + nhập) */
+/* Combobox */
 .ss-combo {
   position: relative;
 }
@@ -1220,10 +1444,11 @@ onMounted(async () => {
   cursor: pointer;
 }
 .ss-combo-item:hover {
-  background: rgba(17, 24, 39, 0.05);
+  background: rgba(255, 77, 79, 0.06);
 }
 .ss-combo-item.active {
-  background: rgba(255, 77, 79, 0.10);
+  background: rgba(255, 77, 79, 0.1);
+  color: rgba(180, 35, 36, 0.95);
 }
 .ss-combo-empty {
   padding: 10px 10px;
@@ -1258,47 +1483,63 @@ onMounted(async () => {
 }
 .btn {
   border-radius: 10px;
-  padding: 8px 12px;
+  padding: 9px 13px;
   font-size: 13px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   white-space: nowrap;
+  transition: 0.18s ease;
 }
-.ss-btn-lite {
-  background: #f3f4f6 !important;
-  color: rgba(17, 24, 39, 0.88) !important;
-  border: 1px solid rgba(17, 24, 39, 0.10) !important;
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
-.ss-btn-lite:hover {
-  background: #eef0f3 !important;
-}
+
 .ss-btn-primary {
   border: none !important;
   background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%) !important;
   color: #fff !important;
-  box-shadow: 0 10px 22px rgba(255, 77, 79, 0.16);
+  box-shadow: 0 12px 24px rgba(255, 77, 79, 0.16);
 }
-.ss-btn-primary:hover {
-  filter: brightness(0.98);
+.ss-btn-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  filter: brightness(0.99);
 }
-.ss-btn-warn {
-  border: none !important;
-  background: #ff7a45 !important;
-  color: #fff !important;
+
+.ss-btn-outline {
+  background: #fff !important;
+  color: #ff4d4f !important;
+  border: 1px solid rgba(255, 77, 79, 0.26) !important;
+  box-shadow: 0 8px 18px rgba(255, 77, 79, 0.06);
 }
-.ss-btn-warn:hover {
-  filter: brightness(0.98);
+.ss-btn-outline:hover:not(:disabled) {
+  background: rgba(255, 77, 79, 0.06) !important;
+  border-color: rgba(255, 77, 79, 0.36) !important;
 }
+
+.ss-btn-soft {
+  background: rgba(255, 77, 79, 0.1) !important;
+  color: rgba(180, 35, 36, 0.95) !important;
+  border: 1px solid rgba(255, 77, 79, 0.18) !important;
+}
+.ss-btn-soft:hover:not(:disabled) {
+  background: rgba(255, 77, 79, 0.15) !important;
+}
+
+.ss-btn-lite {
+  background: #fff !important;
+  color: #ff4d4f !important;
+  border: 1px solid rgba(255, 77, 79, 0.26) !important;
+}
+
+.ss-btn-warn,
 .ss-btn-dark {
-  background: #4b5563 !important;
-  color: #fff !important;
-  border: none !important;
-}
-.ss-btn-dark:hover {
-  filter: brightness(0.98);
+  background: #fff !important;
+  color: #ff4d4f !important;
+  border: 1px solid rgba(255, 77, 79, 0.26) !important;
 }
 
 /* LIST */
@@ -1333,22 +1574,59 @@ onMounted(async () => {
   border-bottom: 1px solid rgba(0, 0, 0, 0.04);
 }
 
-.col-stt { width: 7%; }
-.col-ma  { width: 12%; }
-.col-ten { width: 15%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.col-th  { width: 12%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.col-cl  { width: 12%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.col-sl  { width: 10%; }
-.col-gia { width: 17%; }
-.col-tt  { width: 10%; }
-.col-action { width: 12%; }
+.col-stt {
+  width: 7%;
+}
+.col-ma {
+  width: 12%;
+}
+.col-ten {
+  width: 15%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.col-th {
+  width: 12%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.col-cl {
+  width: 12%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.col-sl {
+  width: 10%;
+}
+.col-gia {
+  width: 17%;
+}
+.col-tt {
+  width: 10%;
+}
+.col-action {
+  width: 12%;
+}
 
-.ss-td { color: rgba(17, 24, 39, 0.78); font-weight: 400; }
-.ss-td-strong { color: rgba(17, 24, 39, 0.88); font-weight: 600; }
-.ss-muted { color: rgba(17, 24, 39, 0.55); }
+.ss-td {
+  color: rgba(17, 24, 39, 0.78);
+  font-weight: 400;
+}
+.ss-td-strong {
+  color: rgba(17, 24, 39, 0.88);
+  font-weight: 600;
+}
+.ss-muted {
+  color: rgba(17, 24, 39, 0.55);
+}
 
-/* ✅ Khoảng giá màu đỏ */
-.ss-money { color: #ff4d4f; font-weight: 600; }
+.ss-money {
+  color: #ff4d4f;
+  font-weight: 600;
+}
 
 /* Badge */
 .ss-badge {
@@ -1359,17 +1637,13 @@ onMounted(async () => {
   border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
-  border: 1px solid rgba(17, 24, 39, 0.10);
+  border: 1px solid rgba(17, 24, 39, 0.1);
 }
-
-/* ✅ Kinh doanh: màu đỏ */
 .ss-badge-on {
   color: rgba(180, 35, 36, 0.95);
   background: rgba(255, 77, 79, 0.12);
   border-color: rgba(255, 77, 79, 0.25);
 }
-
-/* ✅ Ngừng kinh doanh: giữ nguyên */
 .ss-badge-off {
   color: rgba(17, 24, 39, 0.65);
   background: rgba(17, 24, 39, 0.06);
@@ -1417,13 +1691,13 @@ onMounted(async () => {
   transform: translateX(20px);
 }
 
-/* icon mắt */
+/* view button */
 .ss-icon-btn-view {
   width: 36px;
   height: 36px;
   border-radius: 10px;
   background: #fff;
-  border: 1px solid rgba(17, 24, 39, 0.14);
+  border: 1px solid rgba(255, 77, 79, 0.18);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1432,11 +1706,11 @@ onMounted(async () => {
 }
 .ss-icon-btn-view .material-icons-outlined {
   font-size: 20px;
-  color: rgba(17, 24, 39, 0.88);
+  color: rgba(180, 35, 36, 0.95);
 }
 .ss-icon-btn-view:hover {
-  background: rgba(17, 24, 39, 0.04);
-  border-color: rgba(17, 24, 39, 0.22);
+  background: rgba(255, 77, 79, 0.06);
+  border-color: rgba(255, 77, 79, 0.3);
 }
 
 /* Pagination */
@@ -1468,7 +1742,8 @@ onMounted(async () => {
   transition: 0.15s ease;
 }
 .ss-pagebtn:hover {
-  background: rgba(17, 24, 39, 0.04);
+  background: rgba(255, 77, 79, 0.04);
+  border-color: rgba(255, 77, 79, 0.2);
 }
 .ss-pagebtn:disabled {
   opacity: 0.55;
@@ -1477,6 +1752,7 @@ onMounted(async () => {
 .ss-pagebtn.active {
   border-color: rgba(255, 77, 79, 0.35);
   background: rgba(255, 77, 79, 0.08);
+  color: rgba(180, 35, 36, 0.95);
 }
 .ss-pageinfo {
   font-size: 13px;
@@ -1504,6 +1780,9 @@ onMounted(async () => {
   overflow: hidden;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
 }
+.ss-confirm-modal {
+  width: 520px;
+}
 .ss-modal-header {
   padding: 14px 16px;
   display: flex;
@@ -1513,8 +1792,31 @@ onMounted(async () => {
 }
 .ss-modal-title {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: rgba(17, 24, 39, 0.88);
+}
+.ss-modal-close {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 77, 79, 0.18);
+  background: #fff;
+  color: rgba(180, 35, 36, 0.95);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.16s ease;
+}
+.ss-modal-close:hover:not(:disabled) {
+  background: rgba(255, 77, 79, 0.06);
+  border-color: rgba(255, 77, 79, 0.28);
+}
+.ss-modal-close:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.ss-modal-close .material-icons-outlined {
+  font-size: 18px;
 }
 .ss-modal-body {
   padding: 16px;
@@ -1526,6 +1828,45 @@ onMounted(async () => {
   gap: 10px;
   border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
+
+.ss-confirm-text {
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.78);
+  line-height: 1.6;
+}
+.ss-confirm-text b {
+  color: rgba(17, 24, 39, 0.9);
+}
+.ss-confirm-box {
+  margin-top: 10px;
+  border: 1px solid rgba(255, 77, 79, 0.16);
+  background: linear-gradient(180deg, rgba(255, 77, 79, 0.04), rgba(17, 24, 39, 0.02));
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+.ss-confirm-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(17, 24, 39, 0.92);
+}
+.ss-confirm-code {
+  margin-top: 4px;
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.58);
+}
+.ss-confirm-change {
+  margin-top: 10px;
+  font-size: 13px;
+  color: rgba(17, 24, 39, 0.72);
+}
+.ss-confirm-change .from,
+.ss-confirm-change .to {
+  display: inline-block;
+  margin: 0 4px;
+  font-weight: 700;
+  color: rgba(180, 35, 36, 0.95);
+}
+
 .ss-qr-error {
   margin-bottom: 10px;
   padding: 10px 12px;
@@ -1556,6 +1897,24 @@ onMounted(async () => {
   }
   .ss-filter-row2 {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .ss-toast {
+    right: 12px;
+    left: 12px;
+    min-width: unset;
+    max-width: unset;
+  }
+
+  .ss-filter-row1 {
+    grid-template-columns: 1fr;
+  }
+
+  .ss-modal,
+  .ss-confirm-modal {
+    width: calc(100vw - 24px);
   }
 }
 </style>

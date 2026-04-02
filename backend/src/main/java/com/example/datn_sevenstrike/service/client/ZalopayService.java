@@ -30,7 +30,7 @@ public class ZalopayService {
         String appId      = zalopayConfig.getAppId();
         long   appTime    = System.currentTimeMillis();
         String appTransId = new SimpleDateFormat("yyMMdd").format(new Date())
-                            + "_" + orderId + "_" + appTime;
+                + "_" + orderId + "_" + appTime;
         String appUser    = "SevenStrike";
         String description = "SevenStrike - Thanh toan don hang #" + orderId;
 
@@ -40,7 +40,7 @@ public class ZalopayService {
 
         // MAC = HMAC-SHA256(key1, app_id|app_trans_id|app_user|amount|app_time|embed_data|item)
         String macInput = appId + "|" + appTransId + "|" + appUser + "|"
-                        + amount + "|" + appTime + "|" + embedData + "|" + item;
+                + amount + "|" + appTime + "|" + embedData + "|" + item;
         String mac = hmacSHA256(zalopayConfig.getKey1(), macInput);
 
         Map<String, Object> body = new LinkedHashMap<>();

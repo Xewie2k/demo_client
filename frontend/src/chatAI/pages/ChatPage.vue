@@ -1,7 +1,6 @@
 <!-- File: src/chatAI/pages/ChatPage.vue -->
 <template>
   <div class="chat-admin-page d-flex" style="height: calc(100vh - 60px);">
-    <!-- ── Cột trái: danh sách phiên ─────────────────────────────────────── -->
     <div
       class="chat-session-list border-end d-flex flex-column"
       style="width: 300px; min-width: 300px;"
@@ -21,7 +20,6 @@
         </span>
       </div>
 
-      <!-- Loại phiên tabs -->
       <div class="d-flex border-bottom">
         <button
           class="flex-1 btn btn-sm py-2 rounded-0 d-flex align-items-center justify-content-center gap-1"
@@ -59,7 +57,6 @@
         </button>
       </div>
 
-      <!-- Trạng thái tabs -->
       <div class="d-flex border-bottom">
         <button
           v-for="tab in tabs"
@@ -78,7 +75,6 @@
         </button>
       </div>
 
-      <!-- Danh sách -->
       <div class="flex-1 overflow-auto">
         <div
           v-if="filteredSessions.length === 0"
@@ -133,9 +129,7 @@
       </div>
     </div>
 
-    <!-- ── Cột phải: khung chat ───────────────────────────────────────────── -->
     <div class="flex-1 d-flex flex-column" style="min-width: 0;">
-      <!-- Không có phiên nào được chọn -->
       <div
         v-if="!selectedSession"
         class="flex-1 d-flex align-items-center justify-content-center text-muted flex-column gap-2"
@@ -144,9 +138,7 @@
         <span style="font-size: 14px">Chọn một phiên chat để bắt đầu</span>
       </div>
 
-      <!-- Đã chọn phiên -->
       <template v-else>
-        <!-- Header phiên -->
         <div
           class="chat-header-admin border-bottom px-4 py-3 d-flex align-items-center justify-content-between"
           :class="selectedSession.loai === 'NOI_BO' ? 'header-noibo' : ''"
@@ -201,7 +193,6 @@
           </div>
         </div>
 
-        <!-- Tin nhắn -->
         <div class="chat-messages-admin flex-1 overflow-auto p-4" ref="messagesEl">
           <div
             v-for="(msg, index) in currentMessages"
@@ -229,7 +220,6 @@
           </div>
         </div>
 
-        <!-- Input trả lời -->
         <div
           v-if="selectedSession.trangThai === 'DANG_XU_LY'"
           class="border-top p-3 d-flex gap-2 bg-white"
@@ -292,7 +282,9 @@ import {
   onMounted,
   onBeforeUnmount,
   unref,
+  watch,
 } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import {
   connectChat,
   sendStompMessage,
@@ -304,9 +296,10 @@ import {
 } from '@/chatAI/services/chatService'
 import { useChatBadge, setCurrentSession } from '@/chatAI/services/useChatBadge.js'
 
+const route = useRoute()
+const router = useRouter()
 const { sessionUnreadMap } = useChatBadge()
 
-// ── Dữ liệu ─────────────────────────────────────────────────────────────────
 const sessions = ref([])
 const sessionsNoiBo = ref([])
 const sessionsClosedKH = ref([])
@@ -326,7 +319,6 @@ const tabs = [
   { label: 'Đã đóng', value: 'DA_DONG' },
 ]
 
-// ── Computed ────────────────────────────────────────────────────────────────
 const currentSessions = computed(() =>
   activeLoai.value === 'NOI_BO' ? sessionsNoiBo.value : sessions.value
 )
@@ -378,7 +370,6 @@ const canClose = computed(() => {
   return selectedSession.value.nhanVienId === user?.id
 })
 
-// ── User / phân quyền ───────────────────────────────────────────────────────
 function getAdminUser() {
   const raw =
     localStorage.getItem('user') ||
@@ -399,12 +390,10 @@ const isAdmin = computed(() => {
   return role === 'ADMIN'
 })
 
-// ── Subscriptions ───────────────────────────────────────────────────────────
 let subscriptionAdmin = null
 let subscriptionNoiBo = null
 let subscriptionChat = null
 
-// ── Helpers list ────────────────────────────────────────────────────────────
 function getUnreadCount(sessionId) {
   const map = unref(sessionUnreadMap) || {}
   return Number(map?.[sessionId] || 0)
@@ -470,7 +459,21 @@ function getLoaiPrimaryColor(loai) {
   return loai === 'NOI_BO' ? '#1e3a8a' : 'var(--ss-accent)'
 }
 
-// ── WebSocket helpers ───────────────────────────────────────────────────────
+function timPhienTheoId(id) {
+  return [
+    ...sessions.value,
+    ...sessionsNoiBo.value,
+    ...sessionsClosedKH.value,
+    ...sessionsClosedNoiBo.value,
+  ].find((s) => s.id === id) || null
+}
+
+function tabTuTrangThai(trangThai) {
+  if (trangThai === 'DA_DONG') return 'DA_DONG'
+  if (trangThai === 'CHO_NHAN_VIEN') return 'CHO_NHAN_VIEN'
+  return 'active'
+}
+
 async function waitForConnected(client, timeoutMs = 10000) {
   if (client?.connected) return
 
@@ -537,7 +540,6 @@ async function subscribeSelectedChat(session) {
   })
 }
 
-// ── Lifecycle ───────────────────────────────────────────────────────────────
 onMounted(async () => {
   try {
     await loadSessions('KHACH_HANG')
@@ -549,23 +551,32 @@ onMounted(async () => {
     const client = connectChat()
     await waitForConnected(client)
 
-    // Khách hàng
     subscriptionAdmin = client.subscribe('/topic/admin/notifications', (msg) => {
       const updatedPhien = JSON.parse(msg.body)
       syncSessionLists(updatedPhien)
+      moPhienTheoRouteQuery()
     })
 
-    // Nội bộ
     if (isAdmin.value) {
       subscriptionNoiBo = client.subscribe('/topic/admin/noibo-notifications', (msg) => {
         const updatedPhien = JSON.parse(msg.body)
         syncSessionLists(updatedPhien)
+        moPhienTheoRouteQuery()
       })
     }
+
+    await moPhienTheoRouteQuery()
   } catch (e) {
     console.error('[ChatPage] init error:', e)
   }
 })
+
+watch(
+  () => route.query.phienChatId,
+  async () => {
+    await moPhienTheoRouteQuery()
+  }
+)
 
 onBeforeUnmount(() => {
   if (subscriptionAdmin) subscriptionAdmin.unsubscribe()
@@ -581,7 +592,6 @@ onBeforeUnmount(() => {
   disconnectChat()
 })
 
-// ── Load data ───────────────────────────────────────────────────────────────
 async function loadClosedSessions(loai = activeLoai.value) {
   try {
     const data = await layDanhSachPhien('DA_DONG', loai)
@@ -610,8 +620,7 @@ async function loadSessions(loai) {
   }
 }
 
-// ── Chọn phiên ──────────────────────────────────────────────────────────────
-async function chonPhien(session) {
+async function chonPhien(session, capNhatQuery = true) {
   if (!session?.id) return
 
   const targetId = session.id
@@ -630,6 +639,19 @@ async function chonPhien(session) {
     // ignore
   }
 
+  if (capNhatQuery) {
+    try {
+      await router.replace({
+        query: {
+          ...route.query,
+          phienChatId: String(targetId),
+        },
+      })
+    } catch {
+      // ignore
+    }
+  }
+
   try {
     const history = await layTinNhan(targetId)
 
@@ -643,7 +665,41 @@ async function chonPhien(session) {
   }
 }
 
-// ── Tiếp nhận phiên ─────────────────────────────────────────────────────────
+async function moPhienTheoRouteQuery() {
+  const rawId = route.query?.phienChatId
+  if (!rawId) return
+
+  const phienChatId = Number(rawId)
+  if (!Number.isFinite(phienChatId) || phienChatId <= 0) return
+
+  let session = timPhienTheoId(phienChatId)
+
+  if (!session) {
+    await loadSessions('KHACH_HANG')
+    if (isAdmin.value) {
+      await loadSessions('NOI_BO')
+    }
+
+    session = timPhienTheoId(phienChatId)
+  }
+
+  if (!session) return
+
+  activeLoai.value = session.loai || 'KHACH_HANG'
+  activeTab.value = tabTuTrangThai(session.trangThai)
+
+  if (selectedId.value === session.id && currentMessages.value.length > 0) {
+    try {
+      setCurrentSession(session.id)
+    } catch {
+      // ignore
+    }
+    return
+  }
+
+  await chonPhien(session, false)
+}
+
 async function tiepNhan() {
   if (!selectedId.value) return
 
@@ -653,12 +709,12 @@ async function tiepNhan() {
   try {
     const updated = await nhanPhien(selectedId.value, nhanVienId)
     syncSessionLists(updated)
+    await moPhienTheoRouteQuery()
   } catch (e) {
     console.error('[ChatPage] tiepNhan error:', e)
   }
 }
 
-// ── Gửi tin nhắn ────────────────────────────────────────────────────────────
 function guiTinNhanVien() {
   const text = replyText.value.trim()
   if (!text || !selectedId.value || selectedSession.value?.trangThai !== 'DANG_XU_LY') return
@@ -673,7 +729,6 @@ function guiTinNhanVien() {
   })
 }
 
-// ── Đóng phiên ──────────────────────────────────────────────────────────────
 async function dongPhienHienTai() {
   if (!selectedId.value || !selectedSession.value) return
 
@@ -691,17 +746,21 @@ async function dongPhienHienTai() {
     }
 
     syncSessionLists(closedSess)
+    await moPhienTheoRouteQuery()
   } catch (e) {
     console.error('[ChatPage] dongPhien error:', e)
   }
 }
 
-// ── Switch tab / loại ───────────────────────────────────────────────────────
 async function switchTab(val) {
   activeTab.value = val
+  clearSelectedSessionState()
+
   if (val === 'DA_DONG') {
     await loadClosedSessions(activeLoai.value)
   }
+
+  await moPhienTheoRouteQuery()
 }
 
 async function switchLoai(loai) {
@@ -711,9 +770,10 @@ async function switchLoai(loai) {
   if (activeTab.value === 'DA_DONG') {
     await loadClosedSessions(loai)
   }
+
+  await moPhienTheoRouteQuery()
 }
 
-// ── Helpers UI ──────────────────────────────────────────────────────────────
 function labelTrangThai(t) {
   const map = {
     BOT_DANG_XU_LY: '🤖 AI đang xử lý',
@@ -748,7 +808,6 @@ async function scrollToBottom() {
   }
 }
 
-// ── Render message với link clickable ───────────────────────────────────────
 function renderMessage(text) {
   if (!text) return ''
 
@@ -886,7 +945,6 @@ function renderMessage(text) {
   border-radius: 12px 2px 12px 12px;
 }
 
-/* Nội bộ: admin/support bên phải xanh, người mở phiên bên trái xám */
 .admin-msg--nv--noibo {
   align-self: flex-end;
 }

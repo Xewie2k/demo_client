@@ -1,4 +1,3 @@
-<!-- File: src/views/admin/AdminLayout.vue -->
 <template>
   <div class="container-fluid p-0 min-vh-100 ss-admin-root">
     <SidebarMenu />
@@ -8,21 +7,12 @@
 
       <header class="navbar px-4 sticky-top ss-header" style="height: 64px">
         <div class="container-fluid justify-content-end gap-3">
-          <button
-            type="button"
-            class="ss-theme-btn"
-            @click="batTatTheme"
-            :title="theme === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'"
-          >
-            <span class="material-icons ss-text-muted">
-              {{ theme === "dark" ? "light_mode" : "dark_mode" }}
-            </span>
-          </button>
+          <ThongBaoBell />
 
           <div ref="userWrapRef" class="ss-user-wrap ps-3">
             <button class="ss-user-btn" type="button" @click="toggleUserMenu">
               <span class="material-icons ss-text-muted">account_circle</span>
-              <span class="fw-bold small ss-text-muted d-none d-md-inline">
+              <span class="small ss-text-muted d-none d-md-inline">
                 {{ userName }}
               </span>
               <span class="material-icons small ss-text-muted">
@@ -33,14 +23,14 @@
             <div v-show="userMenuOpen" class="ss-user-menu shadow">
               <button class="ss-user-item" type="button" @click="handleProfile">
                 <span class="material-icons ss-user-ic">person</span>
-                <span class="small fw-bold">Thông tin cá nhân</span>
+                <span class="small">Thông tin cá nhân</span>
               </button>
 
               <div class="ss-user-divider"></div>
 
               <button class="ss-user-item ss-danger" type="button" @click="handleLogout">
                 <span class="material-icons ss-user-ic">logout</span>
-                <span class="small fw-bold">Đăng xuất</span>
+                <span class="small">Đăng xuất</span>
               </button>
             </div>
           </div>
@@ -68,6 +58,7 @@ import { useRoute, useRouter } from "vue-router";
 import Swal from "sweetalert2";
 
 import SidebarMenu from "@/components/layouts/SidebarMenu.vue";
+import ThongBaoBell from "@/components/common/ThongBaoBell.vue";
 import StaffChatWidget from "@/chatAI/components/StaffChatWidget.vue";
 import GiaoCa from "@/pages/lich_lam_viec/GiaoCa.vue";
 import { checkActiveCa } from "@/services/lich_lam_viec/giao_caService";
@@ -79,7 +70,7 @@ const ADMIN_ROLES = ["ADMIN", "NHAN_VIEN"];
 const route = useRoute();
 const router = useRouter();
 
-const { theme, khoiTaoTheme, batTatTheme } = useTheme();
+const { khoiTaoTheme } = useTheme();
 khoiTaoTheme();
 
 const userName = ref("Tài khoản");
@@ -377,6 +368,7 @@ onBeforeUnmount(() => {
   padding: 6px 6px;
   border-radius: 10px;
   cursor: pointer;
+  font-weight: 400;
 }
 
 .ss-user-btn:hover {
@@ -406,6 +398,7 @@ onBeforeUnmount(() => {
   text-align: left;
   cursor: pointer;
   color: var(--ss-text);
+  font-weight: 400;
 }
 
 .ss-user-item:hover {

@@ -15,12 +15,11 @@ const props = defineProps({
 });
 
 const trangThaiMap = {
-  1: { label: "Chờ xác nhận", bg: "#fff7ed", color: "#c2410c" },
-  2: { label: "Chờ giao hàng", bg: "#eff6ff", color: "#1d4ed8" },
-  3: { label: "Đang vận chuyển", bg: "#fef3c7", color: "#92400e" },
-  4: { label: "Đã giao hàng", bg: "#ecfeff", color: "#0e7490" },
-  5: { label: "Hoàn thành", bg: "#dcfce7", color: "#15803d" },
-
+  1: { label: "Chờ xác nhận", bg: "#fff7ed", color: "#FF6B6B" }, // Đỏ san hô tươi
+  2: { label: "Chờ giao hàng", bg: "#eff6ff", color: "#409EFF" }, // Xanh lam sáng
+  3: { label: "Đang vận chuyển", bg: "#fef3c7", color: "#FFB822" }, // Vàng cam tươi
+  4: { label: "Đã giao hàng", bg: "#ecfeff", color: "#36CBCB" }, // Xanh ngọc
+  5: { label: "Hoàn thành", bg: "#dcfce7", color: "#67C23A" }, // Xanh lá mạ
 };
 
 const chartData = computed(() => {
@@ -47,7 +46,9 @@ const chartData = computed(() => {
     datasets: [
       {
         data,
-        backgroundColor: colors
+        backgroundColor: colors,
+        borderWidth: 2,
+        borderColor: "#ffffff"
       }
     ]
   };
@@ -58,7 +59,15 @@ const options = {
   maintainAspectRatio: false,
   plugins: {
     legend: {
-      position: "right"
+      position: "right",
+      labels: {
+        usePointStyle: true,
+        padding: 20,
+        font: {
+          family: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+          size: 13
+        }
+      }
     }
   }
 };
