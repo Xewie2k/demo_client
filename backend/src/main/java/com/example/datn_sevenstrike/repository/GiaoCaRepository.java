@@ -6,12 +6,21 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface GiaoCaRepository extends JpaRepository<GiaoCa, Integer> {
 
-    @Query("SELECT g FROM GiaoCa g WHERE g.nhanVien.id = :idNv AND g.trangThai = 0 AND g.xoaMem = false AND g.thoiGianKetCa IS NULL")
-    Optional<GiaoCa> findCaDangHoatDong(@Param("idNv") Integer idNv);
+    @Query("SELECT g FROM GiaoCa g WHERE g.nhanVien.id = :idNv AND g.trangThai = 0 AND g.xoaMem = false AND g.thoiGianKetCa IS NULL AND g.thoiGianNhanCa >= :startOfToday")
+    Optional<GiaoCa> findCaDangHoatDong(@Param("idNv") Integer idNv, @Param("startOfToday") LocalDateTime startOfToday);
+
+    // Ca active của cửa hàng (bất kể nhân viên nào mở), bắt đầu từ hôm nay
+    @Query("SELECT g FROM GiaoCa g WHERE g.trangThai = 0 AND g.xoaMem = false AND g.thoiGianKetCa IS NULL AND g.thoiGianNhanCa >= :startOfToday ORDER BY g.thoiGianNhanCa DESC")
+    Optional<GiaoCa> findCaHoatDongCuaHang(@Param("startOfToday") LocalDateTime startOfToday);
+
+    // Đếm số đơn hoàn thành trong ca
+    @Query(value = "SELECT COUNT(*) FROM hoa_don WHERE id_giao_ca = :idGiaoCa AND trang_thai_hien_tai = 5 AND xoa_mem = 0", nativeQuery = true)
+    Integer countHoaDonTrongCa(@Param("idGiaoCa") Integer idGiaoCa);
 
     @Query(value = "SELECT TOP 1 * FROM giao_ca WHERE trang_thai = 1 AND xoa_mem = 0 ORDER BY id DESC", nativeQuery = true)
     Optional<GiaoCa> findCaLamViecLienKeTruocDo();

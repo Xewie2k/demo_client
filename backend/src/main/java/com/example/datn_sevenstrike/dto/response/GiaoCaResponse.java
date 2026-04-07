@@ -38,6 +38,7 @@ public class GiaoCaResponse {
     private BigDecimal tongTienTrongCa;
     private BigDecimal tienMatTrongCa;
     private BigDecimal tienChuyenKhoanTrongCa;
+    private Integer soDonHangDaThanhToan;
 
     // ==========================================
     // BỔ SUNG CHO LỊCH SỬ TỔNG HỢP

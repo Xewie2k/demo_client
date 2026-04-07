@@ -7,6 +7,12 @@
       </div>
     </div>
 
+    <!-- Banner ca làm việc -->
+    <div v-if="dangLocTheoCa" class="alert alert-info d-flex align-items-center gap-2 mb-3 py-2 px-3" style="border-radius:8px; font-size:0.92rem;">
+      <i class="bi bi-clock-history"></i>
+      <span>Đang hiển thị hóa đơn trong ca hiện tại (ca #{{ activeShiftId }})</span>
+    </div>
+
     <!-- Bộ Lọc -->
     <section class="ss-card ss-border mb-4">
       <div class="p-4">
@@ -26,12 +32,12 @@
             />
           </div>
 
-          <div class="col-md-3">
+          <div class="col-md-3" v-if="!dangLocTheoCa">
             <label class="form-label ss-label">Ngày bắt đầu</label>
             <input type="date" v-model="filterNgayBD" class="form-control ss-input" />
           </div>
 
-          <div class="col-md-3">
+          <div class="col-md-3" v-if="!dangLocTheoCa">
             <label class="form-label ss-label">Ngày kết thúc</label>
             <input type="date" v-model="filterNgayKT" class="form-control ss-input" />
           </div>
@@ -503,13 +509,26 @@ function toLoaiDonLabel(code) {
   return "Tại quầy";
 }
 
+/* ================== CA ACTIVE ================== */
+const activeShiftId = ref(sessionStorage.getItem("ss_active_shift_id") || null);
+const dangLocTheoCa = ref(!!activeShiftId.value);
+
 /* ================== LOAD DATA ================== */
 const loadHoaDon = async () => {
   loading.value = true;
+  // Refresh shift info on each load
+  activeShiftId.value = sessionStorage.getItem("ss_active_shift_id") || null;
+  dangLocTheoCa.value = !!activeShiftId.value;
   try {
-    const res = await axios.get(API_HD);
+    let url = API_HD;
+    if (dangLocTheoCa.value) {
+      url = `${API_HD}/page?pageNo=0&pageSize=1000&idGiaoCa=${activeShiftId.value}`;
+    }
+    const res = await axios.get(url);
 
-    hoaDonList.value = (res.data || [])
+    // /page trả về Page object có .content; all endpoint trả về array trực tiếp
+    const rawList = res.data?.content ?? res.data ?? [];
+    hoaDonList.value = (rawList)
       .map((hd) => {
         const tongHang = Number(hd.tongTien ?? 0);
         const giamGia = Number(hd.tongTienGiam ?? 0);

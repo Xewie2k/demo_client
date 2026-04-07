@@ -49,6 +49,9 @@ public class AuthService {
         if (Objects.equals(nv.getIdQuyenHan(), 1)) {
             role = "ADMIN";
             tenQuyen = "Quản trị viên";
+        } else if (Objects.equals(nv.getIdQuyenHan(), 3)) {
+            role = "THU_NGAN";
+            tenQuyen = "Thu ngân";
         }
 
         return LoginResponse.builder()

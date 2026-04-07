@@ -442,9 +442,10 @@ public class HoaDonController {
     @GetMapping("/page")
     public Page<HoaDonResponse> page(
             @RequestParam(defaultValue = "0") int pageNo,
-            @RequestParam(defaultValue = "10") int pageSize
+            @RequestParam(defaultValue = "10") int pageSize,
+            @RequestParam(required = false) Integer idGiaoCa
     ) {
-        return service.page(pageNo, pageSize);
+        return service.page(pageNo, pageSize, idGiaoCa);
     }
 
     @GetMapping("/{id}")

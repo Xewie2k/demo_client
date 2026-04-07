@@ -36,6 +36,15 @@ public interface HoaDonRepository extends JpaRepository<HoaDon, Integer> {
     """)
     Page<HoaDon> pageQuanLyHoaDon(Pageable pageable);
 
+    // ✅ PAGE lọc theo ca làm việc (cho shift filter)
+    @Query("""
+        select hd
+          from HoaDon hd
+         where hd.xoaMem = false
+           and hd.idGiaoCa = :idGiaoCa
+    """)
+    Page<HoaDon> pageHoaDonTheoGiaoCa(@Param("idGiaoCa") Integer idGiaoCa, Pageable pageable);
+
     // ✅ PAGE Response (có tenNhanVien) cho màn quản lý hóa đơn
     @Query(
             value = """

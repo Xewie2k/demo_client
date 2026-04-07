@@ -36,6 +36,16 @@ public class GiaoCaController {
         }
     }
 
+    // Ca active của cửa hàng (shared shift model — bất kể ai mở)
+    @GetMapping("/check-active-store")
+    public ResponseEntity<GiaoCaResponse> checkActiveCuaHang() {
+        try {
+            return ResponseEntity.ok(service.getCaHoatDongCuaHang());
+        } catch (Exception e) {
+            return ResponseEntity.noContent().build();
+        }
+    }
+
     @PutMapping("/xac-nhan-tien/{id:\\d+}")
     public GiaoCaResponse xacNhanTienDauCa(
             @PathVariable("id") Integer id,

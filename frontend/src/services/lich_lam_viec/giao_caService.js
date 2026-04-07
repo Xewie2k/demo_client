@@ -66,3 +66,8 @@ export const ketThucCa = async (idGiaoCa, payload) => {
 export const getLichSuGiaoCa = async (pageNo = 0, pageSize = 100) => {
   return await request(`${API_GIAO_CA}/page?pageNo=${pageNo}&pageSize=${pageSize}`);
 };
+
+// Ca active của cửa hàng (shared shift — bất kể ai mở)
+export const checkActiveShiftStore = async () => {
+  return await request(`${API_GIAO_CA}/check-active-store`);
+};

@@ -23,6 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -81,8 +82,17 @@ public class GiaoCaService {
 
     @Transactional(readOnly = true)
     public GiaoCaResponse getCaLamViecHienTai(Integer idNhanVien) {
-        GiaoCa gc = giaoCaRepo.findCaDangHoatDong(idNhanVien)
+        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
+        GiaoCa gc = giaoCaRepo.findCaDangHoatDong(idNhanVien, startOfToday)
                 .orElseThrow(() -> new NotFoundEx("Nhân viên hiện không trong ca làm việc nào."));
+        return mapToResponse(gc);
+    }
+
+    @Transactional(readOnly = true)
+    public GiaoCaResponse getCaHoatDongCuaHang() {
+        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
+        GiaoCa gc = giaoCaRepo.findCaHoatDongCuaHang(startOfToday)
+                .orElseThrow(() -> new NotFoundEx("Chưa có ca nào đang mở."));
         return mapToResponse(gc);
     }
 
@@ -110,16 +120,28 @@ public class GiaoCaService {
         NhanVien nv = nhanVienRepo.findById(req.getIdNhanVien())
                 .orElseThrow(() -> new NotFoundEx("Không tìm thấy nhân viên"));
 
-        if (giaoCaRepo.findCaDangHoatDong(req.getIdNhanVien()).isPresent()) {
-            throw new BadRequestEx("Nhân viên đang trong ca làm khác!");
+        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
+
+        // Kiểm tra đã có ca active của cửa hàng chưa (shared shift model)
+        if (giaoCaRepo.findCaHoatDongCuaHang(startOfToday).isPresent()) {
+            throw new BadRequestEx("Cửa hàng đang có ca mở, vui lòng đóng ca trước!");
         }
 
-        LichLamViec lich = lichLamViecRepo.findByIdAndXoaMemFalse(req.getIdLichLamViec())
-                .orElseThrow(() -> new NotFoundEx("Không tìm thấy lịch làm việc!"));
+        boolean isAdmin = "ADMIN".equalsIgnoreCase(req.getRole());
 
-        boolean isAssigned = lichLamViecNhanVienRepo.existsByLichLamViecAndNhanVien(lich.getId(), nv.getId());
-        if (!isAssigned) {
-            throw new BadRequestEx("Nhân viên không có trong danh sách phân công của lịch làm việc này!");
+        LichLamViec lich = null;
+        if (!isAdmin) {
+            // THU_NGAN và các role khác phải có lịch làm việc
+            if (req.getIdLichLamViec() == null) {
+                throw new BadRequestEx("Vui lòng chọn lịch làm việc để mở ca!");
+            }
+            lich = lichLamViecRepo.findByIdAndXoaMemFalse(req.getIdLichLamViec())
+                    .orElseThrow(() -> new NotFoundEx("Không tìm thấy lịch làm việc!"));
+
+            boolean isAssigned = lichLamViecNhanVienRepo.existsByLichLamViecAndNhanVien(lich.getId(), nv.getId());
+            if (!isAssigned) {
+                throw new BadRequestEx("Nhân viên không có trong danh sách phân công của lịch làm việc này!");
+            }
         }
 
         Optional<GiaoCa> catruocOpt = giaoCaRepo.findCaLamViecLienKeTruocDo();
@@ -135,7 +157,9 @@ public class GiaoCaService {
 
         GiaoCa giaoCa = new GiaoCa();
         giaoCa.setNhanVien(nv);
-        giaoCa.setLichLamViec(lich);
+        if (lich != null) {
+            giaoCa.setLichLamViec(lich);
+        }
         giaoCa.setGiaoCaTruoc(caTruoc);
         giaoCa.setThoiGianNhanCa(LocalDateTime.now());
         giaoCa.setTienBanGiaoDuKien(tienDuKien);
@@ -222,6 +246,13 @@ public class GiaoCaService {
             res.setTienChuyenKhoanTrongCa(tienCkCa != null ? tienCkCa : BigDecimal.ZERO);
         } catch (Exception e) {
             res.setTienChuyenKhoanTrongCa(BigDecimal.ZERO);
+        }
+
+        try {
+            Integer soDon = giaoCaRepo.countHoaDonTrongCa(entity.getId());
+            res.setSoDonHangDaThanhToan(soDon != null ? soDon : 0);
+        } catch (Exception e) {
+            res.setSoDonHangDaThanhToan(0);
         }
 
         return res;

@@ -1075,6 +1075,19 @@ end
 go
 
 /* =========================================================
+   SEED DATA — QUYỀN HẠN (ROLES)
+   ========================================================= */
+-- Thêm role Thu ngân (id=3) nếu chưa tồn tại
+IF NOT EXISTS (SELECT 1 FROM dbo.quyen_han WHERE id = 3)
+BEGIN
+    SET IDENTITY_INSERT dbo.quyen_han ON;
+    INSERT INTO dbo.quyen_han (id, ten_quyen_han, trang_thai, xoa_mem)
+    VALUES (3, N'Thu ngân', 1, 0);
+    SET IDENTITY_INSERT dbo.quyen_han OFF;
+END
+go
+
+/* =========================================================
    DONE
    ========================================================= */
 print N'✅ Đã tạo DB: DATN_SevenStrike_Test và tích hợp Module Chat AI';

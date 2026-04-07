@@ -211,10 +211,19 @@ public class HoaDonService {
         return list;
     }
 
-    public Page<HoaDonResponse> page(int pageNo, int pageSize) {
+    public Page<HoaDonResponse> page(int pageNo, int pageSize, Integer idGiaoCa) {
         int p = Math.max(pageNo, 0);
         int s = Math.max(pageSize, 1);
         var pageable = PageRequest.of(p, s, Sort.by(Sort.Direction.DESC, "id"));
+
+        if (idGiaoCa != null) {
+            return repo.pageHoaDonTheoGiaoCa(idGiaoCa, pageable)
+                    .map(hd -> {
+                        HoaDonResponse x = toResponse(hd);
+                        x.setTrangThaiLabel(toTrangThaiLabel(x.getTrangThaiHienTai()));
+                        return x;
+                    });
+        }
 
         return repo.pageQuanLyHoaDonResponse(pageable)
                 .map(x -> {

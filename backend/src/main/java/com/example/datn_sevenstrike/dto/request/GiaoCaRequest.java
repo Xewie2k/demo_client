@@ -12,6 +12,7 @@ public class GiaoCaRequest {
     // Input khi Bắt đầu ca
     private Integer idNhanVien;
     private BigDecimal tienDauCaNhap;
+    private String role; // ADMIN | THU_NGAN — để service biết quyền hạn của người mở ca
 
     private String ghiChu;
 }

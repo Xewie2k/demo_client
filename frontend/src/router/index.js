@@ -72,7 +72,7 @@ import ProductsPage from "@/pages/client/ProductsPage.vue";
 import RegisterPage from "@/pages/client/RegisterPage.vue";
 
 // ======================= AUTH HELPERS =======================
-const ADMIN_ROLES = ["ADMIN", "NHAN_VIEN"];
+const ADMIN_ROLES = ["ADMIN", "NHAN_VIEN", "THU_NGAN"];
 const ADMIN_USER_KEYS = ["user", "nguoiDung"];
 const CLIENT_USER_KEYS = ["ss_customer"];
 
@@ -110,6 +110,7 @@ const normalizeRole = (role) => {
 
   if (r === "STAFF") return "NHAN_VIEN";
   if (r === "NHANVIEN" || r === "NHÂN_VIÊN" || r === "NHÂN VIÊN") return "NHAN_VIEN";
+  if (r === "THU_NGAN" || r === "THUNGAN" || r === "THU NGÂN" || r === "CASHIER") return "THU_NGAN";
 
   return r;
 };
@@ -155,6 +156,7 @@ const clearAdminAuth = () => {
     "nguoiDung",
     "ss_nguoi_ban",
     "ss_has_active_shift",
+    "ss_active_shift_id",
   ];
 
   keys.forEach((key) => {
@@ -345,7 +347,7 @@ const routes = [
         path: "giao-ca",
         name: "admin-giao-ca",
         component: GiaoCaPage,
-        meta: { roles: ["ADMIN", "NHAN_VIEN"] },
+        meta: { roles: ["ADMIN", "THU_NGAN"] },
       },
 
       {

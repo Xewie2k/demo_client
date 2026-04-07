@@ -18,10 +18,10 @@
 
         <div class="ss-body">
           <div class="ss-schedule-box">
-            <div class="ss-schedule-label">LỊCH CỦA BẠN</div>
+            <div class="ss-schedule-label">{{ isAdmin ? "MỞ CA (QUYỀN QUẢN TRỊ)" : "LỊCH CỦA BẠN" }}</div>
             <div class="ss-schedule-info">
-              <span class="ss-shift-name">{{ lichHomNay?.tenCa || "Chưa có lịch" }}</span>
-              <span class="ss-shift-time" v-if="lichHomNay">
+              <span class="ss-shift-name">{{ isAdmin ? "Mở ca không cần lịch phân công" : (lichHomNay?.tenCa || "Chưa có lịch") }}</span>
+              <span class="ss-shift-time" v-if="!isAdmin && lichHomNay">
                 {{ lichHomNay.gioBatDau }} - {{ lichHomNay.gioKetThuc }}
               </span>
             </div>
@@ -72,7 +72,7 @@
           <button
             class="btn-confirm"
             @click="handleBatDauCa"
-            :disabled="isSubmitting || !lichHomNay || tienBanDauInput === null"
+            :disabled="isSubmitting || (!isAdmin && !lichHomNay) || tienBanDauInput === null"
           >
             <i v-if="isSubmitting" class="fa-solid fa-spinner fa-spin"></i>
             <i v-else class="fa-solid fa-circle-check"></i>
@@ -99,7 +99,7 @@
 
         <div class="ho-header-right">
           <div class="ho-badge">
-            <span class="ho-role">NHÂN VIÊN TRỰC</span>
+            <span class="ho-role">{{ currentUser?.role === "ADMIN" ? "QUẢN TRỊ VIÊN" : "THU NGÂN" }}</span>
             <span class="ho-name">{{ currentUser?.tenNhanVien || currentUser?.hoTen || "Nhân viên" }}</span>
           </div>
         </div>
@@ -220,7 +220,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
-import { batDauCa, checkActiveCa, ketThucCa } from "@/services/lich_lam_viec/giao_caService";
+import { batDauCa, ketThucCa, checkActiveShiftStore } from "@/services/lich_lam_viec/giao_caService";
 import { getLichLamViecNhanVien } from "@/services/lich_lam_viec/lich_lam_viec_nhan_vienService";
 
 const router = useRouter();
@@ -323,6 +323,9 @@ const onInputMoney = (event, type) => {
   }
 };
 
+const isAdmin = computed(() => currentUser?.role === "ADMIN");
+const isThuNgan = computed(() => currentUser?.role === "THU_NGAN");
+
 const loadData = async () => {
   loading.value = true;
   errorMessage.value = "";
@@ -330,23 +333,31 @@ const loadData = async () => {
   lichHomNay.value = null;
 
   try {
+    // 1. Kiểm tra ca active của cửa hàng (shared shift model)
     let activeCa = null;
-
     try {
-      const resCa = await checkActiveCa(ID_NHAN_VIEN);
+      const resCa = await checkActiveShiftStore();
       activeCa = layDuLieuThuc(resCa);
     } catch (error) {
-      console.log("Nhân viên chưa có ca mở:", error?.message || error);
+      console.log("Cửa hàng chưa có ca mở:", error?.message || error);
     }
 
     if (activeCa && activeCa.id) {
       caHienTai.value = activeCa;
       sessionStorage.setItem("ss_has_active_shift", "true");
+      sessionStorage.setItem("ss_active_shift_id", String(activeCa.id));
       return;
     }
 
     sessionStorage.removeItem("ss_has_active_shift");
+    sessionStorage.removeItem("ss_active_shift_id");
 
+    // Admin không cần lịch làm việc để mở ca
+    if (isAdmin.value) {
+      return;
+    }
+
+    // THU_NGAN cần lịch làm việc
     try {
       const d = new Date();
       const today = `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}-${d
@@ -384,17 +395,21 @@ const handleBatDauCa = async () => {
     return;
   }
 
-  if (!lichHomNay.value) {
+  // THU_NGAN phải có lịch; ADMIN thì không cần
+  if (!isAdmin.value && !lichHomNay.value) {
     return;
   }
 
   isSubmitting.value = true;
 
   try {
-    const idLichLamViec = lichHomNay.value?.lichLamViec?.id || lichHomNay.value?.idLichLamViec;
+    let idLichLamViec = null;
 
-    if (!idLichLamViec) {
-      throw new Error("Không tìm thấy lịch làm việc để bắt đầu ca.");
+    if (!isAdmin.value) {
+      idLichLamViec = lichHomNay.value?.lichLamViec?.id || lichHomNay.value?.idLichLamViec;
+      if (!idLichLamViec) {
+        throw new Error("Không tìm thấy lịch làm việc để bắt đầu ca.");
+      }
     }
 
     await batDauCa({
@@ -402,6 +417,7 @@ const handleBatDauCa = async () => {
       idLichLamViec: idLichLamViec,
       tienDauCaNhap: tienBanDauInput.value,
       ghiChu: ghiChuBanDau.value?.trim() || "",
+      role: currentUser?.role || "THU_NGAN",
     });
 
     await loadData();
@@ -441,6 +457,7 @@ const submitKetThucCa = async () => {
     });
 
     sessionStorage.removeItem("ss_has_active_shift");
+    sessionStorage.removeItem("ss_active_shift_id");
     triggerToast("Kết thúc ca làm việc thành công!");
 
     await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -455,6 +472,7 @@ const handleLogout = () => {
   localStorage.removeItem("user");
   sessionStorage.removeItem("user");
   sessionStorage.removeItem("ss_has_active_shift");
+  sessionStorage.removeItem("ss_active_shift_id");
   router.push("/login");
 };
 
