@@ -25,10 +25,10 @@
       <div class="container">
         <div class="row align-items-center">
           <!-- Left spacer (hidden on mobile) -->
-          <div class="col-md-2 d-none d-md-block"></div>
+          <div class="col-md-4 d-none d-md-block"></div>
 
           <!-- Logo + Brand (Center) -->
-          <div class="col-md-6 col-6">
+          <div class="col-md-4 col-6">
             <router-link to="/client" class="text-decoration-none d-flex align-items-center justify-content-center gap-2">
               <img
                 src="@/assets/images/logo/Logo_SevenStrike.png"
