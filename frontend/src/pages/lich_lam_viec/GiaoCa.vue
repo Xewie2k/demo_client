@@ -38,6 +38,9 @@
           <div class="form-group">
             <div class="d-flex justify-between mb-2">
               <label class="text-label">TIỀN MẶT ĐẦU CA <span class="text-danger">*</span></label>
+              <span class="text-label" style="color:#10b981; font-size:0.75rem;">
+                <i class="fa-solid fa-rotate"></i> Làm mới mỗi ngày
+              </span>
             </div>
             <div class="input-money-wrapper new-input-style">
               <span class="currency-prefix">₫</span>
@@ -46,8 +49,12 @@
                 class="form-control money-input-new"
                 :value="tienBanDauInput !== null ? formatNumber(tienBanDauInput) : ''"
                 @input="onInputMoney($event, 'start')"
-                placeholder="Nhập số tiền..."
+                placeholder="Nhập số tiền thực tế trong két..."
               />
+            </div>
+            <div style="font-size:0.78rem; color:#6b7280; margin-top:5px;">
+              <i class="fa-solid fa-circle-info" style="color:#3b82f6;"></i>
+              Ca đầu ngày: nhập tự do. Ca trong ngày: phải khớp với số tiền ca trước để lại.
             </div>
           </div>
 

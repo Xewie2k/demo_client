@@ -147,12 +147,27 @@ public class GiaoCaService {
         Optional<GiaoCa> catruocOpt = giaoCaRepo.findCaLamViecLienKeTruocDo();
         BigDecimal tienDuKien = BigDecimal.ZERO;
         GiaoCa caTruoc = null;
+        boolean laCaDauNgay = true; // mặc định: ngày mới thì reset tiền
 
         if (catruocOpt.isPresent()) {
             caTruoc = catruocOpt.get();
-            BigDecimal tienVonCaTruoc = caTruoc.getTienDauCaNhap() != null ? caTruoc.getTienDauCaNhap() : BigDecimal.ZERO;
-            BigDecimal doanhThuCaTruoc = giaoCaRepo.tinhDoanhThuCa(caTruoc.getId());
-            tienDuKien = tienVonCaTruoc.add(doanhThuCaTruoc);
+
+            // Kiểm tra ca trước có phải hôm nay không
+            boolean caTruocHomNay = caTruoc.getThoiGianNhanCa() != null
+                    && caTruoc.getThoiGianNhanCa().toLocalDate().equals(LocalDate.now());
+
+            if (caTruocHomNay) {
+                // Ca cùng ngày: carry-over tiền từ ca trước
+                laCaDauNgay = false;
+                BigDecimal tienVonCaTruoc = caTruoc.getTienDauCaNhap() != null ? caTruoc.getTienDauCaNhap() : BigDecimal.ZERO;
+                BigDecimal doanhThuCaTruoc = giaoCaRepo.tinhDoanhThuCa(caTruoc.getId());
+                tienDuKien = tienVonCaTruoc.add(doanhThuCaTruoc);
+            }
+            // Ca trước là hôm qua (hoặc ngày khác): laCaDauNgay = true, tienDuKien = 0 (làm mới)
+        }
+
+        if (req.getTienDauCaNhap() == null || req.getTienDauCaNhap().compareTo(BigDecimal.ZERO) < 0) {
+            throw new BadRequestEx("Tiền đầu ca không hợp lệ!");
         }
 
         GiaoCa giaoCa = new GiaoCa();
@@ -165,10 +180,14 @@ public class GiaoCaService {
         giaoCa.setTienBanGiaoDuKien(tienDuKien);
         giaoCa.setTienDauCaNhap(req.getTienDauCaNhap());
 
-        if (req.getTienDauCaNhap() != null && req.getTienDauCaNhap().compareTo(tienDuKien) == 0) {
+        if (laCaDauNgay) {
+            // Ngày mới: thu ngân nhập tự do, không cần khớp ca trước
+            giaoCa.setDaXacNhanTienDauCa(true);
+        } else if (req.getTienDauCaNhap().compareTo(tienDuKien) == 0) {
+            // Cùng ngày: phải khớp với số tiền ca trước để lại
             giaoCa.setDaXacNhanTienDauCa(true);
         } else {
-            throw new BadRequestEx("Tiền đầu ca không khớp với tiền ca trước");
+            throw new BadRequestEx("Tiền đầu ca không khớp với tiền ca trước (" + tienDuKien.toPlainString() + " ₫)");
         }
 
         giaoCa.setTrangThai(0);

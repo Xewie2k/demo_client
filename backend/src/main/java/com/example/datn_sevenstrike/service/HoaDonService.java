@@ -427,15 +427,12 @@ public class HoaDonService {
         HoaDon hd = mapper.map(req, HoaDon.class);
         hd.setId(null);
 
-        if (hd.getIdNhanVien() != null) {
-            giaoCaRepo.findCaDangHoatDong(hd.getIdNhanVien())
-                    .ifPresentOrElse(
-                            ca -> hd.setIdGiaoCa(ca.getId()),
-                            () -> hd.setIdGiaoCa(null)
-                    );
-        } else {
-            hd.setIdGiaoCa(null);
-        }
+        // Shared shift model: link tới ca active của cửa hàng
+        giaoCaRepo.findCaHoatDongCuaHang(java.time.LocalDate.now().atStartOfDay())
+                .ifPresentOrElse(
+                        ca -> hd.setIdGiaoCa(ca.getId()),
+                        () -> hd.setIdGiaoCa(null)
+                );
 
         applyDefaults(hd);
 
@@ -480,15 +477,12 @@ public class HoaDonService {
 
         hd.setIdNhanVien(req.getIdNhanVien());
 
-        if (hd.getIdNhanVien() != null) {
-            giaoCaRepo.findCaDangHoatDong(hd.getIdNhanVien())
-                    .ifPresentOrElse(
-                            ca -> hd.setIdGiaoCa(ca.getId()),
-                            () -> hd.setIdGiaoCa(null)
-                    );
-        } else {
-            hd.setIdGiaoCa(null);
-        }
+        // Shared shift model: link tới ca active của cửa hàng
+        giaoCaRepo.findCaHoatDongCuaHang(java.time.LocalDate.now().atStartOfDay())
+                .ifPresentOrElse(
+                        ca -> hd.setIdGiaoCa(ca.getId()),
+                        () -> hd.setIdGiaoCa(null)
+                );
 
         hd.setIdPhieuGiamGia(req.getIdPhieuGiamGia());
         hd.setIdPhieuGiamGiaCaNhan(req.getIdPhieuGiamGiaCaNhan());
