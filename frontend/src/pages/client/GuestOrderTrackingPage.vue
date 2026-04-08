@@ -122,8 +122,9 @@
                   <thead class="bg-light text-secondary small text-uppercase">
                     <tr>
                       <th class="border-0 py-3 ps-3">#</th>
+                      <th class="border-0 py-3 text-center">Mã CTSP</th>
                       <th class="border-0 py-3">Sản phẩm</th>
-                      <th class="border-0 py-3 text-end">Đơn giá</th>
+                      <th class="border-0 py-3 text-center">Đơn giá</th>
                       <th class="border-0 py-3 text-center">Số lượng</th>
                       <th class="border-0 py-3 text-end pe-3">Thành tiền</th>
                     </tr>
@@ -132,6 +133,7 @@
                     <template v-for="(item, index) in selectedOrder.items" :key="index">
                       <tr>
                         <td class="ps-3 fw-bold text-muted">{{ index + 1 }}</td>
+                        <td class="text-center fw-bold">{{ item.maChiTietSanPham || '—' }}</td>
                         <td>
                           <div class="d-flex align-items-center">
                             <img :src="item.anhDaiDien || 'https://placehold.co/60x60'" class="rounded border me-3" width="60" height="60" style="object-fit: cover;">
@@ -141,13 +143,13 @@
                             </div>
                           </div>
                         </td>
-                        <td class="text-end fw-bold">{{ formatCurrency(item.donGia) }}</td>
+                        <td class="text-center fw-bold">{{ formatCurrency(item.donGia) }}</td>
                         <td class="text-center">{{ item.soLuong }}</td>
                         <td class="text-end fw-bold pe-3" style="color: var(--ss-accent);">{{ formatCurrency(item.donGia * item.soLuong) }}</td>
                       </tr>
                       <!-- Dòng vàng thay đổi giá -->
                       <tr v-if="item.donGiaCu && item.donGia !== item.donGiaCu" style="background-color: #fff3cd;">
-                        <td colspan="5" class="py-1 ps-3 small" style="color: #856404;">
+                        <td colspan="6" class="py-1 ps-3 small" style="color: #856404;">
                           <i class="bi bi-exclamation-triangle-fill me-1"></i>
                           Giá trong đơn: <strong>{{ formatCurrency(item.donGia) }}</strong> — Giá hiện tại: <strong>{{ formatCurrency(item.donGiaCu) }}</strong>
                         </td>
@@ -680,6 +682,7 @@
                 <div class="flex-grow-1">
                   <div class="fw-semibold small">{{ item.tenSanPham }}</div>
                   <div class="text-muted small">{{ item.phanLoai }}</div>
+                  <div v-if="item.maChiTietSanPham" class="text-muted" style="font-size:0.75rem;">Mã: {{ item.maChiTietSanPham }}</div>
                   <div v-if="isGiaDaThayDoi(item)" class="small text-warning fw-bold" style="color: #f97316 !important;">
                     <i class="bi bi-exclamation-circle-fill me-1"></i>
                     Giá đã thay đổi: {{ formatCurrency(item.giaBanLuc) }} → {{ formatCurrency(item.giaBanHienTai) }}

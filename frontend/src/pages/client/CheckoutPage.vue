@@ -132,6 +132,7 @@
                     <div class="flex-grow-1">
                         <h6 class="mb-1 fw-bold text-dark text-truncate" style="max-width: 180px;">{{ item.name }}</h6>
                         <small class="text-muted d-block">{{ item.color }} / {{ item.size }}</small>
+                        <div v-if="item.maCtsp" class="text-muted" style="font-size:0.75rem;">Mã: {{ item.maCtsp }}</div>
                     </div>
                     <div class="text-end">
                         <div class="fw-bold text-danger">{{ formatPrice(item.price * item.quantity) }}</div>

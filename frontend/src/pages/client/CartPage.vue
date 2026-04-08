@@ -20,6 +20,7 @@
                         <th class="ps-4 py-3" style="width: 50px;">
                             <input class="form-check-input" type="checkbox" :checked="allSelected" @change="toggleSelectAll">
                         </th>
+                        <th class="py-3 text-center">Mã CTSP</th>
                         <th class="py-3">Sản phẩm</th>
                         <th class="py-3 text-center">Đơn giá</th>
                         <th class="py-3 text-center">Số lượng</th>
@@ -32,6 +33,7 @@
                         <td class="ps-4">
                             <input class="form-check-input" type="checkbox" v-model="selectedItems" :value="item.variantId">
                         </td>
+                        <td class="text-center fw-bold">{{ item.maCtsp || '—' }}</td>
                         <td class="py-4">
                             <div class="d-flex align-items-center gap-3">
                                 <div class="position-relative flex-shrink-0">

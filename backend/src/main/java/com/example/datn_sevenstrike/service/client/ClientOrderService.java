@@ -314,6 +314,7 @@ public class ClientOrderService {
         return ClientOrderItemDTO.builder()
                 .id(item.getId())
                 .tenSanPham(name)
+                .maChiTietSanPham(ctsp != null ? ctsp.getMaChiTietSanPham() : null)
                 .anhDaiDien(thumb)
                 .phanLoai(variant)
                 .donGia(item.getDonGia())
@@ -672,6 +673,7 @@ public class ClientOrderService {
 
             return VariantClientDTO.builder()
                     .id(v.getId())
+                    .maChiTietSanPham(v.getMaChiTietSanPham())
                     .tenMauSac(v.getMauSac() != null ? v.getMauSac().getTenMauSac() : "")
                     .maMauHex(v.getMauSac() != null ? v.getMauSac().getMaMauHex() : null)
                     .tenKichThuoc(v.getKichThuoc() != null ? v.getKichThuoc().getTenKichThuoc() : "")
@@ -795,6 +797,7 @@ public class ClientOrderService {
 
             variantDTOs.add(VariantClientDTO.builder()
                     .id(v.getId())
+                    .maChiTietSanPham(v.getMaChiTietSanPham())
                     .tenMauSac(v.getMauSac() != null ? v.getMauSac().getTenMauSac() : "")
                     .maMauHex(v.getMauSac() != null ? v.getMauSac().getMaMauHex() : null)
                     .tenKichThuoc(v.getKichThuoc() != null ? v.getKichThuoc().getTenKichThuoc() : "")

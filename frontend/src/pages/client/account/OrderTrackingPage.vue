@@ -56,8 +56,9 @@
           <thead class="bg-light text-secondary small text-uppercase">
             <tr>
               <th class="border-0 py-3 ps-3">#</th>
+              <th class="border-0 py-3 text-center">Mã CTSP</th>
               <th class="border-0 py-3">Sản phẩm</th>
-              <th class="border-0 py-3 text-end">Đơn giá</th>
+              <th class="border-0 py-3 text-center">Đơn giá</th>
               <th class="border-0 py-3 text-center">Số lượng</th>
               <th class="border-0 py-3 text-end pe-3">Thành tiền</th>
             </tr>
@@ -65,6 +66,7 @@
           <tbody>
             <tr v-for="(item, index) in order.items" :key="index">
               <td class="ps-3 fw-bold text-muted">{{ index + 1 }}</td>
+              <td class="text-center fw-bold">{{ item.maChiTietSanPham || '—' }}</td>
               <td>
                 <div class="d-flex align-items-center">
                   <img :src="item.anhDaiDien || 'https://placehold.co/60x60'" class="rounded border me-3" width="60" height="60" style="object-fit: cover;">
@@ -74,7 +76,7 @@
                   </div>
                 </div>
               </td>
-              <td class="text-end fw-bold">{{ formatCurrency(item.donGia) }}</td>
+              <td class="text-center fw-bold">{{ formatCurrency(item.donGia) }}</td>
               <td class="text-center">{{ item.soLuong }}</td>
               <td class="text-end fw-bold pe-3" style="color: var(--ss-accent);">{{ formatCurrency(item.thanhTien) }}</td>
             </tr>

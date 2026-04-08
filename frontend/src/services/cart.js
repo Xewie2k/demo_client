@@ -23,6 +23,7 @@ export function useCart() {
       state.items.push({
         productId: product.id,
         variantId: variant.id,
+        maCtsp: variant.maChiTietSanPham || null,
         name: product.tenSanPham,
         color: variant.tenMauSac,
         size: variant.tenKichThuoc,
