@@ -756,22 +756,24 @@ async function switchTab(val) {
   activeTab.value = val
   clearSelectedSessionState()
 
+  const { phienChatId, ...rest } = route.query
+  try { await router.replace({ query: rest }) } catch { /* ignore */ }
+
   if (val === 'DA_DONG') {
     await loadClosedSessions(activeLoai.value)
   }
-
-  await moPhienTheoRouteQuery()
 }
 
 async function switchLoai(loai) {
   activeLoai.value = loai
   clearSelectedSessionState()
 
+  const { phienChatId, ...rest } = route.query
+  try { await router.replace({ query: rest }) } catch { /* ignore */ }
+
   if (activeTab.value === 'DA_DONG') {
     await loadClosedSessions(loai)
   }
-
-  await moPhienTheoRouteQuery()
 }
 
 function labelTrangThai(t) {

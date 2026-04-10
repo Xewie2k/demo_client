@@ -63,7 +63,7 @@
                         <td class="text-center">
                             <div class="d-inline-flex border rounded bg-white">
                                 <button class="btn btn-sm btn-link text-dark text-decoration-none px-2 border-end" @click="updateQuantity(item.variantId, item.quantity - 1)" :disabled="item.quantity <= 1">-</button>
-                                <input type="text" class="form-control form-control-sm text-center border-0 bg-transparent" :value="item.quantity" readonly style="width: 40px; height: 30px;">
+                                <input type="number" class="form-control form-control-sm text-center border-0 bg-transparent" :value="item.quantity" @change="(e) => onCartQtyChange(e, item)" min="1" :max="item.maxStock" style="width: 40px; height: 30px;">
                                 <button class="btn btn-sm btn-link text-dark text-decoration-none px-2 border-start" @click="updateQuantity(item.variantId, item.quantity + 1)" :disabled="item.quantity >= item.maxStock">+</button>
                             </div>
                         </td>
@@ -181,6 +181,21 @@ const proceedToCheckout = () => {
     router.push('/client/checkout');
 };
 
+const onCartQtyChange = (e, item) => {
+  const val = parseInt(e.target.value, 10);
+  if (!val || val < 1) {
+    updateQuantity(item.variantId, 1);
+    e.target.value = 1;
+    return;
+  }
+  if (val > item.maxStock) {
+    updateQuantity(item.variantId, item.maxStock);
+    e.target.value = item.maxStock;
+    return;
+  }
+  updateQuantity(item.variantId, val);
+};
+
 const formatPrice = (value) => {
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
 };
@@ -192,5 +207,13 @@ const formatPrice = (value) => {
 }
 .cursor-pointer {
     cursor: pointer;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
 }
 </style>

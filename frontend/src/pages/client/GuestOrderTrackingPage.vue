@@ -62,7 +62,7 @@
                   <h5 class="mb-0 fw-bold">Đơn hàng {{ selectedOrder.maHoaDon }}</h5>
                   <small class="text-muted">{{ formatDate(selectedOrder.ngayTao) }}</small>
                 </div>
-                <span class="badge rounded-pill px-3 py-2" :class="getStatusBadgeClass(selectedOrder.trangThai)">
+                <span class="badge rounded-pill px-3 py-2" :style="getTrangThaiStyle(selectedOrder.trangThaiHienTai)">
                   {{ selectedOrder.trangThai }}
                 </span>
               </div>
@@ -194,7 +194,7 @@
                 <span class="fw-bold">{{ order.maHoaDon }}</span>
                 <span class="text-muted small">{{ formatDate(order.ngayTao) }}</span>
               </div>
-              <span class="badge rounded-pill px-3 py-1" :class="getStatusBadgeClass(order.trangThai)">
+              <span class="badge rounded-pill px-3 py-1" :style="getTrangThaiStyle(order.trangThaiHienTai)">
                 {{ order.trangThai }}
               </span>
             </div>
@@ -797,17 +797,17 @@ const actionOrderData = computed(() => {
 
 const steps = [
   { code: 1, label: 'Chờ xác nhận',    icon: 'bi bi-clipboard' },
-  { code: 2, label: 'Chờ giao hàng',   icon: 'bi bi-box-seam' },
-  { code: 3, label: 'Đang vận chuyển', icon: 'bi bi-truck' },
-  { code: 4, label: 'Đã giao hàng',    icon: 'bi bi-truck-front' },
+  { code: 2, label: 'Đã xác nhận',     icon: 'bi bi-check2-circle' },
+  { code: 3, label: 'Chờ giao hàng',   icon: 'bi bi-box-seam' },
+  { code: 4, label: 'Đang giao hàng',  icon: 'bi bi-truck' },
   { code: 5, label: 'Hoàn thành',      icon: 'bi bi-check-circle' },
 ];
 
 // Helpers for custom 5-step timeline
 const calcProgressWidth = (o) => {
-  const st = o?.trangThaiHienTai || 1;
-  if (st >= 6) return 0;
-  return Math.max(0, (st - 1) / 4 * 100);
+  let st = o?.trangThaiHienTai || 1;
+  if (st >= 6) st = 1;
+  return st >= 5 ? 100 : (2 * st - 1) / (2 * 5) * 100;
 };
 const isStepActive = (o, code) => {
   const st = o?.trangThaiHienTai || 1;
@@ -843,20 +843,23 @@ const editItemsSubTotal = computed(() =>
 );
 
 const getStatusName = (code) => {
-  const map = { 1: 'Chờ xác nhận', 2: 'Chờ giao hàng', 3: 'Đang vận chuyển', 4: 'Đã giao hàng', 5: 'Hoàn thành', 6: 'Đã hủy', 7: 'Yêu cầu hủy' };
+  const map = { 1: 'Chờ xác nhận', 2: 'Đã xác nhận', 3: 'Chờ giao hàng', 4: 'Đang giao hàng', 5: 'Hoàn thành', 6: 'Đã hủy', 7: 'Yêu cầu hủy' };
   return map[code] || 'Không xác định';
 };
 
-const getStatusBadgeClass = (status) => {
-  if (!status) return 'bg-secondary text-white';
-  const s = status.toLowerCase();
-  if (s.includes('hoàn thành')) return 'bg-dark text-white';
-  if (s.includes('đã giao')) return 'bg-dark text-white';
-  if (s.includes('đang') || s.includes('vận chuyển')) return 'bg-danger text-white';
-  if (s.includes('chờ giao')) return 'bg-secondary text-white';
-  if (s.includes('chờ xác nhận')) return 'bg-secondary text-white';
-  if (s.includes('hủy') || s.includes('thất bại')) return 'bg-danger text-white';
-  return 'bg-secondary text-white';
+const trangThaiMap = {
+  1: { bg: "#fff7ed", color: "#c2410c" },
+  2: { bg: "#eff6ff", color: "#1d4ed8" },
+  3: { bg: "#fef3c7", color: "#92400e" },
+  4: { bg: "#ecfeff", color: "#0e7490" },
+  5: { bg: "#dcfce7", color: "#15803d" },
+  6: { bg: "#fee2e2", color: "#dc2626" },
+  7: { bg: "#fff7ed", color: "#ea580c" },
+};
+const getTrangThaiStyle = (code) => {
+  const st = trangThaiMap[code];
+  if (!st) return { background: "#f3f4f6", color: "#374151", border: "1px solid #d1d5db" };
+  return { background: st.bg, color: st.color, border: `1px solid ${st.color}33` };
 };
 
 const formatCurrency = (v) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(v || 0);

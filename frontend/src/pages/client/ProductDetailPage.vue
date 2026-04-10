@@ -155,8 +155,8 @@
                   <button class="btn btn-link text-dark px-3 h-100 border-0" type="button" @click="quantity > 1 ? quantity-- : null">
                     <i class="bi bi-dash-lg"></i>
                   </button>
-                  <input type="number" class="form-control text-center border-0 shadow-none" v-model="quantity" min="1" :max="selectedVariant ? selectedVariant.soLuong : 1" style="width: 56px;">
-                  <button class="btn btn-link text-dark px-3 h-100 border-0" type="button" @click="quantity++">
+                  <input type="number" class="form-control text-center border-0 shadow-none" :value="quantity" @change="onQuantityChange" min="1" :max="selectedVariant ? selectedVariant.soLuong : 1" style="width: 56px;">
+                  <button class="btn btn-link text-dark px-3 h-100 border-0" type="button" @click="quantity < (selectedVariant?.soLuong || 1) ? quantity++ : null">
                     <i class="bi bi-plus-lg"></i>
                   </button>
                 </div>
@@ -359,13 +359,25 @@ onMounted(fetchProduct);
 
 watch(() => props.id, fetchProduct);
 
-watch([quantity, selectedVariant], ([newQty, newVariant]) => {
-  if (newVariant && newQty > newVariant.soLuong) {
-    Swal.fire({
-      icon: 'warning',
-      title: 'Thông báo',
-      text: `Chỉ còn ${newVariant.soLuong} sản phẩm trong kho`,
-    });
+const onQuantityChange = (e) => {
+  const val = parseInt(e.target.value, 10);
+  const max = selectedVariant.value?.soLuong || 1;
+  if (!val || val < 1) {
+    quantity.value = 1;
+    e.target.value = 1;
+    return;
+  }
+  if (val > max) {
+    Swal.fire({ icon: 'warning', title: 'Thông báo', text: `Chỉ còn ${max} sản phẩm trong kho` });
+    quantity.value = max;
+    e.target.value = max;
+    return;
+  }
+  quantity.value = val;
+};
+
+watch(selectedVariant, (newVariant) => {
+  if (newVariant && quantity.value > newVariant.soLuong) {
     quantity.value = newVariant.soLuong;
   }
 });

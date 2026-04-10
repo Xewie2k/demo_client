@@ -37,15 +37,15 @@
 <script>
 const ALL_STEPS = [
   { code: 1, label: 'Chờ xác nhận',    icon: 'bi bi-clipboard' },
-  { code: 2, label: 'Chờ giao hàng',   icon: 'bi bi-box-seam' },
-  { code: 3, label: 'Đang vận chuyển', icon: 'bi bi-truck' },
-  { code: 4, label: 'Đã giao hàng',    icon: 'bi bi-truck-front' },
+  { code: 2, label: 'Đã xác nhận',     icon: 'bi bi-check2-circle' },
+  { code: 3, label: 'Chờ giao hàng',   icon: 'bi bi-box-seam' },
+  { code: 4, label: 'Đang giao hàng',  icon: 'bi bi-truck' },
   { code: 5, label: 'Hoàn thành',      icon: 'bi bi-check-circle' },
 ];
 
 // Map status label → code (for when only string labels available in timeline)
 const LABEL_TO_CODE = {
-  'chờ xác nhận': 1, 'chờ giao hàng': 2, 'đang vận chuyển': 3, 'đã giao hàng': 4, 'hoàn thành': 5
+  'chờ xác nhận': 1, 'đã xác nhận': 2, 'chờ giao hàng': 3, 'đang giao hàng': 4, 'hoàn thành': 5
 };
 
 export default {
@@ -61,7 +61,7 @@ export default {
     },
     progressPercentage() {
       const st = this.effectiveStatus;
-      return Math.max(0, (st - 1) / (ALL_STEPS.length - 1) * 100);
+      return st >= ALL_STEPS.length ? 100 : (2 * st - 1) / (2 * ALL_STEPS.length) * 100;
     },
   },
   methods: {
