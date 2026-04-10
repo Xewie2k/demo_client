@@ -1,30 +1,67 @@
 import axios from "axios";
+import { getApiErrorMessage } from "@/services/apiError";
 
-const apiBase =
-  import.meta?.env?.VITE_API_URL ||
-  import.meta?.env?.VITE_API_BASE_URL ||
-  "http://localhost:8080";
-
-const http = axios.create({
-  baseURL: String(apiBase).replace(/\/+$/, ""),
+const api = axios.create({
+  baseURL:
+    import.meta?.env?.VITE_API_URL ||
+    import.meta?.env?.VITE_API_BASE_URL ||
+    "http://localhost:8080",
+  withCredentials: true,
 });
 
-const base = "/api/admin/mau-sac";
+const PATH = "/api/admin/mau-sac";
+
+function unwrap(res) {
+  return res?.data ?? res;
+}
+
+function throwApiError(error, fallback) {
+  throw new Error(getApiErrorMessage(error, fallback));
+}
 
 export default {
-  getAll() {
-    return http.get(base);
+  async getAll() {
+    try {
+      const res = await api.get(PATH);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Không tải được danh sách màu sắc.");
+    }
   },
-  getOne(id) {
-    return http.get(`${base}/${id}`);
+
+  async getOne(id) {
+    try {
+      const res = await api.get(`${PATH}/${id}`);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Không tải được thông tin màu sắc.");
+    }
   },
-  create(payload) {
-    return http.post(base, payload);
+
+  async create(payload) {
+    try {
+      const res = await api.post(PATH, payload);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Thêm màu sắc thất bại.");
+    }
   },
-  update(id, payload) {
-    return http.put(`${base}/${id}`, payload);
+
+  async update(id, payload) {
+    try {
+      const res = await api.put(`${PATH}/${id}`, payload);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Cập nhật màu sắc thất bại.");
+    }
   },
-  remove(id) {
-    return http.delete(`${base}/${id}`);
+
+  async remove(id) {
+    try {
+      const res = await api.delete(`${PATH}/${id}`);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Xóa màu sắc thất bại.");
+    }
   },
 };

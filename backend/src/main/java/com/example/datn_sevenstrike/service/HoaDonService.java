@@ -1169,38 +1169,6 @@ public class HoaDonService {
             if (hd.getNgayThanhToan() == null) {
                 hd.setNgayThanhToan(LocalDateTime.now());
             }
-
-            // Tự động tạo GiaoDichThanhToan cho đơn COD online khi giao hàng thành công
-            boolean laOnline = hd.getLoaiDon() != null && hd.getLoaiDon() != 0;
-            boolean laCOD = !isDonChuyenKhoan(idHoaDon);
-            boolean chuaCoGiaoDich = !daCoGiaoDichThanhToan(idHoaDon);
-            if (laOnline && laCOD && chuaCoGiaoDich) {
-                List<PhuongThucThanhToan> allPttt = phuongThucThanhToanRepository
-                        .findAllByXoaMemFalseAndTrangThaiTrueOrderByIdDesc();
-                Integer ptttId = null;
-                for (PhuongThucThanhToan p : allPttt) {
-                    String name = p.getTenPhuongThucThanhToan().toUpperCase();
-                    if (name.contains("TIỀN MẶT") || name.contains("COD")) {
-                        ptttId = p.getId();
-                        break;
-                    }
-                }
-                if (ptttId != null) {
-                    BigDecimal soTien = hd.getTongTienSauGiam() != null
-                            ? hd.getTongTienSauGiam()
-                            : (hd.getTongTien() != null ? hd.getTongTien() : BigDecimal.ZERO);
-                    GiaoDichThanhToan gd = new GiaoDichThanhToan();
-                    gd.setIdHoaDon(idHoaDon);
-                    gd.setIdPhuongThucThanhToan(ptttId);
-                    gd.setSoTien(soTien);
-                    gd.setTrangThai("thanh_cong");
-                    gd.setThoiGianCapNhat(LocalDateTime.now());
-                    gd.setNguoiCapNhat(nguoiCapNhat);
-                    gd.setXoaMem(false);
-                    gd.setGhiChu("Thanh toán COD khi giao hàng thành công");
-                    giaoDichThanhToanRepository.save(gd);
-                }
-            }
         }
 
         hd.setTrangThaiHienTai(newStatus);

@@ -1,426 +1,414 @@
 <!-- File: src/pages/tai_khoan/khach_hang/taikhoan_khachhang.vue -->
 <template>
-  <h2 class="page-title">Quản lý tài khoản/ Quản lý khách hàng</h2>
-
-  <!-- ✅ TOAST thông báo (trang) -->
-  <div v-if="pageToast.show" class="ss-page-toast" :class="pageToast.type">
-    <span class="material-icons-outlined ss-page-toast-ic">
-      {{ pageToast.type === "success" ? "check_circle" : pageToast.type === "error" ? "error" : "info" }}
-    </span>
-    <div class="ss-page-toast-msg">{{ pageToast.msg }}</div>
-    <button class="ss-page-toast-x" type="button" @click="hidePageToast">×</button>
-  </div>
-
-  <!-- ✅ TOAST xác nhận đổi trạng thái -->
-  <div v-if="confirmTrangThai.show" class="ss-confirm-toast">
-    <span class="material-icons-outlined ss-confirm-ic">help_outline</span>
-    <div class="ss-confirm-msg">{{ confirmTrangThai.msg }}</div>
-
-    <div class="ss-confirm-actions">
-      <button
-        class="ss-confirm-btn ss-confirm-cancel"
-        type="button"
-        @click="cancelConfirmTrangThai"
-        :disabled="confirmTrangThai.loading"
-      >
-        Hủy
-      </button>
-      <button
-        class="ss-confirm-btn ss-confirm-ok"
-        type="button"
-        @click="okConfirmTrangThai"
-        :disabled="confirmTrangThai.loading"
-      >
-        {{ confirmTrangThai.loading ? "Đang cập nhật..." : "Xác nhận" }}
-      </button>
-    </div>
-  </div>
-
-  <div class="taikhoan-khachhang-container" v-if="!isPage">
-    <div class="panel">
-      <div class="toolbar">
-        <div class="toolbar-left">
-          <div class="search-wrapper">
-            <i class="fa-solid fa-magnifying-glass search-icon"></i>
-            <input
-              v-model="filters.keyword"
-              type="text"
-              placeholder="Tìm theo tên, SĐT, email,... "
-              class="search-input"
-            />
-          </div>
-        </div>
-
-        <div class="toolbar-right">
-          <button class="btn btn-reset" @click="resetFilters" type="button">
-            <span class="material-icons-outlined btn-mi">restart_alt</span>
-            Đặt lại bộ lọc
-          </button>
-
-          <button class="btn btn-export" @click="exportExcel" type="button">
-            <span class="material-icons-outlined btn-mi">description</span>
-            Xuất Excel
-          </button>
-
-          <button class="btn btn-newaccount" @click="themkh" type="button">
-            <i class="fa-solid fa-plus"></i> Thêm khách hàng
-          </button>
-        </div>
-      </div>
-
-      <div class="filters-bar">
-        <div class="filter-group">
-          <label>Giới tính:</label>
-          <select v-model="filters.gender" class="form-select rounded-3 filter-pill">
-            <option value="">Tất cả</option>
-            <option value="male">Nam</option>
-            <option value="female">Nữ</option>
-          </select>
-        </div>
-
-        <div class="filter-group">
-          <label>Trạng thái:</label>
-          <select v-model="filters.status" class="form-select rounded-3 filter-pill">
-            <option value="">Tất cả</option>
-            <option value="active">Hoạt động</option>
-            <option value="inactive">Ngừng hoạt động</option>
-          </select>
-        </div>
+  <div class="ss-page ss-font">
+    <div class="ss-head">
+      <div class="ss-head-left">
+        <div class="ss-title">Quản lý tài khoản/ Quản lý khách hàng</div>
       </div>
     </div>
 
-    <div class="panel">
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>STT</th>
-              <th>Mã khách hàng</th>
-              <th>Họ tên</th>
-              <th>SĐT</th>
-              <th>Email</th>
-              <th>Địa chỉ</th>
-              <th>Trạng thái</th>
-              <th class="text-center">Thao tác</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            <tr v-for="(item, index) in khachhangList" :key="item.id">
-              <td class="text-gray">{{ pageNo * pageSize + index + 1 }}</td>
-
-              <td class="text-dark fw-700">{{ item.maKhachHang ?? "---" }}</td>
-
-              <td class="text-dark fw-700">{{ item.tenKhachHang ?? "---" }}</td>
-              <td class="text-gray">{{ item.soDienThoai ?? "---" }}</td>
-              <td class="text-gray">{{ item.email ?? "---" }}</td>
-
-              <td class="text-gray">{{ addrMap.get(item.id) ?? "---" }}</td>
-
-              <td>
-                <span class="badge" :class="item.trangThai ? 'status-active' : 'status-ended'">
-                  {{ item.trangThai ? "Hoạt động" : "Ngừng hoạt động" }}
-                </span>
-              </td>
-
-              <td class="text-center">
-                <div class="action-group">
-                  <label class="switch" title="Đổi trạng thái nhanh">
-                    <input
-                      type="checkbox"
-                      :checked="!!item.trangThai"
-                      :disabled="dangCapNhatTrangThai.has(item.id)"
-                      @change="(e) => toggleStatus(item, e)"
-                    />
-                    <span class="slider"></span>
-                  </label>
-
-                  <button
-                    class="ss-icon-btn-view"
-                    @click="openSoDiaChi(item)"
-                    title="Sổ địa chỉ"
-                    type="button"
-                  >
-                    <span class="material-icons-outlined">location_on</span>
-                  </button>
-
-                  <button
-                    class="ss-icon-btn-view"
-                    @click="updatedkh(item.id)"
-                    title="Xem"
-                    type="button"
-                  >
-                    <span class="material-icons-outlined">visibility</span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div class="pagination-container">
-        <button
-          class="page-btn"
-          :class="{ disabled: pageNo === 0 }"
-          :disabled="pageNo === 0"
-          @click="changePage(pageNo - 1)"
-          type="button"
-        >
-          <i class="fa-solid fa-chevron-left"></i>
-        </button>
-
-        <button
-          v-for="p in visiblePages"
-          :key="p"
-          class="page-btn"
-          :class="{ active: pageNo === p }"
-          @click="changePage(p)"
-          type="button"
-        >
-          {{ p + 1 }}
-        </button>
-
-        <button
-          class="page-btn"
-          :class="{ disabled: pageNo >= totalPages - 1 }"
-          :disabled="pageNo >= totalPages - 1"
-          @click="changePage(pageNo + 1)"
-          type="button"
-        >
-          <i class="fa-solid fa-chevron-right"></i>
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <router-view />
-
-  <div v-if="soDiaChi.open" class="ss-overlay" @click.self="closeSoDiaChi">
-    <div class="ss-addr-modal">
-      <div v-if="soDiaChi.toast.show" class="ss-addr-toast" :class="soDiaChi.toast.type">
-        <span class="material-icons-outlined ss-addr-toast-ic">
-          {{ soDiaChi.toast.type === "success" ? "check_circle" : soDiaChi.toast.type === "error" ? "error" : "info" }}
+    <transition name="ss-toast-fade">
+      <div v-if="pageToast.show" class="ss-page-toast" :class="pageToast.type">
+        <span class="material-icons-outlined ss-page-toast-ic">
+          {{ pageToast.type === "success" ? "check_circle" : pageToast.type === "error" ? "error" : "info" }}
         </span>
-        <div class="ss-addr-toast-msg">{{ soDiaChi.toast.msg }}</div>
-        <button class="ss-addr-toast-x" type="button" @click="hideSoDiaChiToast">×</button>
+        <div class="ss-page-toast-msg">{{ pageToast.msg }}</div>
+        <button class="ss-page-toast-x" type="button" @click="hidePageToast">×</button>
       </div>
+    </transition>
 
-      <div class="ss-addr-head">
-        <div class="ss-addr-head-left">
-          <div class="ss-addr-title">
-            <span class="material-icons-outlined ss-addr-ic">place</span>
-            <span>Sổ địa chỉ khách hàng</span>
+    <div class="taikhoan-khachhang-container" v-if="!isPage">
+      <div class="panel">
+        <div class="toolbar">
+          <div class="toolbar-left">
+            <div class="search-wrapper">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input
+                v-model="filters.keyword"
+                type="text"
+                placeholder="Tìm theo tên, SĐT, email,..."
+                class="search-input"
+              />
+            </div>
           </div>
-          <div class="ss-addr-sub">
-            {{ soDiaChi.tenKhachHang || "---" }}
-            <span class="ss-dot-sep">•</span>
-            {{ soDiaChi.maKhachHang || "---" }}
+
+          <div class="toolbar-right">
+            <button class="btn btn-reset" @click="resetFilters" type="button">
+              <span class="material-icons-outlined btn-mi">restart_alt</span>
+              Đặt lại bộ lọc
+            </button>
+
+            <button class="btn btn-export" @click="exportExcel" type="button">
+              <span class="material-icons-outlined btn-mi">description</span>
+              Xuất Excel
+            </button>
+
+            <button class="btn btn-newaccount" @click="themkh" type="button">
+              <i class="fa-solid fa-plus"></i> Thêm khách hàng
+            </button>
           </div>
         </div>
 
-        <div class="ss-addr-head-right">
+        <div class="filters-bar">
+          <div class="filter-group">
+            <label>Giới tính:</label>
+            <select v-model="filters.gender" class="form-select rounded-3 filter-pill">
+              <option value="">Tất cả</option>
+              <option value="male">Nam</option>
+              <option value="female">Nữ</option>
+            </select>
+          </div>
+
+          <div class="filter-group">
+            <label>Trạng thái:</label>
+            <select v-model="filters.status" class="form-select rounded-3 filter-pill">
+              <option value="">Tất cả</option>
+              <option value="active">Hoạt động</option>
+              <option value="inactive">Ngừng hoạt động</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>STT</th>
+                <th>Mã khách hàng</th>
+                <th>Họ tên</th>
+                <th>SĐT</th>
+                <th>Email</th>
+                <th>Địa chỉ</th>
+                <th>Trạng thái</th>
+                <th class="text-center">Thao tác</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr v-if="khachhangList.length === 0">
+                <td colspan="8" class="empty-cell">Không có dữ liệu</td>
+              </tr>
+
+              <tr v-for="(item, index) in khachhangList" :key="item.id">
+                <td class="text-gray">{{ pageNo * pageSize + index + 1 }}</td>
+
+                <td class="text-dark fw-700">{{ item.maKhachHang ?? "---" }}</td>
+                <td class="text-dark fw-700">{{ item.tenKhachHang ?? "---" }}</td>
+                <td class="text-gray">{{ item.soDienThoai ?? "---" }}</td>
+                <td class="text-gray">{{ item.email ?? "---" }}</td>
+                <td class="text-gray">{{ addrMap.get(item.id) ?? "---" }}</td>
+
+                <td>
+                  <span class="badge" :class="item.trangThai ? 'status-active' : 'status-ended'">
+                    {{ item.trangThai ? "Hoạt động" : "Ngừng hoạt động" }}
+                  </span>
+                </td>
+
+                <td class="text-center">
+                  <div class="action-group">
+                    <button
+                      class="ss-switch"
+                      type="button"
+                      :class="{ on: !!item.trangThai }"
+                      :disabled="dangCapNhatTrangThai.has(item.id)"
+                      @click="openToggleConfirm(item)"
+                      :title="item.trangThai ? 'Ngừng hoạt động' : 'Kích hoạt'"
+                      role="switch"
+                      :aria-checked="!!item.trangThai"
+                    >
+                      <span class="ss-switch-knob"></span>
+                    </button>
+
+                    <button
+                      class="ss-icon-btn-view"
+                      @click="openSoDiaChi(item)"
+                      title="Sổ địa chỉ"
+                      type="button"
+                    >
+                      <span class="material-icons-outlined">location_on</span>
+                    </button>
+
+                    <button
+                      class="ss-icon-btn-view"
+                      @click="updatedkh(item.id)"
+                      title="Xem"
+                      type="button"
+                    >
+                      <span class="material-icons-outlined">visibility</span>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-container" v-if="totalPages > 0">
           <button
-            class="ss-addr-head-btn"
+            class="page-btn"
+            :class="{ disabled: pageNo === 0 }"
+            :disabled="pageNo === 0"
+            @click="changePage(pageNo - 1)"
             type="button"
-            title="Làm mới"
-            @click="reloadSoDiaChi(true)"
-            :disabled="soDiaChi.loading"
           >
-            <span class="material-icons-outlined">refresh</span>
+            <i class="fa-solid fa-chevron-left"></i>
           </button>
-          <button class="ss-addr-head-btn" type="button" title="Đóng" @click="closeSoDiaChi">
-            <span class="material-icons-outlined">close</span>
+
+          <button
+            v-for="p in visiblePages"
+            :key="p"
+            class="page-btn"
+            :class="{ active: pageNo === p }"
+            @click="changePage(p)"
+            type="button"
+          >
+            {{ p + 1 }}
+          </button>
+
+          <button
+            class="page-btn"
+            :class="{ disabled: pageNo >= totalPages - 1 }"
+            :disabled="pageNo >= totalPages - 1"
+            @click="changePage(pageNo + 1)"
+            type="button"
+          >
+            <i class="fa-solid fa-chevron-right"></i>
           </button>
         </div>
       </div>
+    </div>
 
-      <div class="ss-addr-body">
-        <div class="ss-addr-grid">
-          <div class="ss-addr-card ss-addr-card-list">
-            <div class="ss-addr-card-head">
-              <div class="ss-addr-card-title">
-                <span class="material-icons-outlined">list</span>
-                <span>Danh sách địa chỉ</span>
-              </div>
+    <router-view />
+
+    <div v-if="soDiaChi.open" class="ss-overlay" @click.self="closeSoDiaChi">
+      <div class="ss-addr-modal">
+        <div v-if="soDiaChi.toast.show" class="ss-addr-toast" :class="soDiaChi.toast.type">
+          <span class="material-icons-outlined ss-addr-toast-ic">
+            {{ soDiaChi.toast.type === "success" ? "check_circle" : soDiaChi.toast.type === "error" ? "error" : "info" }}
+          </span>
+          <div class="ss-addr-toast-msg">{{ soDiaChi.toast.msg }}</div>
+          <button class="ss-addr-toast-x" type="button" @click="hideSoDiaChiToast">×</button>
+        </div>
+
+        <div class="ss-addr-head">
+          <div class="ss-addr-head-left">
+            <div class="ss-addr-title">
+              <span class="material-icons-outlined ss-addr-ic">place</span>
+              <span>Sổ địa chỉ khách hàng</span>
             </div>
-
-            <div class="ss-addr-table-wrap">
-              <table class="ss-addr-table">
-                <thead>
-                  <tr>
-                    <th style="width:70px">STT</th>
-                    <th>Địa chỉ</th>
-                    <th style="width:120px">Mặc định</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-if="!soDiaChi.list.length">
-                    <td colspan="3" class="ss-addr-empty">Chưa có địa chỉ nào</td>
-                  </tr>
-
-                  <tr v-for="(a, idx) in soDiaChi.list" :key="a.id ?? idx">
-                    <td class="ss-addr-stt">{{ idx + 1 }}</td>
-
-                    <td>
-                      <div class="ss-addr-line">
-                        <div class="ss-addr-main">
-                          {{ buildAddrText(a) || a?.tenDiaChi || "---" }}
-                        </div>
-                        <div class="ss-addr-subline">
-                          Người nhận:
-                          {{ a?.hoTenNguoiNhan ?? a?.tenNguoiNhan ?? "---" }}
-                          <span class="ss-dot-sep">•</span>
-                          SĐT: {{ a?.soDienThoai ?? a?.sdt ?? "---" }}
-                        </div>
-                      </div>
-                    </td>
-
-                    <td class="ss-addr-default-col">
-                      <span v-if="a?.macDinh" class="ss-addr-badge">Mặc định</span>
-                      <button
-                        v-else
-                        class="ss-addr-mini-btn"
-                        type="button"
-                        @click="confirmSetMacDinhDiaChi(a)"
-                        :disabled="soDiaChi.loading"
-                        title="Đặt mặc định"
-                      >
-                        <span class="material-icons-outlined">check</span>
-                      </button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="ss-addr-sub">
+              {{ soDiaChi.tenKhachHang || "---" }}
+              <span class="ss-dot-sep">•</span>
+              {{ soDiaChi.maKhachHang || "---" }}
             </div>
           </div>
 
-          <div class="ss-addr-card ss-addr-card-form">
-            <div class="ss-addr-card-head">
-              <div class="ss-addr-card-title">
-                <span class="material-icons-outlined">add_location_alt</span>
-                <span>Thêm nhanh địa chỉ</span>
+          <div class="ss-addr-head-right">
+            <button
+              class="ss-addr-head-btn"
+              type="button"
+              title="Làm mới"
+              @click="reloadSoDiaChi(true)"
+              :disabled="soDiaChi.loading"
+            >
+              <span class="material-icons-outlined">refresh</span>
+            </button>
+            <button class="ss-addr-head-btn" type="button" title="Đóng" @click="closeSoDiaChi">
+              <span class="material-icons-outlined">close</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="ss-addr-body">
+          <div class="ss-addr-grid">
+            <div class="ss-addr-card ss-addr-card-list">
+              <div class="ss-addr-card-head">
+                <div class="ss-addr-card-title">
+                  <span class="material-icons-outlined">list</span>
+                  <span>Danh sách địa chỉ</span>
+                </div>
+              </div>
+
+              <div class="ss-addr-table-wrap">
+                <table class="ss-addr-table">
+                  <thead>
+                    <tr>
+                      <th style="width:70px">STT</th>
+                      <th>Địa chỉ</th>
+                      <th style="width:120px">Mặc định</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-if="!soDiaChi.list.length">
+                      <td colspan="3" class="ss-addr-empty">Chưa có địa chỉ nào</td>
+                    </tr>
+
+                    <tr v-for="(a, idx) in soDiaChi.list" :key="a.id ?? idx">
+                      <td class="ss-addr-stt">{{ idx + 1 }}</td>
+
+                      <td>
+                        <div class="ss-addr-line">
+                          <div class="ss-addr-main">
+                            {{ buildAddrText(a) || a?.tenDiaChi || "---" }}
+                          </div>
+                          <div class="ss-addr-subline">
+                            Người nhận:
+                            {{ a?.hoTenNguoiNhan ?? a?.tenNguoiNhan ?? "---" }}
+                            <span class="ss-dot-sep">•</span>
+                            SĐT: {{ a?.soDienThoai ?? a?.sdt ?? "---" }}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td class="ss-addr-default-col">
+                        <span v-if="a?.macDinh" class="ss-addr-badge">Mặc định</span>
+                        <button
+                          v-else
+                          class="ss-addr-mini-btn"
+                          type="button"
+                          @click="confirmSetMacDinhDiaChi(a)"
+                          :disabled="soDiaChi.loading"
+                          title="Đặt mặc định"
+                        >
+                          <span class="material-icons-outlined">check</span>
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            <div class="ss-addr-form">
-              <div class="ss-addr-row">
-                <div class="ss-addr-col">
-                  <label class="ss-addr-label">Họ tên người nhận</label>
-                  <input
-                    v-model.trim="quick.tenNguoiNhan"
-                    class="ss-addr-input"
-                    placeholder="vd: Nguyễn Văn A"
-                  />
-                </div>
-
-                <div class="ss-addr-col">
-                  <label class="ss-addr-label">Số điện thoại</label>
-                  <input
-                    v-model.trim="quick.soDienThoai"
-                    class="ss-addr-input"
-                    placeholder="vd: 09xxxxxxxx"
-                  />
+            <div class="ss-addr-card ss-addr-card-form">
+              <div class="ss-addr-card-head">
+                <div class="ss-addr-card-title">
+                  <span class="material-icons-outlined">add_location_alt</span>
+                  <span>Thêm nhanh địa chỉ</span>
                 </div>
               </div>
 
-              <div class="ss-addr-row">
-                <div class="ss-addr-col">
-                  <label class="ss-addr-label">Thành phố/Tỉnh</label>
+              <div class="ss-addr-form">
+                <div class="ss-addr-row">
+                  <div class="ss-addr-col">
+                    <label class="ss-addr-label">Họ tên người nhận</label>
+                    <input
+                      v-model.trim="quick.tenNguoiNhan"
+                      class="ss-addr-input"
+                      placeholder="vd: Nguyễn Văn A"
+                    />
+                  </div>
 
-                  <v-select
-                    v-model="quick.tinh"
-                    :options="tinhOptions"
-                    label="name"
-                    placeholder="Chọn hoặc tìm tỉnh/thành..."
-                    :clearable="true"
+                  <div class="ss-addr-col">
+                    <label class="ss-addr-label">Số điện thoại</label>
+                    <input
+                      v-model.trim="quick.soDienThoai"
+                      class="ss-addr-input"
+                      placeholder="vd: 09xxxxxxxx"
+                    />
+                  </div>
+                </div>
+
+                <div class="ss-addr-row">
+                  <div class="ss-addr-col">
+                    <label class="ss-addr-label">Thành phố/Tỉnh</label>
+
+                    <v-select
+                      v-model="quick.tinh"
+                      :options="tinhOptions"
+                      label="name"
+                      placeholder="Chọn hoặc tìm tỉnh/thành..."
+                      :clearable="true"
+                    >
+                      <template #option="opt">
+                        <span class="text-truncate">{{ opt?.name }}</span>
+                      </template>
+                      <template #selected-option="opt">
+                        <span>{{ opt?.name }}</span>
+                      </template>
+                    </v-select>
+                  </div>
+
+                  <div class="ss-addr-col">
+                    <label class="ss-addr-label">Quận/Huyện</label>
+
+                    <v-select
+                      v-model="quick.huyen"
+                      :options="huyenOptions"
+                      label="name"
+                      placeholder="Chọn hoặc tìm quận/huyện..."
+                      :clearable="true"
+                      :disabled="!quick.tinh"
+                    >
+                      <template #option="opt">
+                        <span class="text-truncate">{{ opt?.name }}</span>
+                      </template>
+                      <template #selected-option="opt">
+                        <span>{{ opt?.name }}</span>
+                      </template>
+                    </v-select>
+                  </div>
+                </div>
+
+                <div class="ss-addr-row">
+                  <div class="ss-addr-col">
+                    <label class="ss-addr-label">Phường/Xã</label>
+
+                    <v-select
+                      v-model="quick.xa"
+                      :options="xaOptions"
+                      label="name"
+                      placeholder="Chọn hoặc tìm phường/xã..."
+                      :clearable="true"
+                      :disabled="!quick.huyen"
+                    >
+                      <template #option="opt">
+                        <span class="text-truncate">{{ opt?.name }}</span>
+                      </template>
+                      <template #selected-option="opt">
+                        <span>{{ opt?.name }}</span>
+                      </template>
+                    </v-select>
+                  </div>
+
+                  <div class="ss-addr-col">
+                    <label class="ss-addr-label">Địa chỉ cụ thể</label>
+                    <input
+                      v-model.trim="quick.diaChiCuThe"
+                      class="ss-addr-input"
+                      placeholder="Số nhà, đường..."
+                    />
+                  </div>
+                </div>
+
+                <label class="ss-addr-check">
+                  <input type="checkbox" v-model="quick.macDinh" />
+                  <span>Đặt làm địa chỉ mặc định</span>
+                </label>
+
+                <div class="ss-addr-actions">
+                  <button
+                    class="ss-addr-btn ss-addr-btn-primary"
+                    type="button"
+                    @click="themNhanhDiaChi"
+                    :disabled="soDiaChi.loading"
                   >
-                    <template #option="opt">
-                      <span class="text-truncate">{{ opt?.name }}</span>
-                    </template>
-                    <template #selected-option="opt">
-                      <span>{{ opt?.name }}</span>
-                    </template>
-                  </v-select>
+                    {{ soDiaChi.loading ? "Đang thêm..." : "Thêm nhanh" }}
+                  </button>
                 </div>
 
-                <div class="ss-addr-col">
-                  <label class="ss-addr-label">Quận/Huyện</label>
-
-                  <v-select
-                    v-model="quick.huyen"
-                    :options="huyenOptions"
-                    label="name"
-                    placeholder="Chọn hoặc tìm quận/huyện..."
-                    :clearable="true"
-                    :disabled="!quick.tinh"
-                  >
-                    <template #option="opt">
-                      <span class="text-truncate">{{ opt?.name }}</span>
-                    </template>
-                    <template #selected-option="opt">
-                      <span>{{ opt?.name }}</span>
-                    </template>
-                  </v-select>
+                <div v-if="soDiaChi.err" class="ss-addr-err">
+                  <span class="material-icons-outlined">error_outline</span>
+                  <span>{{ soDiaChi.err }}</span>
                 </div>
-              </div>
-
-              <div class="ss-addr-row">
-                <div class="ss-addr-col">
-                  <label class="ss-addr-label">Phường/Xã</label>
-
-                  <v-select
-                    v-model="quick.xa"
-                    :options="xaOptions"
-                    label="name"
-                    placeholder="Chọn hoặc tìm phường/xã..."
-                    :clearable="true"
-                    :disabled="!quick.huyen"
-                  >
-                    <template #option="opt">
-                      <span class="text-truncate">{{ opt?.name }}</span>
-                    </template>
-                    <template #selected-option="opt">
-                      <span>{{ opt?.name }}</span>
-                    </template>
-                  </v-select>
-                </div>
-
-                <div class="ss-addr-col">
-                  <label class="ss-addr-label">Địa chỉ cụ thể</label>
-                  <input
-                    v-model.trim="quick.diaChiCuThe"
-                    class="ss-addr-input"
-                    placeholder="Số nhà, đường..."
-                  />
-                </div>
-              </div>
-
-              <label class="ss-addr-check">
-                <input type="checkbox" v-model="quick.macDinh" />
-                <span>Đặt làm địa chỉ mặc định</span>
-              </label>
-
-              <div class="ss-addr-actions">
-                <button
-                  class="ss-addr-btn ss-addr-btn-primary"
-                  type="button"
-                  @click="themNhanhDiaChi"
-                  :disabled="soDiaChi.loading"
-                >
-                  {{ soDiaChi.loading ? "Đang thêm..." : "Thêm nhanh" }}
-                </button>
-              </div>
-
-              <div v-if="soDiaChi.err" class="ss-addr-err">
-                <span class="material-icons-outlined">error_outline</span>
-                <span>{{ soDiaChi.err }}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
+
   </div>
 </template>
 
@@ -433,37 +421,32 @@ import {
 } from "@/services/tai_khoan/khach_hang/khach_hangService";
 
 import {
-  getAllDiaChiKhachHang
-} from "@/services/tai_khoan/khach_hang/diaChiKhachHangService";
-
-import {
+  getAllDiaChiKhachHang,
   getDiaChiByKhachHangId_FEFilter,
   createDiaChiKhachHang,
   updateDiaChiKhachHang
 } from "@/services/tai_khoan/khach_hang/diaChiKhachHangService";
 
 import vnAddressService from "@/services/vnAddressService";
-
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import * as XLSX from "xlsx";
+import Swal from "sweetalert2";
 
 const router = useRouter();
 const route = useRoute();
 
 const pageNo = ref(0);
-const pageSize = ref(5);
+const pageSize = ref(10);
 const totalPages = ref(0);
 
 const khachhangList = ref([]);
 const khachhangOrigin = ref([]);
-
 const addrMap = ref(new Map());
 
 const filters = ref({ keyword: "", status: "", gender: "" });
 
-const dangCapNhatTrangThai = ref(new Set());
-const trangThaiSeqMap = ref(new Map());
+const dangCapNhatTrangThai = reactive(new Set());
 
 const themkh = () => router.push({ name: "tai-khoan-khach-hang-them" });
 const updatedkh = (id) => router.push({ name: "tai-khoan-khach-hang-cap-nhat", params: { id } });
@@ -476,6 +459,148 @@ const isPage = computed(() => {
 });
 
 const sortNewestFirst = (arr) => (arr || []).slice().sort((a, b) => (b?.id ?? 0) - (a?.id ?? 0));
+
+const getErrorMessage = (e, fallback = "Đã xảy ra lỗi") => {
+  const msg =
+    e?.response?.data?.message ||
+    e?.response?.data?.error ||
+    e?.response?.data?.detail ||
+    e?.message;
+
+  return typeof msg === "string" && msg.trim() ? msg.trim() : fallback;
+};
+
+const pageToast = reactive({ show: false, type: "info", msg: "" });
+let pageToastTimer = null;
+
+const showPageToast = (type, msg) => {
+  pageToast.show = true;
+  pageToast.type = type || "info";
+  pageToast.msg = msg || "";
+
+  if (pageToastTimer) clearTimeout(pageToastTimer);
+  pageToastTimer = setTimeout(() => {
+    pageToast.show = false;
+  }, 2600);
+};
+
+const hidePageToast = () => {
+  pageToast.show = false;
+};
+
+function applySwalButtonStyle(button, type = "confirm") {
+  if (!button) return;
+  button.style.appearance = "none";
+  button.style.webkitAppearance = "none";
+  button.style.border = "0";
+  button.style.outline = "none";
+  button.style.boxShadow = "none";
+  button.style.borderRadius = "3px";
+  button.style.minWidth = "78px";
+  button.style.height = "38px";
+  button.style.padding = "0 18px";
+  button.style.fontSize = "14px";
+  button.style.fontWeight = "400";
+  button.style.lineHeight = "38px";
+  button.style.fontFamily = "inherit";
+  button.style.display = "inline-flex";
+  button.style.alignItems = "center";
+  button.style.justifyContent = "center";
+  button.style.cursor = "pointer";
+
+  if (type === "confirm") {
+    button.style.background = "#27313b";
+    button.style.color = "#fff";
+  } else if (type === "cancel") {
+    button.style.background = "#6c757d";
+    button.style.color = "#fff";
+  } else if (type === "ok") {
+    button.style.background = "#8a3ffc";
+    button.style.color = "#fff";
+  }
+}
+
+function getSwalBase(type = "confirm") {
+  return {
+    width: 500,
+    padding: "22px 20px 24px",
+    background: "#ffffff",
+    backdrop: "rgba(0,0,0,0.45)",
+    allowOutsideClick: false,
+    allowEscapeKey: true,
+    buttonsStyling: false,
+    reverseButtons: false,
+    focusConfirm: false,
+    customClass: {
+      popup: "ss-swal-popup",
+      icon: "ss-swal-icon",
+      title: "ss-swal-title",
+      htmlContainer: "ss-swal-text",
+      actions: type === "success" ? "ss-swal-actions ss-swal-actions-center" : "ss-swal-actions",
+      confirmButton: type === "success" ? "ss-swal-ok-btn" : "ss-swal-confirm-btn",
+      cancelButton: "ss-swal-cancel-btn",
+    },
+    didOpen: (popup) => {
+      const actions = popup.querySelector(".swal2-actions");
+      const confirmBtn = popup.querySelector(".swal2-confirm");
+      const cancelBtn = popup.querySelector(".swal2-cancel");
+      const title = popup.querySelector(".swal2-title");
+      const html = popup.querySelector(".swal2-html-container");
+      const icon = popup.querySelector(".swal2-icon");
+
+      popup.style.borderRadius = "6px";
+      popup.style.boxShadow = "0 18px 48px rgba(0, 0, 0, 0.22)";
+      popup.style.padding = "22px 20px 24px";
+
+      if (actions) {
+        actions.style.display = "flex";
+        actions.style.alignItems = "center";
+        actions.style.justifyContent = "center";
+        actions.style.gap = "10px";
+        actions.style.marginTop = "18px";
+        actions.style.width = "100%";
+      }
+
+      if (title) {
+        title.style.fontSize = "27px";
+        title.style.lineHeight = "1.2";
+        title.style.fontWeight = "400";
+        title.style.color = "#333";
+        title.style.margin = "2px 0 10px";
+        title.style.padding = "0";
+      }
+
+      if (html) {
+        html.style.fontSize = "15px";
+        html.style.lineHeight = "1.45";
+        html.style.fontWeight = "400";
+        html.style.color = "#666";
+        html.style.margin = "0";
+        html.style.padding = "0";
+      }
+
+      if (icon) {
+        icon.style.margin = "8px auto 10px";
+      }
+
+      if (type === "success") {
+        applySwalButtonStyle(confirmBtn, "ok");
+      } else {
+        applySwalButtonStyle(confirmBtn, "confirm");
+        applySwalButtonStyle(cancelBtn, "cancel");
+      }
+    },
+  };
+}
+
+const escapeHtml = (value) => {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+};
 
 const buildAddrText = (a) => {
   const parts = [a?.diaChiCuThe, a?.phuong, a?.quan, a?.thanhPho]
@@ -496,7 +621,6 @@ const loadAddressMap = async () => {
       if (!idkh) continue;
 
       const txt = buildAddrText(a) || a?.tenDiaChi || "---";
-
       if (!m.has(idkh) || a?.macDinh) m.set(idkh, txt);
     }
 
@@ -508,8 +632,7 @@ const loadAddressMap = async () => {
 };
 
 const applyStatusFilter = () => {
-  const source = Array.isArray(khachhangOrigin.value) ? khachhangOrigin.value : (khachhangOrigin.value ?? []);
-
+  const source = Array.isArray(khachhangOrigin.value) ? khachhangOrigin.value : [];
   if (!filters.value.status) {
     khachhangList.value = source;
     return;
@@ -532,126 +655,97 @@ const reApplyFilters = () => {
   applyGenderFilter();
 };
 
-const pageToast = reactive({ show: false, type: "info", msg: "" });
-let pageToastTimer = null;
+const buildToggleConfirmHtml = (item, nextValue) => {
+  const oldText = item?.trangThai ? "Hoạt động" : "Ngừng hoạt động";
+  const newText = nextValue ? "Hoạt động" : "Ngừng hoạt động";
 
-const showPageToast = (type, msg) => {
-  pageToast.show = true;
-  pageToast.type = type || "info";
-  pageToast.msg = msg || "";
-
-  if (pageToastTimer) clearTimeout(pageToastTimer);
-  pageToastTimer = setTimeout(() => {
-    pageToast.show = false;
-  }, 2600);
-};
-
-const hidePageToast = () => {
-  pageToast.show = false;
-};
-
-const confirmTrangThai = reactive({
-  show: false,
-  loading: false,
-  msg: "",
-  item: null,
-  newValue: false,
-});
-
-const openConfirmTrangThai = (item, newValue) => {
-  const ten = (item?.tenKhachHang ?? item?.maKhachHang ?? "khách hàng").toString().trim() || "khách hàng";
-  const nextText = newValue ? "Hoạt động" : "Ngừng hoạt động";
-
-  confirmTrangThai.show = true;
-  confirmTrangThai.loading = false;
-  confirmTrangThai.item = item;
-  confirmTrangThai.newValue = !!newValue;
-  confirmTrangThai.msg = `Bạn có muốn chuyển trạng thái của "${ten}" sang "${nextText}" không?`;
-};
-
-const cancelConfirmTrangThai = () => {
-  if (confirmTrangThai.loading) return;
-  confirmTrangThai.show = false;
-  confirmTrangThai.loading = false;
-  confirmTrangThai.msg = "";
-  confirmTrangThai.item = null;
-  confirmTrangThai.newValue = false;
+  return `
+    <div style="font-weight:400;color:#666;line-height:1.5;">
+      <div style="margin-bottom:10px;font-weight:400;">
+        Bạn có muốn chuyển trạng thái khách hàng này không?
+      </div>
+      <div style="border:1px solid rgba(255,77,79,0.14);background:linear-gradient(180deg, rgba(255,77,79,0.04), rgba(17,24,39,0.02));border-radius:10px;padding:12px 14px;text-align:left;">
+        <div style="font-size:15px;color:#333;font-weight:400;margin-bottom:4px;">
+          ${escapeHtml(item?.tenKhachHang || "—")}
+        </div>
+        <div style="font-size:13px;color:#666;font-weight:400;margin-bottom:8px;">
+          Mã khách hàng: ${escapeHtml(item?.maKhachHang || "—")}
+        </div>
+        <div style="font-size:13px;color:#666;font-weight:400;">
+          Trạng thái sẽ đổi từ
+          <span style="color:#b42324;font-weight:400;">${escapeHtml(oldText)}</span>
+          sang
+          <span style="color:#b42324;font-weight:400;">${escapeHtml(newText)}</span>
+        </div>
+      </div>
+    </div>
+  `;
 };
 
 const capNhatTrangThai = async (item, newValue) => {
   const id = item?.id;
-  if (!id) return;
-
-  if (dangCapNhatTrangThai.value.has(id)) return;
+  if (!id || dangCapNhatTrangThai.has(id)) return;
 
   const oldValue = !!item.trangThai;
   const nextValue = !!newValue;
 
   if (oldValue === nextValue) return;
 
-  const nextSeq = (trangThaiSeqMap.value.get(id) ?? 0) + 1;
-  trangThaiSeqMap.value.set(id, nextSeq);
+  const result = await Swal.fire({
+    ...getSwalBase("confirm"),
+    icon: "question",
+    title: "Xác nhận?",
+    html: buildToggleConfirmHtml(item, nextValue),
+    confirmButtonText: "Đồng ý",
+    cancelButtonText: "Hủy",
+    showCancelButton: true,
+  });
 
+  if (!result.isConfirmed) return;
+
+  dangCapNhatTrangThai.add(id);
   item.trangThai = nextValue;
   reApplyFilters();
-
-  dangCapNhatTrangThai.value.add(id);
 
   try {
     await updateKhachHang(id, { trangThai: nextValue });
 
-    if (trangThaiSeqMap.value.get(id) !== nextSeq) return;
-
-    reApplyFilters();
-    showPageToast("success", "Đã cập nhật trạng thái");
+    await Swal.fire({
+      ...getSwalBase("success"),
+      icon: "success",
+      title: "Thành công!",
+      html: `
+        <div style="font-weight:400;color:#666;line-height:1.5;">
+          Đã chuyển trạng thái khách hàng
+          <span style="font-weight:400;color:#333;">${escapeHtml(item?.tenKhachHang || item?.maKhachHang || "")}</span>
+          từ
+          <span style="font-weight:400;color:#b42324;">${escapeHtml(oldValue ? "Hoạt động" : "Ngừng hoạt động")}</span>
+          sang
+          <span style="font-weight:400;color:#b42324;">${escapeHtml(nextValue ? "Hoạt động" : "Ngừng hoạt động")}</span>.
+        </div>
+      `,
+      confirmButtonText: "OK",
+      showCancelButton: false,
+    });
   } catch (err) {
-    if (trangThaiSeqMap.value.get(id) === nextSeq) {
-      item.trangThai = oldValue;
-      reApplyFilters();
-      showPageToast("error", "Không thể cập nhật trạng thái");
-    }
+    item.trangThai = oldValue;
+    reApplyFilters();
+
+    await Swal.fire({
+      ...getSwalBase("confirm"),
+      icon: "error",
+      title: "Thất bại!",
+      text: getErrorMessage(err, "Không thể cập nhật trạng thái khách hàng."),
+      confirmButtonText: "OK",
+      showCancelButton: false,
+    });
   } finally {
-    if (trangThaiSeqMap.value.get(id) === nextSeq) {
-      dangCapNhatTrangThai.value.delete(id);
-    }
+    dangCapNhatTrangThai.delete(id);
   }
 };
 
-const okConfirmTrangThai = async () => {
-  const item = confirmTrangThai.item;
-  if (!item?.id) {
-    cancelConfirmTrangThai();
-    return;
-  }
-
-  if (confirmTrangThai.loading) return;
-
-  confirmTrangThai.loading = true;
-  try {
-    await capNhatTrangThai(item, confirmTrangThai.newValue);
-  } finally {
-    confirmTrangThai.loading = false;
-    cancelConfirmTrangThai();
-  }
-};
-
-const toggleStatus = async (item, e) => {
-  const id = item?.id;
-  if (!id) return;
-
-  if (dangCapNhatTrangThai.value.has(id)) {
-    if (e?.target) e.target.checked = !!item.trangThai;
-    return;
-  }
-
-  const oldValue = !!item.trangThai;
-  const newValue = !!e?.target?.checked;
-
-  if (oldValue === newValue) return;
-
-  if (e?.target) e.target.checked = oldValue;
-
-  openConfirmTrangThai(item, newValue);
+const openToggleConfirm = async (item) => {
+  await capNhatTrangThai(item, !item?.trangThai);
 };
 
 const exportExcel = async () => {
@@ -691,7 +785,7 @@ const exportExcel = async () => {
     }));
 
     if (dataToExport.length === 0) {
-      alert("Không có dữ liệu để xuất.");
+      showPageToast("info", "Không có dữ liệu để xuất Excel.");
       return;
     }
 
@@ -710,9 +804,10 @@ const exportExcel = async () => {
     ];
 
     XLSX.writeFile(workbook, "DanhSachKhachHang.xlsx");
+    showPageToast("success", "Xuất Excel thành công.");
   } catch (error) {
     console.error("Lỗi khi xuất Excel:", error);
-    alert("Đã xảy ra lỗi khi xuất file Excel.");
+    showPageToast("error", getErrorMessage(error, "Đã xảy ra lỗi khi xuất file Excel."));
   }
 };
 
@@ -735,6 +830,7 @@ const handleFilter = async () => {
     await loadAddressMap();
   } catch (e) {
     console.log("Filter error", e);
+    showPageToast("error", getErrorMessage(e, "Không tải được danh sách khách hàng."));
   }
 };
 
@@ -859,7 +955,6 @@ const getErrMsgNganGon = (e) => {
 
   const s = String(msg || "").trim();
   if (!s) return "Đã xảy ra lỗi, vui lòng thử lại.";
-  if (s.length > 120) return "Đã xảy ra lỗi, vui lòng kiểm tra lại dữ liệu.";
   return s;
 };
 
@@ -946,12 +1041,11 @@ const reloadSoDiaChi = async (resetForm = false) => {
       });
 
     if (!soDiaChi.list.length) quick.macDinh = true;
-
     if (resetForm) showSoDiaChiToast("info", "Đã làm mới sổ địa chỉ");
   } catch (e) {
     console.log(e);
     soDiaChi.list = [];
-    soDiaChi.err = "Không tải được danh sách địa chỉ";
+    soDiaChi.err = getErrorMessage(e, "Không tải được danh sách địa chỉ.");
     showSoDiaChiToast("error", soDiaChi.err);
   } finally {
     soDiaChi.loading = false;
@@ -974,10 +1068,25 @@ const themNhanhDiaChi = async () => {
   }
 
   const preview = quickPreviewText() || "---";
-  const ok = confirm(
-    `Xác nhận thêm địa chỉ?\n\n${preview}${quick.macDinh ? "\n\n(Địa chỉ này sẽ được đặt làm mặc định)" : ""}`
-  );
-  if (!ok) return;
+
+  const result = await Swal.fire({
+    ...getSwalBase("confirm"),
+    icon: "question",
+    title: "Xác nhận?",
+    html: `
+      <div style="font-weight:400;color:#666;line-height:1.5;">
+        <div style="margin-bottom:10px;font-weight:400;">Bạn có muốn thêm địa chỉ này không?</div>
+        <div style="border:1px solid rgba(255,77,79,0.14);background:linear-gradient(180deg, rgba(255,77,79,0.04), rgba(17,24,39,0.02));border-radius:10px;padding:12px 14px;text-align:left;">
+          <div style="font-size:13px;color:#666;font-weight:400;">${escapeHtml(preview)}</div>
+        </div>
+      </div>
+    `,
+    confirmButtonText: "Đồng ý",
+    cancelButtonText: "Hủy",
+    showCancelButton: true,
+  });
+
+  if (!result.isConfirmed) return;
 
   try {
     soDiaChi.loading = true;
@@ -1008,8 +1117,8 @@ const themNhanhDiaChi = async () => {
     await loadAddressMap();
   } catch (e) {
     console.log(e);
-    soDiaChi.err = getErrMsgNganGon(e) || "Thêm địa chỉ thất bại";
-    showSoDiaChiToast("error", "Thêm địa chỉ thất bại");
+    soDiaChi.err = getErrMsgNganGon(e);
+    showSoDiaChiToast("error", soDiaChi.err);
   } finally {
     soDiaChi.loading = false;
   }
@@ -1020,8 +1129,25 @@ const confirmSetMacDinhDiaChi = async (a) => {
   if (!id) return;
 
   const preview = buildAddrText(a) || a?.tenDiaChi || "---";
-  const ok = confirm(`Đặt địa chỉ này làm mặc định?\n\n${preview}`);
-  if (!ok) return;
+
+  const result = await Swal.fire({
+    ...getSwalBase("confirm"),
+    icon: "question",
+    title: "Xác nhận?",
+    html: `
+      <div style="font-weight:400;color:#666;line-height:1.5;">
+        <div style="margin-bottom:10px;font-weight:400;">Bạn có muốn đặt địa chỉ này làm mặc định không?</div>
+        <div style="border:1px solid rgba(255,77,79,0.14);background:linear-gradient(180deg, rgba(255,77,79,0.04), rgba(17,24,39,0.02));border-radius:10px;padding:12px 14px;text-align:left;">
+          <div style="font-size:13px;color:#666;font-weight:400;">${escapeHtml(preview)}</div>
+        </div>
+      </div>
+    `,
+    confirmButtonText: "Đồng ý",
+    cancelButtonText: "Hủy",
+    showCancelButton: true,
+  });
+
+  if (!result.isConfirmed) return;
 
   await setMacDinhDiaChi(a);
 };
@@ -1042,8 +1168,8 @@ const setMacDinhDiaChi = async (a) => {
     await loadAddressMap();
   } catch (e) {
     console.log(e);
-    soDiaChi.err = getErrMsgNganGon(e) || "Không thể đặt mặc định";
-    showSoDiaChiToast("error", "Không thể đặt mặc định");
+    soDiaChi.err = getErrMsgNganGon(e);
+    showSoDiaChiToast("error", soDiaChi.err);
   } finally {
     soDiaChi.loading = false;
   }
@@ -1061,21 +1187,26 @@ onMounted(async () => {
 </script>
 
 <style scoped>
+.ss-page { padding: 16px; }
+.ss-font { font-family: inherit; color: rgba(17, 24, 39, 0.82); }
+.ss-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.ss-head-left { display: flex; align-items: center; gap: 10px; }
+.ss-title { font-size: 20px; font-weight: 500; color: rgba(17, 24, 39, 0.88); }
+
 .taikhoan-khachhang-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  margin: 20px;
+  gap: 16px;
 }
 
 .panel {
-  font-family: var(--admin-font);
-  color: var(--ss-text);
+  font-family: inherit;
+  color: rgba(17,24,39,0.82);
   background: #fff;
-  border-radius: 18px;
-  padding: 24px;
-  border: 1px solid var(--ss-border);
-  box-shadow: var(--ss-shadow-soft);
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid rgba(255,77,79,0.18);
+  box-shadow: 0 18px 50px rgba(17,24,39,0.08);
 }
 
 .page-title {
@@ -1086,37 +1217,21 @@ onMounted(async () => {
   color: rgba(17, 24, 39, 0.92);
 }
 
-.text-center {
-  text-align: center;
-}
-
-.text-gray {
-  color: var(--ss-text-muted);
-}
-
-.text-dark {
-  color: rgba(17, 24, 39, 0.88);
-}
-
-.fw-700 {
-  font-weight: 600;
-}
+.text-center { text-align: center; }
+.text-gray { color: rgba(17,24,39,0.62); }
+.text-dark { color: rgba(17,24,39,0.88); }
+.fw-700 { font-weight: 600; }
 
 .toolbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 15px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
-
-.toolbar-left,
-.toolbar-right {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-}
+.toolbar-left, .toolbar-right { display: flex; align-items: center; }
+.toolbar-right { gap: 10px; }
 
 .btn-mi {
   font-size: 18px;
@@ -1128,84 +1243,55 @@ onMounted(async () => {
 }
 
 .btn {
-  height: 34px;
+  height: 36px;
   padding: 0 14px;
-  border: none;
-  cursor: pointer;
-  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid rgba(17,24,39,0.14);
+  background: #fff;
+  color: rgba(17,24,39,0.88);
   font-size: 13px;
-  transition: all 0.2s;
+  font-weight: 400;
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  cursor: pointer;
+  transition: 0.15s ease;
 }
-.btn:hover {
-  opacity: 0.96;
-}
+.btn:hover { background: rgba(17,24,39,0.04); }
 
 .btn-newaccount {
-  height: 34px;
-  padding: 0 14px;
-  border-radius: 10px;
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%);
-  box-shadow: 0 10px 18px rgba(255, 77, 79, 0.16);
+  border: none !important;
+  color:#fff !important;
+  background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%) !important;
+  box-shadow: 0 10px 18px rgba(255,77,79,0.16);
 }
-.btn-newaccount i {
-  font-size: 12px;
-}
+.btn-newaccount:hover { filter: brightness(0.98); }
+.btn-newaccount i { font-size: 13px; }
 
 .btn-export {
-  height: 34px;
-  padding: 0 14px;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
   background: #f3f4f6 !important;
-  color: rgba(17, 24, 39, 0.88) !important;
-  border: 1px solid rgba(17, 24, 39, 0.10) !important;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 13px;
-  transition: all 0.2s;
+  color: rgba(17,24,39,0.88) !important;
+  border: 1px solid rgba(17,24,39,0.10) !important;
 }
-.btn-export:hover {
-  background: #eef0f3 !important;
-}
+.btn-export:hover { background: #eef0f3 !important; }
 
 .btn-reset {
-  height: 34px;
-  padding: 0 14px;
-  border-radius: 10px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
   background: #4b5563 !important;
   color: #fff !important;
   border: none !important;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 13px;
-  transition: 0.2s;
 }
-.btn-reset:hover {
-  filter: brightness(0.98);
-}
+.btn-reset:hover { filter: brightness(0.98); }
 
 .filter-pill {
-  height: 38px;
+  height: 36px;
   min-width: 150px;
 }
 
 .badge {
   padding: 6px 12px;
   border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 500;
   white-space: nowrap;
   display: inline-flex;
   align-items: center;
@@ -1227,10 +1313,9 @@ onMounted(async () => {
 
 .table-wrapper {
   overflow-x: auto;
-  border-radius: 18px;
+  border-radius: 14px;
   background: #fff;
-  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
-  border: 1px solid rgba(17, 24, 39, 0.08);
+  border: 1px solid rgba(17,24,39,0.08);
 }
 
 table {
@@ -1239,76 +1324,57 @@ table {
   border-spacing: 0;
 }
 
-th:first-child {
-  border-top-left-radius: 16px;
-}
-th:last-child {
-  border-top-right-radius: 16px;
-}
+th:first-child { border-top-left-radius: 16px; }
+th:last-child { border-top-right-radius: 16px; }
 
 th {
-  padding: 16px;
-  background: #f9fafb;
-  font-size: 13.5px;
-  font-weight: 600;
-  text-align: left;
-  color: rgba(17, 24, 39, 0.88);
-  border-bottom: 1px solid #e5e7eb;
+  padding: 14px 16px;
+  background:#F9FAFB;
+  font-size: 13px;
+  font-weight: 400;
+  text-align:left;
+  color: rgba(17,24,39,0.82);
+  border-bottom: 1px solid rgba(17,24,39,0.08);
   white-space: nowrap;
-  text-transform: none;
 }
 
 td {
-  padding: 16px;
-  border-bottom: 1px solid #f3f4f6;
-  font-size: 13.5px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(17,24,39,0.06);
+  font-size: 13px;
   vertical-align: middle;
-  color: rgba(17, 24, 39, 0.72);
+  color: rgba(17,24,39,0.72);
 }
 
-tbody tr:hover {
-  background: #f9fafb;
-}
+tbody tr:hover { background:#F9FAFB; }
 
 .pagination-container {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-top: 24px;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:8px;
+  margin-top: 12px;
 }
 
 .page-btn {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  color: #374151;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: 0.2s;
-  font-size: 14px;
-  font-weight: 500;
+  width:36px;
+  height:36px;
+  border-radius: 10px;
+  border:1px solid rgba(17,24,39,0.14);
+  background:#fff;
+  color: rgba(17,24,39,0.82);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition: 0.15s ease;
+  font-size: 13px;
+  font-weight: 400;
 }
 
-.page-btn:hover:not(.disabled) {
-  background: #f3f4f6;
-  border-color: #d1d5db;
-}
-
-.page-btn.active {
-  background: #111827;
-  color: #fff;
-  border-color: #111827;
-}
-
-.page-btn.disabled {
-  color: #d1d5db;
-  background: #f9fafb;
-}
+.page-btn:hover:not(.disabled) { background: rgba(17,24,39,0.04); }
+.page-btn.active { background:#111827; color:#fff; border-color:#111827; }
+.page-btn.disabled { color: rgba(17,24,39,0.25); background:#F9FAFB; }
 
 .search-wrapper {
   position: relative;
@@ -1319,27 +1385,27 @@ tbody tr:hover {
 .search-icon {
   position: absolute;
   left: 12px;
-  color: #9ca3af;
-  font-size: 14px;
+  color: rgba(17,24,39,0.40);
+  font-size: 13px;
   pointer-events: none;
 }
 
 .search-input {
-  height: 40px;
-  padding: 0 16px 0 36px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
+  height: 36px;
+  padding: 0 12px 0 34px;
+  border-radius: 12px;
+  border: 1px solid rgba(17,24,39,0.14);
   outline: none;
-  min-width: 465px;
-  color: rgba(17, 24, 39, 0.78);
-  font-size: 14px;
-  background: #f9fafb;
+  min-width: 420px;
+  color: rgba(17,24,39,0.82);
+  font-size: 13px;
+  background:#F9FAFB;
 }
 
 .search-input:focus {
-  border-color: rgba(255, 77, 79, 0.65);
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(255, 77, 79, 0.10);
+  border-color: rgba(255,77,79,0.45);
+  background:#fff;
+  box-shadow: 0 0 0 3px rgba(255,77,79,0.10);
 }
 
 .ss-icon-btn-view {
@@ -1367,25 +1433,57 @@ tbody tr:hover {
 }
 
 .filter-group {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
   font-size: 14px;
   color: rgba(17, 24, 39, 0.78);
-  font-weight: 600;
+  font-weight: 400;
   white-space: nowrap;
 }
 
 .filters-bar {
   display: flex;
   gap: 20px;
-  margin-bottom: 24px;
+  margin-bottom: 8px;
 }
 
 .action-group {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+.ss-switch {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 24, 39, 0.14);
+  background: rgba(17, 24, 39, 0.12);
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  transition: 0.15s ease;
+}
+.ss-switch.on {
+  background: rgba(255, 77, 79, 0.92);
+  border-color: rgba(255, 77, 79, 0.25);
+}
+.ss-switch:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.ss-switch-knob {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  transform: translateX(0);
+  transition: 0.15s ease;
+}
+.ss-switch.on .ss-switch-knob {
+  transform: translateX(20px);
 }
 
 .ss-page-toast {
@@ -1426,125 +1524,12 @@ tbody tr:hover {
   color: rgba(17, 24, 39, 0.45);
 }
 .ss-page-toast-x:hover { color: rgba(17, 24, 39, 0.7); }
+.ss-toast-fade-enter-active, .ss-toast-fade-leave-active { transition: all 0.25s ease; }
+.ss-toast-fade-enter-from, .ss-toast-fade-leave-to { opacity: 0; transform: translateY(-8px); }
 
-.ss-confirm-toast {
-  position: fixed;
-  top: 64px;
-  right: 14px;
-  z-index: 2501;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  width: min(520px, calc(100vw - 28px));
-  padding: 12px 12px 12px 12px;
-  border-radius: 14px;
-  background: #fff;
-  border: 1px solid rgba(255, 77, 79, 0.25);
-  box-shadow: 0 18px 55px rgba(17, 24, 39, 0.18);
-  position: fixed;
-}
-
-.ss-confirm-ic {
-  font-size: 20px;
-  color: rgba(255, 77, 79, 0.95);
-  margin-top: 1px;
-}
-
-.ss-confirm-msg {
-  flex: 1;
-  color: rgba(17, 24, 39, 0.86);
-  font-size: 13.5px;
-  line-height: 1.35;
-  padding-right: 8px;
-}
-
-.ss-confirm-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 2px;
-}
-
-.ss-confirm-btn {
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  cursor: pointer;
-  font-size: 12.5px;
-  font-weight: 700;
-  transition: 0.15s ease;
-}
-.ss-confirm-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-
-.ss-confirm-cancel {
-  background: #f3f4f6;
-  border-color: rgba(17, 24, 39, 0.12);
-  color: rgba(17, 24, 39, 0.82);
-}
-.ss-confirm-cancel:hover { background: #eef0f3; }
-
-.ss-confirm-ok {
-  background: #ff4d4f;
-  border-color: rgba(255, 77, 79, 0.35);
-  color: #fff;
-  box-shadow: 0 10px 18px rgba(255, 77, 79, 0.16);
-}
-.ss-confirm-ok:hover { filter: brightness(0.98); }
-
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 32px;
-  height: 18px;
-}
-
-.switch input {
-  opacity: 0;
-  width: 100%;
-  height: 100%;
-  position: absolute;
-  inset: 0;
-  cursor: pointer;
-  z-index: 2;
-}
-
-.switch input:disabled {
-  cursor: not-allowed;
-}
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  inset: 0;
-  background-color: #e5e7eb;
-  border-radius: 18px;
-  transition: 0.3s;
-}
-
-.switch input:disabled + .slider {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 14px;
-  width: 14px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  border-radius: 50%;
-  transition: 0.3s;
-}
-
-.switch input:checked + .slider {
-  background-color: #ff4d4f;
-}
-
-.switch input:checked + .slider:before {
-  transform: translateX(14px);
+.empty-cell {
+  text-align: center;
+  color: rgba(17,24,39,0.55);
 }
 
 .ss-overlay {
@@ -1721,7 +1706,6 @@ tbody tr:hover {
 }
 
 .ss-addr-table-wrap { max-height: 260px; overflow: auto; }
-
 .ss-addr-table { width: 100%; border-collapse: separate; border-spacing: 0; }
 
 .ss-addr-table thead th {
@@ -1899,8 +1883,101 @@ tbody tr:hover {
 }
 :deep(.vs__deselect) { color: rgba(17, 24, 39, 0.45) !important; }
 
+:deep(.swal2-popup.ss-swal-popup) {
+  width: 500px !important;
+  max-width: 500px !important;
+  border-radius: 6px !important;
+  padding: 22px 20px 24px !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22) !important;
+  font-family: inherit !important;
+}
+:deep(.swal2-icon.ss-swal-icon) { margin: 8px auto 10px !important; }
+:deep(.swal2-icon.swal2-question.ss-swal-icon) {
+  width: 72px !important;
+  height: 72px !important;
+  border-width: 3px !important;
+  color: #9db5c2 !important;
+  border-color: #9db5c2 !important;
+}
+:deep(.swal2-icon.swal2-success.ss-swal-icon) {
+  width: 72px !important;
+  height: 72px !important;
+  border-width: 3px !important;
+  border-color: #d8efcf !important;
+  color: #8fd16f !important;
+}
+:deep(.swal2-icon.swal2-success .swal2-success-ring) {
+  border-color: rgba(143, 209, 111, 0.22) !important;
+}
+:deep(.swal2-icon.swal2-success [class^="swal2-success-line"]) {
+  background-color: #8fd16f !important;
+}
+:deep(.swal2-title.ss-swal-title) {
+  font-size: 27px !important;
+  line-height: 1.2 !important;
+  font-weight: 400 !important;
+  color: #333 !important;
+  margin: 2px 0 10px !important;
+  padding: 0 !important;
+}
+:deep(.swal2-html-container.ss-swal-text) {
+  font-size: 15px !important;
+  line-height: 1.45 !important;
+  font-weight: 400 !important;
+  color: #666 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+:deep(.swal2-actions.ss-swal-actions) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  margin-top: 18px !important;
+  width: 100% !important;
+}
+:deep(.swal2-actions.ss-swal-actions-center) { justify-content: center !important; }
+:deep(.ss-swal-confirm-btn),
+:deep(.ss-swal-cancel-btn),
+:deep(.ss-swal-ok-btn) {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  min-width: 78px !important;
+  height: 38px !important;
+  padding: 0 18px !important;
+  border-radius: 3px !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 38px !important;
+  font-family: inherit !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: 0.15s ease !important;
+}
+:deep(.ss-swal-confirm-btn) { background: #27313b !important; color: #fff !important; }
+:deep(.ss-swal-confirm-btn:hover) { background: #1f2831 !important; }
+:deep(.ss-swal-cancel-btn) { background: #6c757d !important; color: #fff !important; }
+:deep(.ss-swal-cancel-btn:hover) { background: #5f6870 !important; }
+:deep(.ss-swal-ok-btn) { background: #8a3ffc !important; color: #fff !important; }
+:deep(.ss-swal-ok-btn:hover) { background: #7b32ed !important; }
+:deep(.ss-swal-confirm-btn:focus),
+:deep(.ss-swal-cancel-btn:focus),
+:deep(.ss-swal-ok-btn:focus) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 @media (max-width: 980px) {
   .ss-addr-grid { grid-template-columns: 1fr; }
   .ss-addr-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 900px){
+  .search-input{ min-width: 260px; width: 100%; }
+  .filters-bar{ gap: 10px; }
 }
 </style>

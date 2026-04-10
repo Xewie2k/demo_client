@@ -1,28 +1,71 @@
 import axios from "axios";
+import { getApiErrorMessage } from "@/services/apiError";
 
-// đổi baseURL theo BE của bạn nếu khác
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080",
+  baseURL:
+    import.meta?.env?.VITE_API_URL ||
+    import.meta?.env?.VITE_API_BASE_URL ||
+    "http://localhost:8080",
   withCredentials: true,
 });
 
 const PATH = "/api/admin/co-giay";
 
+function unwrap(res) {
+  return res?.data ?? res;
+}
+
+function throwApiError(error, fallback) {
+  throw new Error(getApiErrorMessage(error, fallback));
+}
+
 export default {
-  getAll() {
-    return api.get(PATH).then((r) => r.data);
+  async getAll() {
+    try {
+      const res = await api.get(PATH);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Không tải được danh sách cỏ giày.");
+    }
   },
 
-  create(payload) {
-    return api.post(PATH, payload).then((r) => r.data);
+  async getOne(id) {
+    try {
+      const res = await api.get(`${PATH}/${id}`);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Không tải được thông tin cỏ giày.");
+    }
   },
 
-  update(id, payload) {
-    return api.put(`${PATH}/${id}`, payload).then((r) => r.data);
+  async create(payload) {
+    try {
+      const res = await api.post(PATH, payload);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Thêm cỏ giày thất bại.");
+    }
   },
 
-  softDelete(id) {
-    // nếu BE của bạn dùng DELETE mềm
-    return api.delete(`${PATH}/${id}`).then((r) => r.data);
+  async update(id, payload) {
+    try {
+      const res = await api.put(`${PATH}/${id}`, payload);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Cập nhật cỏ giày thất bại.");
+    }
+  },
+
+  async softDelete(id) {
+    try {
+      const res = await api.delete(`${PATH}/${id}`);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Xóa cỏ giày thất bại.");
+    }
+  },
+
+  async remove(id) {
+    return this.softDelete(id);
   },
 };

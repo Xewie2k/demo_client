@@ -24,12 +24,16 @@ public class KichThuocService {
 
     public List<KichThuocResponse> all() {
         return repo.findAllByXoaMemFalseOrderByIdDesc()
-                .stream().map(this::toResponse).toList();
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     public List<KichThuocResponse> allActive() {
         return repo.findAllByXoaMemFalseAndTrangThaiTrueOrderByIdDesc()
-                .stream().map(this::toResponse).toList();
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     public KichThuocResponse one(Integer id) {
@@ -40,7 +44,9 @@ public class KichThuocService {
 
     @Transactional
     public KichThuocResponse create(KichThuocRequest req) {
-        if (req == null) throw new BadRequestEx("Thiếu dữ liệu tạo mới");
+        if (req == null) {
+            throw new BadRequestEx("Thiếu dữ liệu tạo mới");
+        }
 
         KichThuoc e = mapper.map(req, KichThuoc.class);
         e.setId(null);
@@ -53,17 +59,27 @@ public class KichThuocService {
 
     @Transactional
     public KichThuocResponse update(Integer id, KichThuocRequest req) {
-        if (req == null) throw new BadRequestEx("Thiếu dữ liệu cập nhật");
+        if (req == null) {
+            throw new BadRequestEx("Thiếu dữ liệu cập nhật");
+        }
 
         KichThuoc db = repo.findByIdAndXoaMemFalse(id)
                 .orElseThrow(() -> new NotFoundEx("Không tìm thấy KichThuoc id=" + id));
 
         boolean activeCu = isActive(db);
 
-        if (req.getTenKichThuoc() != null) db.setTenKichThuoc(req.getTenKichThuoc());
-        if (req.getGiaTriKichThuoc() != null) db.setGiaTriKichThuoc(req.getGiaTriKichThuoc());
-        if (req.getTrangThai() != null) db.setTrangThai(req.getTrangThai());
-        if (req.getXoaMem() != null) db.setXoaMem(req.getXoaMem());
+        if (req.getTenKichThuoc() != null) {
+            db.setTenKichThuoc(req.getTenKichThuoc());
+        }
+        if (req.getGiaTriKichThuoc() != null) {
+            db.setGiaTriKichThuoc(req.getGiaTriKichThuoc());
+        }
+        if (req.getTrangThai() != null) {
+            db.setTrangThai(req.getTrangThai());
+        }
+        if (req.getXoaMem() != null) {
+            db.setXoaMem(req.getXoaMem());
+        }
 
         applyDefaults(db);
         validateUpdate(db);
@@ -93,20 +109,37 @@ public class KichThuocService {
     }
 
     private void applyDefaults(KichThuoc e) {
-        if (e.getXoaMem() == null) e.setXoaMem(false);
-        if (e.getTrangThai() == null) e.setTrangThai(true);
-        if (e.getTenKichThuoc() != null) e.setTenKichThuoc(e.getTenKichThuoc().trim());
+        if (e.getXoaMem() == null) {
+            e.setXoaMem(false);
+        }
+        if (e.getTrangThai() == null) {
+            e.setTrangThai(true);
+        }
+        if (e.getTenKichThuoc() != null) {
+            e.setTenKichThuoc(e.getTenKichThuoc().trim());
+        }
     }
 
     private void validateCreate(KichThuoc e) {
         validateCommon(e);
-        if (e.getGiaTriKichThuoc() != null && repo.existsByGiaTriKichThuocAndXoaMemFalse(e.getGiaTriKichThuoc())) {
+
+        if (repo.existsByTenKichThuocIgnoreCaseAndXoaMemFalse(e.getTenKichThuoc())) {
+            throw new BadRequestEx("Tên kích thước đã tồn tại");
+        }
+
+        if (e.getGiaTriKichThuoc() != null
+                && repo.existsByGiaTriKichThuocAndXoaMemFalse(e.getGiaTriKichThuoc())) {
             throw new BadRequestEx("Giá trị kích thước đã tồn tại: " + e.getGiaTriKichThuoc());
         }
     }
 
     private void validateUpdate(KichThuoc e) {
         validateCommon(e);
+
+        if (repo.existsByTenKichThuocIgnoreCaseAndXoaMemFalseAndIdNot(e.getTenKichThuoc(), e.getId())) {
+            throw new BadRequestEx("Tên kích thước đã tồn tại");
+        }
+
         if (e.getGiaTriKichThuoc() != null
                 && repo.existsByGiaTriKichThuocAndXoaMemFalseAndIdNot(e.getGiaTriKichThuoc(), e.getId())) {
             throw new BadRequestEx("Giá trị kích thước đã tồn tại: " + e.getGiaTriKichThuoc());
@@ -121,6 +154,7 @@ public class KichThuocService {
         if (e.getGiaTriKichThuoc() != null) {
             BigDecimal min = new BigDecimal("38.0");
             BigDecimal max = new BigDecimal("45.0");
+
             if (e.getGiaTriKichThuoc().compareTo(min) < 0 || e.getGiaTriKichThuoc().compareTo(max) > 0) {
                 throw new BadRequestEx("gia_tri_kich_thuoc phải trong khoảng 38.0 đến 45.0");
             }

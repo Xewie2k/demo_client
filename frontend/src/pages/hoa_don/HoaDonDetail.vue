@@ -1,6 +1,4 @@
-<!-- File: src/pages/hoa_don/HoaDonDetail.vue -->
 <template>
-  <!-- Toast notification -->
   <div
     v-if="toast.show"
     :class="`position-fixed top-0 end-0 m-3 alert alert-${toast.type} shadow`"
@@ -19,7 +17,6 @@
   </div>
 
   <div class="order-page p-4 ss-page ss-font">
-    <!-- HEADER -->
     <div class="order-header mb-4">
       <div>
         <h5 class="fw-bold mb-1">Chi tiết đơn hàng</h5>
@@ -42,9 +39,7 @@
     </div>
 
     <div class="row g-4">
-      <!-- CỘT TRÁI -->
       <div class="col-lg-8">
-        <!-- TRẠNG THÁI -->
         <div class="card ss-card mb-4">
           <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -121,7 +116,6 @@
           </div>
         </div>
 
-        <!-- THÔNG TIN KHÁCH HÀNG -->
         <div class="row g-4 mb-4">
           <div class="col-md-6">
             <div class="card ss-card">
@@ -148,7 +142,6 @@
             </div>
           </div>
 
-          <!-- THÔNG TIN GIAO HÀNG -->
           <div class="col-md-6">
             <div class="card ss-card">
               <div class="card-body">
@@ -175,7 +168,6 @@
           </div>
         </div>
 
-        <!-- DANH SÁCH SẢN PHẨM -->
         <div class="card ss-card">
           <div class="card-body">
             <h6 class="fw-bold mb-3">
@@ -224,7 +216,6 @@
         </div>
       </div>
 
-      <!-- CỘT PHẢI -->
       <div class="col-lg-4">
         <div class="sticky-summary">
           <div class="card ss-card mb-3">
@@ -235,29 +226,29 @@
 
               <div class="ss-money">
                 <span>Tổng tiền hàng</span>
-                <b>{{ hoaDon.tongTien.toLocaleString() }} đ</b>
+                <b>{{ hoaDon.tongTienHang.toLocaleString("vi-VN") }} đ</b>
               </div>
 
               <div class="ss-money">
                 <span>Giảm giá</span>
-                <b class="text-success">- {{ hoaDon.giamGia.toLocaleString() }} đ</b>
+                <b class="text-success">- {{ hoaDon.giamGia.toLocaleString("vi-VN") }} đ</b>
               </div>
 
               <div class="ss-money">
                 <span>Phí vận chuyển</span>
-                <b>+ {{ hoaDon.phiVanChuyen.toLocaleString() }} đ</b>
+                <b>+ {{ hoaDon.phiVanChuyen.toLocaleString("vi-VN") }} đ</b>
               </div>
 
               <hr />
 
               <div class="ss-total">
                 <span>TỔNG TIỀN</span>
-                <b>{{ hoaDon.canThanhToan.toLocaleString() }} đ</b>
+                <b>{{ hoaDon.canThanhToan.toLocaleString("vi-VN") }} đ</b>
               </div>
             </div>
           </div>
 
-          <div class="card ss-card mt-3">
+          <div class="card ss-card mt-3" v-if="!anLichSuThanhToanCOD">
             <div class="card-body payment-history-card">
               <h6 class="fw-bold mb-3">
                 <i class="bi bi-clock-history me-1"></i>
@@ -276,7 +267,7 @@
                 <div class="fw-bold">{{ item.loai }}</div>
 
                 <div class="text-end">
-                  <div class="fw-bold text-danger">{{ item.soTien.toLocaleString() }} đ</div>
+                  <div class="fw-bold text-danger">{{ item.soTien.toLocaleString("vi-VN") }} đ</div>
 
                   <div class="text-muted small">
                     {{ item.thoiGian }}
@@ -288,7 +279,6 @@
             </div>
           </div>
 
-          <!-- YÊU CẦU HỦY -->
           <div
             v-if="laAdmin() && selectedHD.trangThai === 7"
             class="card ss-card mt-3 border-danger"
@@ -323,7 +313,6 @@
             </div>
           </div>
 
-          <!-- HOÀN PHÍ -->
           <div
             v-if="laAdmin() && selectedHD.daHoanPhi === false"
             class="card ss-card mt-3 border-warning"
@@ -364,7 +353,6 @@
     </div>
   </div>
 
-  <!-- MODAL EDIT -->
   <div class="modal fade" id="modalEdit" tabindex="-1">
     <div class="modal-dialog modal-lg">
       <div class="modal-content">
@@ -541,7 +529,6 @@
     </div>
   </div>
 
-  <!-- MODAL THANH TOÁN -->
   <div class="modal fade" id="modalThanhToan" tabindex="-1">
     <div class="modal-dialog">
       <div class="modal-content p-3">
@@ -552,8 +539,8 @@
 
         <div class="modal-body">
           <div class="d-flex justify-content-between mb-3">
-            <span>Tổng tiền hàng</span>
-            <b class="text-danger">{{ hoaDon.canThanhToan.toLocaleString() }} đ</b>
+            <span>Tổng cần thanh toán</span>
+            <b class="text-danger">{{ hoaDon.canThanhToan.toLocaleString("vi-VN") }} đ</b>
           </div>
 
           <div class="text-center mb-3">
@@ -603,7 +590,7 @@
 
           <div class="d-flex justify-content-between mb-3">
             <span>Tiền thiếu</span>
-            <b class="text-danger">{{ tienThieuThanhToan.toLocaleString() }} đ</b>
+            <b class="text-danger">{{ tienThieuThanhToan.toLocaleString("vi-VN") }} đ</b>
           </div>
 
           <button class="btn btn-primary" type="button" @click="checkQuyenThaoTac(xacNhanThanhToan)">
@@ -614,7 +601,6 @@
     </div>
   </div>
 
-  <!-- MODAL TỪ CHỐI HỦY -->
   <div
     v-if="showTuChoiHuyModal"
     class="modal d-block"
@@ -631,7 +617,7 @@
         <div class="modal-body">
           <p class="text-muted">
             Từ chối yêu cầu hủy đơn <strong>{{ selectedHD.maHD }}</strong
-            >? Đơn sẽ về lại trạng thái Chờ xác nhận.
+            >? Đơn sẽ về lại trạng thái Chưa xác nhận.
           </p>
 
           <div class="mb-3">
@@ -659,7 +645,6 @@
     </div>
   </div>
 
-  <!-- MODAL LỊCH SỬ -->
   <div class="modal fade" id="modalLichSu" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
       <div class="modal-content history-modal">
@@ -711,11 +696,16 @@ const props = defineProps({
   id: { type: [String, Number], required: false },
 });
 
-/* =========================================================
- * ✅ CHẶN THAO TÁC KHI NHÂN VIÊN CHƯA MỞ CA
- * - ADMIN: luôn được thao tác
- * - NHÂN VIÊN: bắt buộc ss_has_active_shift=true
- * ========================================================= */
+const TRANG_THAI_HOA_DON = Object.freeze({
+  CHUA_XAC_NHAN: 1,
+  DA_XAC_NHAN: 2,
+  CHO_GIAO: 3,
+  DANG_GIAO: 4,
+  DA_HOAN_THANH: 5,
+  DA_HUY: 6,
+  YEU_CAU_HUY: 7,
+});
+
 const normalizeRole = (role) => {
   const r = String(role || "").trim().toUpperCase();
   if (r === "STAFF") return "NHAN_VIEN";
@@ -817,14 +807,12 @@ const checkQuyenAdmin = async (callback) => {
 
 const tab = ref("donhang");
 
-// Address refs for delivery tab
 const provinces = ref([]);
 const districts = ref([]);
 const wards = ref([]);
 const addressCodes = reactive({ city: "", district: "", ward: "" });
 const addressNames = reactive({ city: "", district: "", ward: "" });
 
-// Cancel / refund refs
 const showTuChoiHuyModal = ref(false);
 const tuChoiLyDo = ref("");
 const tuChoiLoading = ref(false);
@@ -834,7 +822,7 @@ const hoanPhiLoading = ref(false);
 const form = ref({
   maHD: "",
   ngayTao: "",
-  trangThai: 1,
+  trangThai: TRANG_THAI_HOA_DON.CHUA_XAC_NHAN,
   tenKhachHang: "",
   sdt: "",
   email: "",
@@ -850,17 +838,45 @@ const API_HD = "/api/admin/hoa-don";
 const API_NV = "/api/admin/nhan-vien";
 
 const trangThaiList = [
-  { value: 1, label: "Chờ xác nhận", icon: "bi-hourglass" },
-  { value: 2, label: "Chờ giao hàng", icon: "bi-box" },
-  { value: 3, label: "Đang vận chuyển", icon: "bi-truck" },
-  { value: 4, label: "Đã giao hàng", icon: "bi-check-circle" },
-  { value: 5, label: "Hoàn thành", icon: "bi-flag" },
-  { value: 6, label: "Đã hủy", icon: "bi-x-circle" },
-  { value: 7, label: "Yêu cầu hủy", icon: "bi-exclamation-triangle" },
+  {
+    value: TRANG_THAI_HOA_DON.CHUA_XAC_NHAN,
+    label: "Chưa xác nhận",
+    icon: "bi-hourglass",
+  },
+  {
+    value: TRANG_THAI_HOA_DON.DA_XAC_NHAN,
+    label: "Đã xác nhận",
+    icon: "bi-check",
+  },
+  {
+    value: TRANG_THAI_HOA_DON.CHO_GIAO,
+    label: "Chờ giao",
+    icon: "bi-box",
+  },
+  {
+    value: TRANG_THAI_HOA_DON.DANG_GIAO,
+    label: "Đang giao",
+    icon: "bi-truck",
+  },
+  {
+    value: TRANG_THAI_HOA_DON.DA_HOAN_THANH,
+    label: "Đã hoàn thành",
+    icon: "bi-flag",
+  },
+  {
+    value: TRANG_THAI_HOA_DON.DA_HUY,
+    label: "Đã hủy",
+    icon: "bi-x-circle",
+  },
+  {
+    value: TRANG_THAI_HOA_DON.YEU_CAU_HUY,
+    label: "Yêu cầu hủy",
+    icon: "bi-exclamation-triangle",
+  },
 ];
 
 const selectedHD = ref({
-  trangThai: 1,
+  trangThai: TRANG_THAI_HOA_DON.CHUA_XAC_NHAN,
   sanPham: [],
   nguoiTaoId: null,
   nguoiCapNhatId: null,
@@ -885,27 +901,59 @@ const isTaiQuay = computed(() => {
   return type === 0 || type === "0" || type === false;
 });
 
+const anLichSuThanhToanCOD = computed(() => {
+  const loaiTT = selectedHD.value?.loaiThanhToan;
+  const trangThai = Number(selectedHD.value?.trangThai ?? TRANG_THAI_HOA_DON.CHUA_XAC_NHAN);
+  return (
+    loaiTT === 0 &&
+    trangThai >= TRANG_THAI_HOA_DON.CHUA_XAC_NHAN &&
+    trangThai <= TRANG_THAI_HOA_DON.DANG_GIAO
+  );
+});
 
 const trangThaiHienTaiDungDeHienThi = computed(() => {
-  const t = Number(selectedHD.value?.trangThai ?? 1);
+  const t = Number(
+    selectedHD.value?.trangThai ?? TRANG_THAI_HOA_DON.CHUA_XAC_NHAN
+  );
 
-  if (t === 6 || t === 7) return t;
-  if (isTaiQuay.value) return t >= 5 ? 5 : 1;
+  if (
+    t === TRANG_THAI_HOA_DON.DA_HUY ||
+    t === TRANG_THAI_HOA_DON.YEU_CAU_HUY
+  ) {
+    return t;
+  }
+
+  if (isTaiQuay.value) {
+    return t >= TRANG_THAI_HOA_DON.DA_HOAN_THANH
+      ? TRANG_THAI_HOA_DON.DA_HOAN_THANH
+      : TRANG_THAI_HOA_DON.CHUA_XAC_NHAN;
+  }
+
   return t;
 });
 
 const danhSachTrangThaiHopLe = computed(() => {
   const current = Number(trangThaiHienTaiDungDeHienThi.value);
 
-  if (current === 6 || current === 7) {
+  if (
+    current === TRANG_THAI_HOA_DON.DA_HUY ||
+    current === TRANG_THAI_HOA_DON.YEU_CAU_HUY
+  ) {
     return trangThaiList.filter((st) => st.value === current);
   }
 
   if (isTaiQuay.value) {
-    const ds = trangThaiList.filter((st) => st.value === 1 || st.value === 5);
+    const ds = trangThaiList.filter(
+      (st) =>
+        st.value === TRANG_THAI_HOA_DON.CHUA_XAC_NHAN ||
+        st.value === TRANG_THAI_HOA_DON.DA_HOAN_THANH
+    );
+
     return ds.filter((st) => {
       if (st.value === current) return true;
-      if (current === 1) return st.value === 5;
+      if (current === TRANG_THAI_HOA_DON.CHUA_XAC_NHAN) {
+        return st.value === TRANG_THAI_HOA_DON.DA_HOAN_THANH;
+      }
       return false;
     });
   }
@@ -914,23 +962,19 @@ const danhSachTrangThaiHopLe = computed(() => {
     if (st.value === current) return true;
 
     switch (current) {
-      case 1:
-        return st.value === 2;
-      case 2:
-        return st.value === 3;
-      case 3:
-        return st.value === 4;
-      case 4:
-        return st.value === 5;
+      case TRANG_THAI_HOA_DON.CHUA_XAC_NHAN:
+        return st.value === TRANG_THAI_HOA_DON.DA_XAC_NHAN;
+      case TRANG_THAI_HOA_DON.DA_XAC_NHAN:
+        return st.value === TRANG_THAI_HOA_DON.CHO_GIAO;
+      case TRANG_THAI_HOA_DON.CHO_GIAO:
+        return st.value === TRANG_THAI_HOA_DON.DANG_GIAO;
+      case TRANG_THAI_HOA_DON.DANG_GIAO:
+        return st.value === TRANG_THAI_HOA_DON.DA_HOAN_THANH;
       default:
         return false;
     }
   });
 });
-
-/* =========================================================
- * ✅ LẤY NHÂN VIÊN / TOKEN ĐĂNG NHẬP
- * ========================================================= */
 
 const base64UrlDecode = (str) => {
   try {
@@ -1272,10 +1316,6 @@ const taoConfigHeaderNhanVien = () => {
   return Object.keys(headers).length ? { headers } : {};
 };
 
-/* =========================
- * ✅ LỊCH SỬ + NGƯỜI THAO TÁC
- * ========================= */
-
 const phuongThuc = ref("TM");
 const tienKhachDua = ref(0);
 const tienKhachDuaHienThi = ref("");
@@ -1576,7 +1616,7 @@ const boSungLichSuMacDinhTuHoaDon = (arr, dataHoaDon) => {
     ds.push({
       thoiGian: new Date(dataHoaDon.ngayTao).toLocaleString("vi-VN"),
       noiDung: "Tạo đơn hàng",
-      trangThaiMoi: 1,
+      trangThaiMoi: TRANG_THAI_HOA_DON.CHUA_XAC_NHAN,
       nguoiThaoTacRaw: "",
       nguoiThaoTac: "",
       nguoiId: nguoiTao,
@@ -1585,10 +1625,6 @@ const boSungLichSuMacDinhTuHoaDon = (arr, dataHoaDon) => {
 
   return sapXepLichSuGiamDan(ds);
 };
-
-/* =========================
- * ✅ MODAL + UPDATE
- * ========================= */
 
 const tachDiaChiCuThe = (diaChi) => {
   const parts = String(diaChi || "")
@@ -1653,7 +1689,9 @@ const updateHoaDon = async () => {
     if (!id) return;
 
     const next = Number(form.value.trangThai);
-    const current = Number(selectedHD.value?.trangThai ?? 1);
+    const current = Number(
+      selectedHD.value?.trangThai ?? TRANG_THAI_HOA_DON.CHUA_XAC_NHAN
+    );
 
     if (next === current) {
       showToast("Trạng thái không thay đổi!", "warning");
@@ -1727,20 +1765,24 @@ const updateThongTinKhachHangVaGiaoHang = async () => {
   }
 };
 
-/* =========================
- * ✅ TÍNH TIỀN + THANH TOÁN
- * ========================= */
-
 const hoaDon = computed(() => {
-  const tongTien = Number(selectedHD.value.tongTien ?? 0);
+  const tongTienTuBe = Number(selectedHD.value.tongTien ?? 0);
   const giamGia = Number(selectedHD.value.giamGia ?? 0);
   const phiVanChuyen = Number(selectedHD.value.phiVanChuyen ?? 0);
 
+  const tongTienHang = Array.isArray(selectedHD.value.sanPham)
+    ? selectedHD.value.sanPham.reduce(
+        (sum, sp) => sum + Number(sp?.thanhTien ?? 0),
+        0
+      )
+    : 0;
+
   return {
-    tongTien,
+    tongTienHang,
+    tongTien: tongTienTuBe,
     giamGia,
     phiVanChuyen,
-    canThanhToan: tongTien - giamGia + phiVanChuyen,
+    canThanhToan: Math.max(0, tongTienTuBe - giamGia),
   };
 });
 
@@ -1792,8 +1834,8 @@ const xacNhanThanhToan = async () => {
       }
     } else {
       const trangThaiSauThanhToan = Math.min(
-        5,
-        Number(selectedHD.value.trangThai || 1) + 1
+        TRANG_THAI_HOA_DON.DA_HOAN_THANH,
+        Number(selectedHD.value.trangThai || TRANG_THAI_HOA_DON.CHUA_XAC_NHAN) + 1
       );
 
       await apiClient.put(
@@ -1825,27 +1867,43 @@ const xacNhanThanhToan = async () => {
   }
 };
 
-/* =========================
- * ✅ TIMELINE + STATUS 6/7
- * ========================= */
-
 const trangThaiHienThi = computed(() => {
-  const current = Number(trangThaiHienTaiDungDeHienThi.value || 1);
+  const current = Number(
+    trangThaiHienTaiDungDeHienThi.value || TRANG_THAI_HOA_DON.CHUA_XAC_NHAN
+  );
 
-  if (current === 6) {
-    return trangThaiList.filter((st) => st.value === 1 || st.value === 6);
+  if (current === TRANG_THAI_HOA_DON.DA_HUY) {
+    return trangThaiList.filter(
+      (st) =>
+        st.value === TRANG_THAI_HOA_DON.CHUA_XAC_NHAN ||
+        st.value === TRANG_THAI_HOA_DON.DA_HUY
+    );
   }
 
-  if (current === 7) {
-    return trangThaiList.filter((st) => st.value === 1 || st.value === 7);
+  if (current === TRANG_THAI_HOA_DON.YEU_CAU_HUY) {
+    return trangThaiList.filter(
+      (st) =>
+        st.value === TRANG_THAI_HOA_DON.CHUA_XAC_NHAN ||
+        st.value === TRANG_THAI_HOA_DON.YEU_CAU_HUY
+    );
   }
 
   if (isTaiQuay.value) {
-    if (current >= 5) return trangThaiList.filter((st) => st.value === 1 || st.value === 5);
-    return trangThaiList.filter((st) => st.value === 1);
+    if (current >= TRANG_THAI_HOA_DON.DA_HOAN_THANH) {
+      return trangThaiList.filter(
+        (st) =>
+          st.value === TRANG_THAI_HOA_DON.CHUA_XAC_NHAN ||
+          st.value === TRANG_THAI_HOA_DON.DA_HOAN_THANH
+      );
+    }
+    return trangThaiList.filter(
+      (st) => st.value === TRANG_THAI_HOA_DON.CHUA_XAC_NHAN
+    );
   }
 
-  return trangThaiList.filter((st) => st.value <= current && st.value <= 5);
+  return trangThaiList.filter(
+    (st) => st.value <= current && st.value <= TRANG_THAI_HOA_DON.DA_HOAN_THANH
+  );
 });
 
 const metaTheoTrangThai = computed(() => {
@@ -1879,15 +1937,29 @@ const metaTheoTrangThai = computed(() => {
 const metaTrangThai = (value) => metaTheoTrangThai.value?.[value] || null;
 
 const getStepIcon = (st) => {
-  if (st.value === 1 && selectedHD.value.trangThai === 6) return "bi-hourglass";
-  if (st.value === 1 && selectedHD.value.trangThai === 7) return "bi-hourglass";
-  if (st.value === 6 && selectedHD.value.trangThai === 6) return "bi-x-circle-fill";
+  if (
+    st.value === TRANG_THAI_HOA_DON.CHUA_XAC_NHAN &&
+    selectedHD.value.trangThai === TRANG_THAI_HOA_DON.DA_HUY
+  ) {
+    return "bi-hourglass";
+  }
+
+  if (
+    st.value === TRANG_THAI_HOA_DON.CHUA_XAC_NHAN &&
+    selectedHD.value.trangThai === TRANG_THAI_HOA_DON.YEU_CAU_HUY
+  ) {
+    return "bi-hourglass";
+  }
+
+  if (
+    st.value === TRANG_THAI_HOA_DON.DA_HUY &&
+    selectedHD.value.trangThai === TRANG_THAI_HOA_DON.DA_HUY
+  ) {
+    return "bi-x-circle-fill";
+  }
+
   return st.icon;
 };
-
-/* =========================
- * ✅ HỦY / TỪ CHỐI HỦY / HOÀN PHÍ
- * ========================= */
 
 const xacNhanHuyTheoYeuCau = async () => {
   if (!confirm("Xác nhận hủy đơn hàng theo yêu cầu của khách?")) return;
@@ -1957,10 +2029,6 @@ const tuChoiHuy = async () => {
   }
 };
 
-/* =========================
- * ✅ ADDRESS SERVICE
- * ========================= */
-
 const onCityChange = async () => {
   addressCodes.district = "";
   addressCodes.ward = "";
@@ -1994,10 +2062,6 @@ const onWardChange = () => {
   const w = wards.value.find((x) => x.code == addressCodes.ward);
   addressNames.ward = w?.name || "";
 };
-
-/* =========================
- * ✅ HEADER INFO
- * ========================= */
 
 const thongTinTaoBoiText = computed(() => {
   const arr = [...(lichSuThaoTac.value || [])].sort((a, b) => {
@@ -2041,10 +2105,6 @@ const thongTinCapNhatGanNhatText = computed(() => {
   return `${last.thoiGian}${whoText}`;
 });
 
-/* =========================
- * ✅ LOAD DATA
- * ========================= */
-
 const loadChiTiet = async (id) => {
   const { data } = await apiClient.get(`${API_HD}/${id}`, taoConfigHeaderNhanVien());
 
@@ -2059,12 +2119,15 @@ const loadChiTiet = async (id) => {
     diaChi: data.diaChiKhachHang ?? "",
     ghiChu: data.ghiChu ?? "",
     loaiDon: data.loaiDon,
+    loaiThanhToan: data.loaiThanhToan ?? null,
 
     tongTien: Number(data.tongTien ?? 0),
     giamGia: Number(data.tongTienGiam ?? 0),
     phiVanChuyen: Number(data.phiVanChuyen ?? 0),
 
-    trangThai: Number(data.trangThaiHienTai ?? 1),
+    trangThai: Number(
+      data.trangThaiHienTai ?? TRANG_THAI_HOA_DON.CHUA_XAC_NHAN
+    ),
     sanPham: Array.isArray(data.chiTietHoaDon)
       ? data.chiTietHoaDon.map((sp) => ({
           id: sp.id,
@@ -2152,8 +2215,8 @@ const inHoaDon = () => {
         <td>${index + 1}</td>
         <td>${sp.tenSanPham}</td>
         <td>${sp.soLuong}</td>
-        <td>${sp.donGia.toLocaleString()} đ</td>
-        <td>${sp.thanhTien.toLocaleString()} đ</td>
+        <td>${sp.donGia.toLocaleString("vi-VN")} đ</td>
+        <td>${sp.thanhTien.toLocaleString("vi-VN")} đ</td>
       </tr>
     `;
   });
@@ -2165,12 +2228,12 @@ const inHoaDon = () => {
       <br/>
 
       <div class="right">
-        <div>Tổng tiền hàng: <b>${hoaDon.value.tongTien.toLocaleString()} đ</b></div>
-        <div>Giảm giá: <b>- ${hoaDon.value.giamGia.toLocaleString()} đ</b></div>
-        <div>Phí vận chuyển: <b>+ ${hoaDon.value.phiVanChuyen.toLocaleString()} đ</b></div>
+        <div>Tổng tiền hàng: <b>${hoaDon.value.tongTienHang.toLocaleString("vi-VN")} đ</b></div>
+        <div>Giảm giá: <b>- ${hoaDon.value.giamGia.toLocaleString("vi-VN")} đ</b></div>
+        <div>Phí vận chuyển: <b>+ ${hoaDon.value.phiVanChuyen.toLocaleString("vi-VN")} đ</b></div>
         <hr/>
         <div class="bold">
-          Tổng thanh toán: ${hoaDon.value.canThanhToan.toLocaleString()} đ
+          Tổng thanh toán: ${hoaDon.value.canThanhToan.toLocaleString("vi-VN")} đ
         </div>
       </div>
 
@@ -2293,7 +2356,6 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 
-/* ===== STATUS ===== */
 .ss-status {
   display: flex;
   justify-content: space-between;

@@ -126,7 +126,7 @@
                 <div class="d-flex align-items-center justify-content-center gap-2">
                   <div
                     class="form-check form-switch mb-0"
-                    title="Dừng đợt giảm giá"
+                    :title="item.trangThai ? 'Ngừng kích hoạt' : 'Kích hoạt'"
                     v-if="item.statusKey !== 'ended'"
                   >
                     <input
@@ -135,6 +135,7 @@
                       :checked="item.trangThai"
                       @click.prevent="toggleStatus(item)"
                       style="cursor: pointer;"
+                      :disabled="switchLoadingIds.has(item.id)"
                     />
                   </div>
 
@@ -179,10 +180,12 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
+import Swal from "sweetalert2";
 import { discountService } from "@/services/khuyen_mai/dot_giam_gia/discountService";
 
 const router = useRouter();
 const rawDiscounts = ref([]);
+const switchLoadingIds = reactive(new Set());
 
 const filters = reactive({
   keyword: "",
@@ -214,10 +217,6 @@ const formatDate = (dateArrOrStr) => {
   return d.toLocaleDateString("vi-VN");
 };
 
-/* ✅ SORT “đợt tốt nhất” lên trước:
-   - Active > Upcoming > Ended
-   - Trong cùng nhóm: mucUuTien desc -> giaTriGiamGia desc -> ngayBatDau desc -> id desc
-*/
 const sortDiscountsForList = (arr) => {
   const order = { active: 0, upcoming: 1, ended: 2 };
 
@@ -240,6 +239,161 @@ const sortDiscountsForList = (arr) => {
 
     return Number(b.id ?? 0) - Number(a.id ?? 0);
   });
+};
+
+const getErrorMessage = (error, fallback) => {
+  const message =
+    error?.message ||
+    error?.response?.data?.message ||
+    error?.response?.data?.error ||
+    error?.response?.data?.detail;
+  return typeof message === "string" && message.trim() ? message.trim() : fallback;
+};
+
+const getTrangThaiLabel = (value) => {
+  return value ? "Đang diễn ra" : "Đã kết thúc";
+};
+
+const escapeHtml = (value) => {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+};
+
+function applySwalButtonStyle(button, type = "confirm") {
+  if (!button) return;
+
+  button.style.appearance = "none";
+  button.style.webkitAppearance = "none";
+  button.style.border = "0";
+  button.style.outline = "none";
+  button.style.boxShadow = "none";
+  button.style.borderRadius = "3px";
+  button.style.minWidth = "78px";
+  button.style.height = "38px";
+  button.style.padding = "0 18px";
+  button.style.fontSize = "14px";
+  button.style.fontWeight = "400";
+  button.style.lineHeight = "38px";
+  button.style.fontFamily = "inherit";
+  button.style.display = "inline-flex";
+  button.style.alignItems = "center";
+  button.style.justifyContent = "center";
+  button.style.cursor = "pointer";
+
+  if (type === "confirm") {
+    button.style.background = "#27313b";
+    button.style.color = "#fff";
+  } else if (type === "cancel") {
+    button.style.background = "#6c757d";
+    button.style.color = "#fff";
+  } else if (type === "ok") {
+    button.style.background = "#8a3ffc";
+    button.style.color = "#fff";
+  }
+}
+
+function getSwalBase(type = "confirm") {
+  return {
+    width: 500,
+    padding: "22px 20px 24px",
+    background: "#ffffff",
+    backdrop: "rgba(0,0,0,0.45)",
+    allowOutsideClick: false,
+    allowEscapeKey: true,
+    buttonsStyling: false,
+    reverseButtons: false,
+    focusConfirm: false,
+    customClass: {
+      popup: "ss-swal-popup",
+      icon: "ss-swal-icon",
+      title: "ss-swal-title",
+      htmlContainer: "ss-swal-text",
+      actions: type === "success" ? "ss-swal-actions ss-swal-actions-center" : "ss-swal-actions",
+      confirmButton: type === "success" ? "ss-swal-ok-btn" : "ss-swal-confirm-btn",
+      cancelButton: "ss-swal-cancel-btn",
+    },
+    didOpen: (popup) => {
+      const actions = popup.querySelector(".swal2-actions");
+      const confirmBtn = popup.querySelector(".swal2-confirm");
+      const cancelBtn = popup.querySelector(".swal2-cancel");
+      const title = popup.querySelector(".swal2-title");
+      const html = popup.querySelector(".swal2-html-container");
+      const icon = popup.querySelector(".swal2-icon");
+
+      popup.style.borderRadius = "6px";
+      popup.style.boxShadow = "0 18px 48px rgba(0, 0, 0, 0.22)";
+      popup.style.padding = "22px 20px 24px";
+
+      if (actions) {
+        actions.style.display = "flex";
+        actions.style.alignItems = "center";
+        actions.style.justifyContent = "center";
+        actions.style.gap = "10px";
+        actions.style.marginTop = "18px";
+        actions.style.width = "100%";
+      }
+
+      if (title) {
+        title.style.fontSize = "27px";
+        title.style.lineHeight = "1.2";
+        title.style.fontWeight = "400";
+        title.style.color = "#333";
+        title.style.margin = "2px 0 10px";
+        title.style.padding = "0";
+      }
+
+      if (html) {
+        html.style.fontSize = "15px";
+        html.style.lineHeight = "1.45";
+        html.style.fontWeight = "400";
+        html.style.color = "#666";
+        html.style.margin = "0";
+        html.style.padding = "0";
+      }
+
+      if (icon) {
+        icon.style.margin = "8px auto 10px";
+      }
+
+      if (type === "success") {
+        applySwalButtonStyle(confirmBtn, "ok");
+      } else {
+        applySwalButtonStyle(confirmBtn, "confirm");
+        applySwalButtonStyle(cancelBtn, "cancel");
+      }
+    },
+  };
+}
+
+const buildToggleConfirmHtml = (item, nextStatus) => {
+  const fromLabel = getTrangThaiLabel(item.trangThai);
+  const toLabel = getTrangThaiLabel(nextStatus);
+
+  return `
+    <div style="font-weight:400;color:#666;line-height:1.5;">
+      <div style="margin-bottom:10px;font-weight:400;">
+        Bạn có muốn chuyển trạng thái đợt giảm giá này không?
+      </div>
+      <div style="border:1px solid rgba(255,77,79,0.14);background:linear-gradient(180deg, rgba(255,77,79,0.04), rgba(17,24,39,0.02));border-radius:10px;padding:12px 14px;text-align:left;">
+        <div style="font-size:15px;color:#333;font-weight:400;margin-bottom:4px;">
+          ${escapeHtml(item.tenDotGiamGia || "—")}
+        </div>
+        <div style="font-size:13px;color:#666;font-weight:400;margin-bottom:8px;">
+          Mã đợt: ${escapeHtml(item.maDotGiamGia || "—")}
+        </div>
+        <div style="font-size:13px;color:#666;font-weight:400;">
+          Trạng thái sẽ đổi từ
+          <span style="color:#b42324;font-weight:400;">${escapeHtml(fromLabel)}</span>
+          sang
+          <span style="color:#b42324;font-weight:400;">${escapeHtml(toLabel)}</span>
+        </div>
+      </div>
+    </div>
+  `;
 };
 
 const fetchDiscounts = async () => {
@@ -351,12 +505,23 @@ const viewDetail = (id) => {
 };
 
 const toggleStatus = async (item) => {
-  const newStatus = !item.trangThai;
-  const action = newStatus ? "kích hoạt" : "ngừng kích hoạt";
+  if (switchLoadingIds.has(item.id)) return;
 
-  if (!confirm(`Bạn có chắc muốn ${action} đợt giảm giá "${item.tenDotGiamGia}"?`)) {
-    return;
-  }
+  const newStatus = !item.trangThai;
+
+  const result = await Swal.fire({
+    ...getSwalBase("confirm"),
+    icon: "question",
+    title: "Xác nhận?",
+    html: buildToggleConfirmHtml(item, newStatus),
+    confirmButtonText: "Đồng ý",
+    cancelButtonText: "Hủy",
+    showCancelButton: true,
+  });
+
+  if (!result.isConfirmed) return;
+
+  switchLoadingIds.add(item.id);
 
   try {
     const [fullInfo, details] = await Promise.all([
@@ -374,9 +539,36 @@ const toggleStatus = async (item) => {
 
     await discountService.update(item.id, payload);
     await fetchDiscounts();
+
+    await Swal.fire({
+      ...getSwalBase("success"),
+      icon: "success",
+      title: "Thành công!",
+      html: `
+        <div style="font-weight:400;color:#666;line-height:1.5;">
+          Đã chuyển trạng thái đợt giảm giá
+          <span style="font-weight:400;color:#333;">${escapeHtml(item.tenDotGiamGia || item.maDotGiamGia || "")}</span>
+          từ
+          <span style="font-weight:400;color:#b42324;">${escapeHtml(getTrangThaiLabel(!newStatus))}</span>
+          sang
+          <span style="font-weight:400;color:#b42324;">${escapeHtml(getTrangThaiLabel(newStatus))}</span>.
+        </div>
+      `,
+      confirmButtonText: "OK",
+      showCancelButton: false,
+    });
   } catch (e) {
     console.error(e);
-    alert("Lỗi cập nhật trạng thái: " + (e.response?.data?.message || e.message));
+    await Swal.fire({
+      ...getSwalBase("confirm"),
+      icon: "error",
+      title: "Thất bại!",
+      text: getErrorMessage(e, "Cập nhật trạng thái đợt giảm giá thất bại."),
+      confirmButtonText: "OK",
+      showCancelButton: false,
+    });
+  } finally {
+    switchLoadingIds.delete(item.id);
   }
 };
 
@@ -695,5 +887,130 @@ onMounted(() => {
 .form-check-input:checked {
   background-color: #ff4d4f;
   border-color: #ff4d4f;
+}
+
+:deep(.swal2-popup.ss-swal-popup) {
+  width: 500px !important;
+  max-width: 500px !important;
+  border-radius: 6px !important;
+  padding: 22px 20px 24px !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22) !important;
+  font-family: inherit !important;
+}
+
+:deep(.swal2-icon.ss-swal-icon) {
+  margin: 8px auto 10px !important;
+}
+
+:deep(.swal2-icon.swal2-question.ss-swal-icon) {
+  width: 72px !important;
+  height: 72px !important;
+  border-width: 3px !important;
+  color: #9db5c2 !important;
+  border-color: #9db5c2 !important;
+}
+
+:deep(.swal2-icon.swal2-success.ss-swal-icon) {
+  width: 72px !important;
+  height: 72px !important;
+  border-width: 3px !important;
+  border-color: #d8efcf !important;
+  color: #8fd16f !important;
+}
+
+:deep(.swal2-icon.swal2-success .swal2-success-ring) {
+  border-color: rgba(143, 209, 111, 0.22) !important;
+}
+
+:deep(.swal2-icon.swal2-success [class^="swal2-success-line"]) {
+  background-color: #8fd16f !important;
+}
+
+:deep(.swal2-title.ss-swal-title) {
+  font-size: 27px !important;
+  line-height: 1.2 !important;
+  font-weight: 400 !important;
+  color: #333 !important;
+  margin: 2px 0 10px !important;
+  padding: 0 !important;
+}
+
+:deep(.swal2-html-container.ss-swal-text) {
+  font-size: 15px !important;
+  line-height: 1.45 !important;
+  font-weight: 400 !important;
+  color: #666 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+:deep(.swal2-actions.ss-swal-actions) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  margin-top: 18px !important;
+  width: 100% !important;
+}
+
+:deep(.swal2-actions.ss-swal-actions-center) {
+  justify-content: center !important;
+}
+
+:deep(.ss-swal-confirm-btn),
+:deep(.ss-swal-cancel-btn),
+:deep(.ss-swal-ok-btn) {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  min-width: 78px !important;
+  height: 38px !important;
+  padding: 0 18px !important;
+  border-radius: 3px !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 38px !important;
+  font-family: inherit !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: 0.15s ease !important;
+}
+
+:deep(.ss-swal-confirm-btn) {
+  background: #27313b !important;
+  color: #fff !important;
+}
+
+:deep(.ss-swal-confirm-btn:hover) {
+  background: #1f2831 !important;
+}
+
+:deep(.ss-swal-cancel-btn) {
+  background: #6c757d !important;
+  color: #fff !important;
+}
+
+:deep(.ss-swal-cancel-btn:hover) {
+  background: #5f6870 !important;
+}
+
+:deep(.ss-swal-ok-btn) {
+  background: #8a3ffc !important;
+  color: #fff !important;
+}
+
+:deep(.ss-swal-ok-btn:hover) {
+  background: #7b32ed !important;
+}
+
+:deep(.ss-swal-confirm-btn:focus),
+:deep(.ss-swal-cancel-btn:focus),
+:deep(.ss-swal-ok-btn:focus) {
+  outline: none !important;
+  box-shadow: none !important;
 }
 </style>

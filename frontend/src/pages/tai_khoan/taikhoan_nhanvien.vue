@@ -1,4 +1,3 @@
-<!-- File: src/pages/tai_khoan/nhan_vien/taikhoan_nhanvien.vue -->
 <template>
   <div class="ss-page ss-font">
     <div class="ss-head">
@@ -7,37 +6,15 @@
       </div>
     </div>
 
-    <div v-if="pageToast.show" class="ss-page-toast" :class="pageToast.type">
-      <span class="material-icons-outlined ss-page-toast-ic">
-        {{ pageToast.type === "success" ? "check_circle" : pageToast.type === "error" ? "error" : "info" }}
-      </span>
-      <div class="ss-page-toast-msg">{{ pageToast.msg }}</div>
-      <button class="ss-page-toast-x" type="button" @click="hidePageToast">×</button>
-    </div>
-
-    <div v-if="confirmTrangThai.show" class="ss-confirm-toast">
-      <span class="material-icons-outlined ss-confirm-ic">help_outline</span>
-      <div class="ss-confirm-msg">{{ confirmTrangThai.msg }}</div>
-
-      <div class="ss-confirm-actions">
-        <button
-          class="ss-confirm-btn ss-confirm-cancel"
-          type="button"
-          @click="cancelConfirmTrangThai"
-          :disabled="confirmTrangThai.loading"
-        >
-          Hủy
-        </button>
-        <button
-          class="ss-confirm-btn ss-confirm-ok"
-          type="button"
-          @click="okConfirmTrangThai"
-          :disabled="confirmTrangThai.loading"
-        >
-          {{ confirmTrangThai.loading ? "Đang cập nhật..." : "Xác nhận" }}
-        </button>
+    <transition name="ss-toast-fade">
+      <div v-if="pageToast.show" class="ss-page-toast" :class="pageToast.type">
+        <span class="material-icons-outlined ss-page-toast-ic">
+          {{ pageToast.type === "success" ? "check_circle" : pageToast.type === "error" ? "error" : "info" }}
+        </span>
+        <div class="ss-page-toast-msg">{{ pageToast.msg }}</div>
+        <button class="ss-page-toast-x" type="button" @click="hidePageToast">×</button>
       </div>
-    </div>
+    </transition>
 
     <div class="taikhoan-nhanvien-container" v-if="!isPage">
       <div class="panel">
@@ -48,7 +25,7 @@
               <input
                 v-model="filters.keyword"
                 type="text"
-                placeholder="Tìm theo tên, SĐT, email,... "
+                placeholder="Tìm theo tên, SĐT, email,..."
                 class="search-input"
               />
             </div>
@@ -73,8 +50,8 @@
 
         <div class="filters-bar">
           <div class="filter-group">
-            <label class="ss-label">Chức vụ:</label>
-            <select v-model="filters.roleId" class="form-select filter-pill">
+            <label>Chức vụ:</label>
+            <select v-model="filters.roleId" class="form-select rounded-3 filter-pill">
               <option value="">Tất cả</option>
               <option v-for="[id, name] in roleMap" :key="id" :value="id">
                 {{ name }}
@@ -83,8 +60,8 @@
           </div>
 
           <div class="filter-group">
-            <label class="ss-label">Trạng thái:</label>
-            <select v-model="filters.status" class="form-select filter-pill">
+            <label>Trạng thái:</label>
+            <select v-model="filters.status" class="form-select rounded-3 filter-pill">
               <option value="">Tất cả</option>
               <option value="active">Hoạt động</option>
               <option value="inactive">Ngừng hoạt động</option>
@@ -95,7 +72,7 @@
 
       <div class="panel">
         <div class="table-wrapper">
-          <table class="ss-table">
+          <table>
             <thead>
               <tr>
                 <th>STT</th>
@@ -112,6 +89,10 @@
             </thead>
 
             <tbody>
+              <tr v-if="nhanVienList.length === 0">
+                <td colspan="10" class="empty-cell">Không có dữ liệu</td>
+              </tr>
+
               <tr v-for="(item, index) in nhanVienList" :key="item.id">
                 <td class="text-gray">{{ pageNo * pageSize + index + 1 }}</td>
 
@@ -122,15 +103,11 @@
                   </div>
                 </td>
 
-                <td class="text-dark">{{ item.maNhanVien ?? "---" }}</td>
-                <td class="text-dark">{{ item.tenNhanVien ?? "---" }}</td>
-
+                <td class="text-dark fw-700">{{ item.maNhanVien ?? "---" }}</td>
+                <td class="text-dark fw-700">{{ item.tenNhanVien ?? "---" }}</td>
                 <td class="text-gray">{{ item.soDienThoai ?? "---" }}</td>
                 <td class="text-gray">{{ item.email ?? "---" }}</td>
-
-                <td class="text-gray">
-                  {{ buildDiaChi(item) }}
-                </td>
+                <td class="text-gray">{{ buildDiaChi(item) }}</td>
 
                 <td>
                   <span class="badge badge-role">
@@ -146,17 +123,25 @@
 
                 <td class="text-center">
                   <div class="action-group">
-                    <label class="switch" title="Đổi trạng thái nhanh">
-                      <input
-                        type="checkbox"
-                        :checked="!!item.trangThai"
-                        :disabled="dangCapNhatTrangThai.has(item.id)"
-                        @change="(e) => toggleStatus(item, e)"
-                      />
-                      <span class="slider"></span>
-                    </label>
+                    <button
+                      class="ss-switch"
+                      type="button"
+                      :class="{ on: !!item.trangThai }"
+                      :disabled="dangCapNhatTrangThai.has(item.id)"
+                      @click="openToggleConfirm(item)"
+                      :title="item.trangThai ? 'Ngừng hoạt động' : 'Kích hoạt'"
+                      role="switch"
+                      :aria-checked="!!item.trangThai"
+                    >
+                      <span class="ss-switch-knob"></span>
+                    </button>
 
-                    <button class="ss-icon-btn-view" @click="updatednv(item.id)" title="Xem" type="button">
+                    <button
+                      class="ss-icon-btn-view"
+                      @click="updatednv(item.id)"
+                      title="Xem"
+                      type="button"
+                    >
                       <span class="material-icons-outlined">visibility</span>
                     </button>
                   </div>
@@ -166,7 +151,7 @@
           </table>
         </div>
 
-        <div class="pagination-container">
+        <div class="pagination-container" v-if="totalPages > 0">
           <button
             class="page-btn"
             :class="{ disabled: pageNo === 0 }"
@@ -206,10 +191,16 @@
 </template>
 
 <script setup>
-import { searchNhanVien, pagingNhanVien, updateNhanVien, getAllNhanVien } from "@/services/tai_khoan/nhan_vien/nhan_vienService";
+import {
+  searchNhanVien,
+  pagingNhanVien,
+  updateNhanVien,
+  getAllNhanVien,
+} from "@/services/tai_khoan/nhan_vien/nhan_vienService";
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import * as XLSX from "xlsx";
+import Swal from "sweetalert2";
 
 const router = useRouter();
 const route = useRoute();
@@ -217,11 +208,12 @@ const route = useRoute();
 const BASE_URL = "http://localhost:8080";
 
 const pageNo = ref(0);
-const pageSize = ref(5);
+const pageSize = ref(10);
 const totalPages = ref(0);
 
 const nhanVienList = ref([]);
 const nhanVienOrigin = ref([]);
+const roleMap = ref(new Map());
 
 const filters = ref({
   keyword: "",
@@ -229,10 +221,29 @@ const filters = ref({
   roleId: "",
 });
 
-const roleMap = ref(new Map());
+const dangCapNhatTrangThai = reactive(new Set());
 
-const dangCapNhatTrangThai = ref(new Set());
-const trangThaiSeqMap = ref(new Map());
+const themnv = () => router.push({ name: "tai-khoan-nhan-vien-them" });
+const updatednv = (id) => router.push({ name: "tai-khoan-nhan-vien-cap-nhat", params: { id } });
+
+const isPage = computed(() => {
+  return (
+    route.path.includes("/admin/tai-khoan/nhan-vien/them") ||
+    route.path.includes("/admin/tai-khoan/nhan-vien/cap-nhat")
+  );
+});
+
+const sortNewestFirst = (arr) => (arr || []).slice().sort((a, b) => (b?.id ?? 0) - (a?.id ?? 0));
+
+const getErrorMessage = (e, fallback = "Đã xảy ra lỗi") => {
+  const msg =
+    e?.response?.data?.message ||
+    e?.response?.data?.error ||
+    e?.response?.data?.detail ||
+    e?.message;
+
+  return typeof msg === "string" && msg.trim() ? msg.trim() : fallback;
+};
 
 const pageToast = reactive({ show: false, type: "info", msg: "" });
 let pageToastTimer = null;
@@ -252,95 +263,118 @@ const hidePageToast = () => {
   pageToast.show = false;
 };
 
-const confirmTrangThai = reactive({
-  show: false,
-  loading: false,
-  msg: "",
-  item: null,
-  newValue: false,
-});
+function applySwalButtonStyle(button, type = "confirm") {
+  if (!button) return;
+  button.style.appearance = "none";
+  button.style.webkitAppearance = "none";
+  button.style.border = "0";
+  button.style.outline = "none";
+  button.style.boxShadow = "none";
+  button.style.borderRadius = "3px";
+  button.style.minWidth = "78px";
+  button.style.height = "38px";
+  button.style.padding = "0 18px";
+  button.style.fontSize = "14px";
+  button.style.fontWeight = "400";
+  button.style.lineHeight = "38px";
+  button.style.fontFamily = "inherit";
+  button.style.display = "inline-flex";
+  button.style.alignItems = "center";
+  button.style.justifyContent = "center";
+  button.style.cursor = "pointer";
 
-const openConfirmTrangThai = (item, newValue) => {
-  const ten = (item?.tenNhanVien ?? item?.maNhanVien ?? "nhân viên").toString().trim() || "nhân viên";
-  const nextText = newValue ? "Hoạt động" : "Ngừng hoạt động";
-
-  confirmTrangThai.show = true;
-  confirmTrangThai.loading = false;
-  confirmTrangThai.item = item;
-  confirmTrangThai.newValue = !!newValue;
-  confirmTrangThai.msg = `Bạn có muốn chuyển trạng thái của "${ten}" sang "${nextText}" không?`;
-};
-
-const cancelConfirmTrangThai = () => {
-  if (confirmTrangThai.loading) return;
-  confirmTrangThai.show = false;
-  confirmTrangThai.loading = false;
-  confirmTrangThai.msg = "";
-  confirmTrangThai.item = null;
-  confirmTrangThai.newValue = false;
-};
-
-const reApplyFilters = () => {
-  applyStatusFilter();
-  applyRoleFilter();
-};
-
-const capNhatTrangThai = async (item, newValue) => {
-  const id = item?.id;
-  if (!id) return;
-
-  if (dangCapNhatTrangThai.value.has(id)) return;
-
-  const oldValue = !!item.trangThai;
-  const nextValue = !!newValue;
-
-  if (oldValue === nextValue) return;
-
-  const nextSeq = (trangThaiSeqMap.value.get(id) ?? 0) + 1;
-  trangThaiSeqMap.value.set(id, nextSeq);
-
-  item.trangThai = nextValue;
-  reApplyFilters();
-
-  dangCapNhatTrangThai.value.add(id);
-
-  try {
-    await updateNhanVien(id, { trangThai: nextValue });
-
-    if (trangThaiSeqMap.value.get(id) !== nextSeq) return;
-
-    reApplyFilters();
-    showPageToast("success", "Đã cập nhật trạng thái");
-  } catch (e) {
-    console.log(e);
-    if (trangThaiSeqMap.value.get(id) === nextSeq) {
-      item.trangThai = oldValue;
-      reApplyFilters();
-      showPageToast("error", "Không thể cập nhật trạng thái");
-    }
-  } finally {
-    if (trangThaiSeqMap.value.get(id) === nextSeq) {
-      dangCapNhatTrangThai.value.delete(id);
-    }
+  if (type === "confirm") {
+    button.style.background = "#27313b";
+    button.style.color = "#fff";
+  } else if (type === "cancel") {
+    button.style.background = "#6c757d";
+    button.style.color = "#fff";
+  } else if (type === "ok") {
+    button.style.background = "#8a3ffc";
+    button.style.color = "#fff";
   }
-};
+}
 
-const okConfirmTrangThai = async () => {
-  const item = confirmTrangThai.item;
-  if (!item?.id) {
-    cancelConfirmTrangThai();
-    return;
-  }
+function getSwalBase(type = "confirm") {
+  return {
+    width: 500,
+    padding: "22px 20px 24px",
+    background: "#ffffff",
+    backdrop: "rgba(0,0,0,0.45)",
+    allowOutsideClick: false,
+    allowEscapeKey: true,
+    buttonsStyling: false,
+    reverseButtons: false,
+    focusConfirm: false,
+    customClass: {
+      popup: "ss-swal-popup",
+      icon: "ss-swal-icon",
+      title: "ss-swal-title",
+      htmlContainer: "ss-swal-text",
+      actions: type === "success" ? "ss-swal-actions ss-swal-actions-center" : "ss-swal-actions",
+      confirmButton: type === "success" ? "ss-swal-ok-btn" : "ss-swal-confirm-btn",
+      cancelButton: "ss-swal-cancel-btn",
+    },
+    didOpen: (popup) => {
+      const actions = popup.querySelector(".swal2-actions");
+      const confirmBtn = popup.querySelector(".swal2-confirm");
+      const cancelBtn = popup.querySelector(".swal2-cancel");
+      const title = popup.querySelector(".swal2-title");
+      const html = popup.querySelector(".swal2-html-container");
+      const icon = popup.querySelector(".swal2-icon");
 
-  if (confirmTrangThai.loading) return;
+      popup.style.borderRadius = "6px";
+      popup.style.boxShadow = "0 18px 48px rgba(0, 0, 0, 0.22)";
+      popup.style.padding = "22px 20px 24px";
 
-  confirmTrangThai.loading = true;
-  try {
-    await capNhatTrangThai(item, confirmTrangThai.newValue);
-  } finally {
-    confirmTrangThai.loading = false;
-    cancelConfirmTrangThai();
-  }
+      if (actions) {
+        actions.style.display = "flex";
+        actions.style.alignItems = "center";
+        actions.style.justifyContent = "center";
+        actions.style.gap = "10px";
+        actions.style.marginTop = "18px";
+        actions.style.width = "100%";
+      }
+
+      if (title) {
+        title.style.fontSize = "27px";
+        title.style.lineHeight = "1.2";
+        title.style.fontWeight = "400";
+        title.style.color = "#333";
+        title.style.margin = "2px 0 10px";
+        title.style.padding = "0";
+      }
+
+      if (html) {
+        html.style.fontSize = "15px";
+        html.style.lineHeight = "1.45";
+        html.style.fontWeight = "400";
+        html.style.color = "#666";
+        html.style.margin = "0";
+        html.style.padding = "0";
+      }
+
+      if (icon) {
+        icon.style.margin = "8px auto 10px";
+      }
+
+      if (type === "success") {
+        applySwalButtonStyle(confirmBtn, "ok");
+      } else {
+        applySwalButtonStyle(confirmBtn, "confirm");
+        applySwalButtonStyle(cancelBtn, "cancel");
+      }
+    },
+  };
+}
+
+const escapeHtml = (value) => {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 };
 
 const mapTenQuyenHan = (raw) => {
@@ -349,8 +383,13 @@ const mapTenQuyenHan = (raw) => {
 
   const k = v.toUpperCase().replace(/\s+/g, "");
 
-  if (k === "NHAN_VIEN" || k === "NHANVIEN" || k === "ROLE_NHAN_VIEN" || k === "ROLENHAN_VIEN") return "Nhân viên";
-  if (k === "ADMIN" || k === "ROLE_ADMIN" || k === "ROLEADMIN") return "Admin";
+  if (k === "NHAN_VIEN" || k === "NHANVIEN" || k === "ROLE_NHAN_VIEN" || k === "ROLENHAN_VIEN") {
+    return "Nhân viên";
+  }
+
+  if (k === "ADMIN" || k === "ROLE_ADMIN" || k === "ROLEADMIN") {
+    return "Admin";
+  }
 
   return v;
 };
@@ -359,16 +398,20 @@ const loadQuyenHan = async () => {
   try {
     const res = await fetch("http://localhost:8080/api/admin/quyen-han");
     if (!res.ok) return;
+
     const data = await res.json();
     const list = Array.isArray(data) ? data : data?.content ?? [];
     const m = new Map();
+
     list.forEach((x) => {
       const rawName = x.ten ?? x.tenQuyenHan ?? x.ma ?? `Quyền ${x.id}`;
       const name = mapTenQuyenHan(rawName);
       m.set(Number(x.id), name);
     });
+
     roleMap.value = m;
-  } catch {
+  } catch (e) {
+    console.log("Load quyền hạn error", e);
   }
 };
 
@@ -377,29 +420,13 @@ const getRoleName = (id) => {
   return roleMap.value.get(key) || (id ? `Quyền ${id}` : "---");
 };
 
-const themnv = () => {
-  router.push({ name: "tai-khoan-nhan-vien-them" });
-};
-
-const updatednv = (id) => {
-  router.push({ name: "tai-khoan-nhan-vien-cap-nhat", params: { id } });
-};
-
-const isPage = computed(() => {
-  return (
-    route.path.includes("/admin/tai-khoan/nhan-vien/them") ||
-    route.path.includes("/admin/tai-khoan/nhan-vien/cap-nhat")
-  );
-});
-
-const sortNewestFirst = (arr) => (arr || []).slice().sort((a, b) => (b?.id ?? 0) - (a?.id ?? 0));
-
 const applyStatusFilter = () => {
-  const source = Array.isArray(nhanVienOrigin.value) ? nhanVienOrigin.value : (nhanVienOrigin.value ?? []);
+  const source = Array.isArray(nhanVienOrigin.value) ? nhanVienOrigin.value : [];
   if (!filters.value.status) {
     nhanVienList.value = source;
     return;
   }
+
   const isActive = filters.value.status === "active";
   nhanVienList.value = source.filter((item) => Boolean(item.trangThai) === isActive);
 };
@@ -412,10 +439,106 @@ const applyRoleFilter = () => {
   nhanVienList.value = source.filter((item) => Number(item.idQuyenHan) === roleId);
 };
 
+const reApplyFilters = () => {
+  applyStatusFilter();
+  applyRoleFilter();
+};
+
+const buildToggleConfirmHtml = (item, nextValue) => {
+  const oldText = item?.trangThai ? "Hoạt động" : "Ngừng hoạt động";
+  const newText = nextValue ? "Hoạt động" : "Ngừng hoạt động";
+
+  return `
+    <div style="font-weight:400;color:#666;line-height:1.5;">
+      <div style="margin-bottom:10px;font-weight:400;">
+        Bạn có muốn chuyển trạng thái nhân viên này không?
+      </div>
+      <div style="border:1px solid rgba(255,77,79,0.14);background:linear-gradient(180deg, rgba(255,77,79,0.04), rgba(17,24,39,0.02));border-radius:10px;padding:12px 14px;text-align:left;">
+        <div style="font-size:15px;color:#333;font-weight:400;margin-bottom:4px;">
+          ${escapeHtml(item?.tenNhanVien || "—")}
+        </div>
+        <div style="font-size:13px;color:#666;font-weight:400;margin-bottom:8px;">
+          Mã nhân viên: ${escapeHtml(item?.maNhanVien || "—")}
+        </div>
+        <div style="font-size:13px;color:#666;font-weight:400;">
+          Trạng thái sẽ đổi từ
+          <span style="color:#b42324;font-weight:400;">${escapeHtml(oldText)}</span>
+          sang
+          <span style="color:#b42324;font-weight:400;">${escapeHtml(newText)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
+const capNhatTrangThai = async (item, newValue) => {
+  const id = item?.id;
+  if (!id || dangCapNhatTrangThai.has(id)) return;
+
+  const oldValue = !!item.trangThai;
+  const nextValue = !!newValue;
+
+  if (oldValue === nextValue) return;
+
+  const result = await Swal.fire({
+    ...getSwalBase("confirm"),
+    icon: "question",
+    title: "Xác nhận?",
+    html: buildToggleConfirmHtml(item, nextValue),
+    confirmButtonText: "Đồng ý",
+    cancelButtonText: "Hủy",
+    showCancelButton: true,
+  });
+
+  if (!result.isConfirmed) return;
+
+  dangCapNhatTrangThai.add(id);
+  item.trangThai = nextValue;
+  reApplyFilters();
+
+  try {
+    await updateNhanVien(id, { trangThai: nextValue });
+
+    await Swal.fire({
+      ...getSwalBase("success"),
+      icon: "success",
+      title: "Thành công!",
+      html: `
+        <div style="font-weight:400;color:#666;line-height:1.5;">
+          Đã chuyển trạng thái nhân viên
+          <span style="font-weight:400;color:#333;">${escapeHtml(item?.tenNhanVien || item?.maNhanVien || "")}</span>
+          từ
+          <span style="font-weight:400;color:#b42324;">${escapeHtml(oldValue ? "Hoạt động" : "Ngừng hoạt động")}</span>
+          sang
+          <span style="font-weight:400;color:#b42324;">${escapeHtml(nextValue ? "Hoạt động" : "Ngừng hoạt động")}</span>.
+        </div>
+      `,
+      confirmButtonText: "OK",
+      showCancelButton: false,
+    });
+  } catch (err) {
+    item.trangThai = oldValue;
+    reApplyFilters();
+
+    await Swal.fire({
+      ...getSwalBase("confirm"),
+      icon: "error",
+      title: "Thất bại!",
+      text: getErrorMessage(err, "Không thể cập nhật trạng thái nhân viên."),
+      confirmButtonText: "OK",
+      showCancelButton: false,
+    });
+  } finally {
+    dangCapNhatTrangThai.delete(id);
+  }
+};
+
+const openToggleConfirm = async (item) => {
+  await capNhatTrangThai(item, !item?.trangThai);
+};
+
 const handleFilter = async () => {
   try {
-    cancelConfirmTrangThai();
-
     if (filters.value.keyword.trim()) {
       const res = await searchNhanVien(filters.value.keyword.trim());
       const arr = Array.isArray(res) ? res : res?.content ?? [];
@@ -431,6 +554,7 @@ const handleFilter = async () => {
     applyRoleFilter();
   } catch (e) {
     console.log("Filter error", e);
+    showPageToast("error", getErrorMessage(e, "Không tải được danh sách nhân viên."));
   }
 };
 
@@ -461,7 +585,7 @@ const visiblePages = computed(() => {
 });
 
 const buildDiaChi = (x) => {
-  const parts = [x.diaChiCuThe, x.phuong, x.quan, x.thanhPho]
+  const parts = [x?.diaChiCuThe, x?.phuong, x?.quan, x?.thanhPho]
     .map((v) => (v ?? "").toString().trim())
     .filter(Boolean);
   return parts.length ? parts.join(", ") : "---";
@@ -488,33 +612,18 @@ const initials = (name) => {
   return last2.map((p) => p[0]?.toUpperCase() || "").join("");
 };
 
-const toggleStatus = async (item, e) => {
-  const id = item?.id;
-  if (!id) return;
-
-  if (dangCapNhatTrangThai.value.has(id)) {
-    if (e?.target) e.target.checked = !!item.trangThai;
-    return;
-  }
-
-  const oldValue = !!item.trangThai;
-  const newValue = !!e?.target?.checked;
-
-  if (oldValue === newValue) return;
-
-  if (e?.target) e.target.checked = oldValue;
-
-  openConfirmTrangThai(item, newValue);
-};
-
 const exportExcel = async () => {
   try {
     let allData = [];
-    if (filters.value.keyword.trim()) allData = await searchNhanVien(filters.value.keyword.trim());
-    else allData = await getAllNhanVien();
+    if (filters.value.keyword.trim()) {
+      const res = await searchNhanVien(filters.value.keyword.trim());
+      allData = Array.isArray(res) ? res : res?.content ?? [];
+    } else {
+      const res = await getAllNhanVien();
+      allData = Array.isArray(res) ? res : res?.content ?? [];
+    }
 
-    const base = Array.isArray(allData) ? allData : (allData?.content ?? []);
-    let filteredData = base;
+    let filteredData = allData;
 
     if (filters.value.status) {
       const isActive = filters.value.status === "active";
@@ -540,7 +649,7 @@ const exportExcel = async () => {
     }));
 
     if (dataToExport.length === 0) {
-      alert("Không có dữ liệu để xuất.");
+      showPageToast("info", "Không có dữ liệu để xuất Excel.");
       return;
     }
 
@@ -560,9 +669,10 @@ const exportExcel = async () => {
     ];
 
     XLSX.writeFile(workbook, "DanhSachNhanVien.xlsx");
+    showPageToast("success", "Xuất Excel thành công.");
   } catch (error) {
     console.error("Lỗi khi xuất Excel:", error);
-    alert("Đã xảy ra lỗi khi xuất file Excel.");
+    showPageToast("error", getErrorMessage(error, "Đã xảy ra lỗi khi xuất file Excel."));
   }
 };
 
@@ -588,23 +698,21 @@ watch(
 onMounted(async () => {
   await loadQuyenHan();
   await handleFilter();
+
+  if (route.query.added) {
+    showPageToast("success", "Thêm nhân viên thành công!");
+    const { added, ...restQuery } = route.query;
+    await router.replace({ query: restQuery });
+  }
 });
 </script>
 
 <style scoped>
 .ss-page { padding: 16px; }
-.ss-font { font-family: inherit; color: rgba(17,24,39,0.82); }
-.ss-title { font-size: 20px; font-weight: 500; color: rgba(17,24,39,0.88); }
-.ss-label { font-size: 13px; font-weight: 400; color: rgba(17,24,39,0.82); }
-
-.ss-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
+.ss-font { font-family: inherit; color: rgba(17, 24, 39, 0.82); }
+.ss-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
 .ss-head-left { display: flex; align-items: center; gap: 10px; }
+.ss-title { font-size: 20px; font-weight: 500; color: rgba(17, 24, 39, 0.88); }
 
 .taikhoan-nhanvien-container {
   display: flex;
@@ -613,12 +721,19 @@ onMounted(async () => {
 }
 
 .panel {
+  font-family: inherit;
+  color: rgba(17,24,39,0.82);
   background: #fff;
   border-radius: 14px;
   padding: 16px;
   border: 1px solid rgba(255,77,79,0.18);
   box-shadow: 0 18px 50px rgba(17,24,39,0.08);
 }
+
+.text-center { text-align: center; }
+.text-gray { color: rgba(17,24,39,0.62); }
+.text-dark { color: rgba(17,24,39,0.88); }
+.fw-700 { font-weight: 600; }
 
 .toolbar {
   display: flex;
@@ -640,7 +755,7 @@ onMounted(async () => {
   color: currentColor;
 }
 
-.btn, .btn-export, .btn-newaccount {
+.btn {
   height: 36px;
   padding: 0 14px;
   border-radius: 10px;
@@ -655,141 +770,38 @@ onMounted(async () => {
   cursor: pointer;
   transition: 0.15s ease;
 }
-.btn:hover, .btn-export:hover, .btn-newaccount:hover { background: rgba(17,24,39,0.04); }
+.btn:hover { background: rgba(17,24,39,0.04); }
 
-.btn-reset{
-  background: #4b5563 !important;
-  color: #fff !important;
-  border: none !important;
-}
-.btn-reset:hover{
-  filter: brightness(0.98);
-}
-
-.btn-export{
-  background: #f3f4f6 !important;
-  color: rgba(17,24,39,0.88) !important;
-  border: 1px solid rgba(17,24,39,0.10) !important;
-}
-.btn-export:hover{
-  background: #eef0f3 !important;
-}
-
-.btn-newaccount{
+.btn-newaccount {
   border: none !important;
   color:#fff !important;
   background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%) !important;
   box-shadow: 0 10px 18px rgba(255,77,79,0.16);
 }
-.btn-newaccount:hover{
-  filter: brightness(0.98);
-  background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%) !important;
-}
-.btn i, .btn-export i, .btn-newaccount i { font-size: 13px; }
+.btn-newaccount:hover { filter: brightness(0.98); }
+.btn-newaccount i { font-size: 13px; }
 
-.filters-bar {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-top: 8px;
+.btn-export {
+  background: #f3f4f6 !important;
+  color: rgba(17,24,39,0.88) !important;
+  border: 1px solid rgba(17,24,39,0.10) !important;
 }
-.filter-group{
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
+.btn-export:hover { background: #eef0f3 !important; }
+
+.btn-reset {
+  background: #4b5563 !important;
+  color: #fff !important;
+  border: none !important;
 }
-.filter-group label{
-  white-space: nowrap;
-  margin: 0;
-  line-height: 1;
-  font-size: 13px;
-  font-weight: 400;
-  color: rgba(17,24,39,0.82);
-  flex: 0 0 auto;
-}
-.filter-pill{
+.btn-reset:hover { filter: brightness(0.98); }
+
+.filter-pill {
   height: 36px;
-  min-width: 160px;
-  border-radius: 12px;
-  font-size: 13px;
-  font-weight: 400;
-  color: rgba(17,24,39,0.82);
-  border: 1px solid rgba(17,24,39,0.14);
+  min-width: 150px;
 }
 
-.search-wrapper { position: relative; display:flex; align-items:center; }
-.search-icon { position:absolute; left:12px; color: rgba(17,24,39,0.40); font-size: 13px; pointer-events:none; }
-.search-input{
-  height: 36px;
-  padding: 0 12px 0 34px;
-  border-radius: 12px;
-  border: 1px solid rgba(17,24,39,0.14);
-  outline: none;
-  min-width: 420px;
-  color: rgba(17,24,39,0.82);
-  font-size: 13px;
-  background:#F9FAFB;
-}
-.search-input:focus{
-  border-color: rgba(255,77,79,0.45);
-  background:#fff;
-  box-shadow: 0 0 0 3px rgba(255,77,79,0.10);
-}
-
-.table-wrapper {
-  overflow-x: auto;
-  border-radius: 14px;
-  background: #fff;
-  border: 1px solid rgba(17,24,39,0.08);
-}
-.ss-table { width: 100%; border-collapse: separate; border-spacing: 0; }
-.ss-table thead th{
-  padding: 14px 16px;
-  background:#F9FAFB;
-  font-size: 13px;
-  font-weight: 400;
-  text-align:left;
-  color: rgba(17,24,39,0.82);
-  border-bottom: 1px solid rgba(17,24,39,0.08);
-  white-space: nowrap;
-}
-.ss-table tbody td{
-  padding: 14px 16px;
-  border-bottom: 1px solid rgba(17,24,39,0.06);
-  font-size: 13px;
-  font-weight: 400;
-  color: rgba(17,24,39,0.72);
-  vertical-align: middle;
-}
-.ss-table tbody tr:hover { background:#F9FAFB; }
-
-.text-center { text-align: center; }
-.text-gray { color: rgba(17,24,39,0.62); }
-.text-dark { color: rgba(17,24,39,0.88); }
-
-.avatar{
-  width: 40px; height: 40px;
-  border-radius: 12px;
-  border: 1px solid rgba(17,24,39,0.14);
-  background: #fff;
-  overflow: hidden;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-.avatar img{ width:100%; height:100%; object-fit: cover; }
-.avatar-fallback{
-  width:100%; height:100%;
-  display:flex; align-items:center; justify-content:center;
-  background: rgba(17,24,39,0.04);
-  color: rgba(17,24,39,0.78);
-  font-weight: 500;
-  font-size: 13px;
-}
-
-.badge{
-  padding: 6px 10px;
+.badge {
+  padding: 6px 12px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 500;
@@ -799,31 +811,73 @@ onMounted(async () => {
   justify-content: center;
   line-height: 1.1;
 }
-.status-active{
-  background: rgba(255,77,79,0.10);
+
+.status-active {
+  background: rgba(255, 77, 79, 0.10);
   color: #b42324;
-  border: 1px solid rgba(255,77,79,0.35);
+  border: 1px solid rgba(255, 77, 79, 0.35);
 }
-.status-ended{
-  background: rgba(17,24,39,0.06);
-  color: rgba(17,24,39,0.82);
-  border: 1px solid rgba(17,24,39,0.14);
+
+.status-ended {
+  background: rgba(17, 24, 39, 0.06);
+  color: rgba(17, 24, 39, 0.88);
+  border: 1px solid rgba(17, 24, 39, 0.14);
 }
-.badge-role{
+
+.badge-role {
   background: rgba(17,24,39,0.04);
   color: rgba(17,24,39,0.82);
   border: 1px solid rgba(17,24,39,0.14);
 }
 
-.pagination-container{
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(17,24,39,0.08);
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+th:first-child { border-top-left-radius: 16px; }
+th:last-child { border-top-right-radius: 16px; }
+
+th {
+  padding: 14px 16px;
+  background:#F9FAFB;
+  font-size: 13px;
+  font-weight: 400;
+  text-align:left;
+  color: rgba(17,24,39,0.82);
+  border-bottom: 1px solid rgba(17,24,39,0.08);
+  white-space: nowrap;
+}
+
+td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(17,24,39,0.06);
+  font-size: 13px;
+  vertical-align: middle;
+  color: rgba(17,24,39,0.72);
+}
+
+tbody tr:hover { background:#F9FAFB; }
+
+.pagination-container {
   display:flex;
   justify-content:center;
   align-items:center;
   gap:8px;
   margin-top: 12px;
 }
-.page-btn{
-  width:36px; height:36px;
+
+.page-btn {
+  width:36px;
+  height:36px;
   border-radius: 10px;
   border:1px solid rgba(17,24,39,0.14);
   background:#fff;
@@ -836,70 +890,148 @@ onMounted(async () => {
   font-size: 13px;
   font-weight: 400;
 }
-.page-btn:hover:not(.disabled){ background: rgba(17,24,39,0.04); }
-.page-btn.active{ background:#111827; color:#fff; border-color:#111827; }
-.page-btn.disabled{ color: rgba(17,24,39,0.25); background:#F9FAFB; cursor:not-allowed; }
 
-.ss-icon-btn-view{
-  width:36px; height:36px;
-  border-radius:10px;
+.page-btn:hover:not(.disabled) { background: rgba(17,24,39,0.04); }
+.page-btn.active { background:#111827; color:#fff; border-color:#111827; }
+.page-btn.disabled { color: rgba(17,24,39,0.25); background:#F9FAFB; }
+
+.search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 12px;
+  color: rgba(17,24,39,0.40);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.search-input {
+  height: 36px;
+  padding: 0 12px 0 34px;
+  border-radius: 12px;
+  border: 1px solid rgba(17,24,39,0.14);
+  outline: none;
+  min-width: 420px;
+  color: rgba(17,24,39,0.82);
+  font-size: 13px;
+  background:#F9FAFB;
+}
+
+.search-input:focus {
+  border-color: rgba(255,77,79,0.45);
   background:#fff;
-  border:1px solid rgba(17,24,39,0.14);
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  transition: 0.15s ease;
-  padding:0;
-}
-.ss-icon-btn-view span{
-  font-size: 20px;
-  color: rgba(17,24,39,0.88);
-}
-.ss-icon-btn-view:hover{
-  background: rgba(17,24,39,0.04);
-  border-color: rgba(17,24,39,0.22);
+  box-shadow: 0 0 0 3px rgba(255,77,79,0.10);
 }
 
-.action-group{
+.ss-icon-btn-view {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid rgba(17, 24, 39, 0.14);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: 0.15s ease;
+  padding: 0;
+}
+
+.ss-icon-btn-view span {
+  font-size: 20px;
+  color: rgba(17, 24, 39, 0.88);
+}
+
+.ss-icon-btn-view:hover {
+  background: rgba(17, 24, 39, 0.04);
+  border-color: rgba(17, 24, 39, 0.22);
+}
+
+.filter-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: rgba(17, 24, 39, 0.78);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.filters-bar {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 8px;
+}
+
+.action-group {
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 32px;
+.ss-switch {
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid rgba(17, 24, 39, 0.14);
+  background: rgba(17, 24, 39, 0.12);
+  display: inline-flex;
+  align-items: center;
+  padding: 2px;
+  transition: 0.15s ease;
+}
+.ss-switch.on {
+  background: rgba(255, 77, 79, 0.92);
+  border-color: rgba(255, 77, 79, 0.25);
+}
+.ss-switch:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.ss-switch-knob {
+  width: 18px;
   height: 18px;
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  transform: translateX(0);
+  transition: 0.15s ease;
 }
-.switch input { opacity: 0; width: 0; height: 0; }
-
-.slider {
-  position: absolute;
-  cursor: pointer;
-  inset: 0;
-  background-color: rgba(17,24,39,0.12);
-  border-radius: 18px;
-  transition: .3s;
-}
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 14px;
-  width: 14px;
-  left: 2px;
-  bottom: 2px;
-  background-color: #fff;
-  border-radius: 50%;
-  transition: .3s;
-  box-shadow: 0 2px 6px rgba(17,24,39,0.12);
+.ss-switch.on .ss-switch-knob {
+  transform: translateX(20px);
 }
 
-.switch input:checked + .slider { background-color: #ff4d4f; }
-.switch input:checked + .slider:before { transform: translateX(14px); }
-
-.switch input:disabled + .slider { opacity: 0.6; cursor: not-allowed; }
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(17,24,39,0.14);
+  background: #fff;
+  overflow: hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.avatar img {
+  width:100%;
+  height:100%;
+  object-fit: cover;
+}
+.avatar-fallback {
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: rgba(17,24,39,0.04);
+  color: rgba(17,24,39,0.78);
+  font-weight: 500;
+  font-size: 13px;
+}
 
 .ss-page-toast {
   position: fixed;
@@ -939,70 +1071,102 @@ onMounted(async () => {
   color: rgba(17, 24, 39, 0.45);
 }
 .ss-page-toast-x:hover { color: rgba(17, 24, 39, 0.7); }
+.ss-toast-fade-enter-active, .ss-toast-fade-leave-active { transition: all 0.25s ease; }
+.ss-toast-fade-enter-from, .ss-toast-fade-leave-to { opacity: 0; transform: translateY(-8px); }
 
-.ss-confirm-toast {
-  position: fixed;
-  top: 64px;
-  right: 14px;
-  z-index: 2501;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  width: min(520px, calc(100vw - 28px));
-  padding: 12px;
-  border-radius: 14px;
-  background: #fff;
-  border: 1px solid rgba(255, 77, 79, 0.25);
-  box-shadow: 0 18px 55px rgba(17, 24, 39, 0.18);
+.empty-cell {
+  text-align: center;
+  color: rgba(17,24,39,0.55);
 }
 
-.ss-confirm-ic {
-  font-size: 20px;
-  color: rgba(255, 77, 79, 0.95);
-  margin-top: 1px;
+:deep(.swal2-popup.ss-swal-popup) {
+  width: 500px !important;
+  max-width: 500px !important;
+  border-radius: 6px !important;
+  padding: 22px 20px 24px !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22) !important;
+  font-family: inherit !important;
 }
-
-.ss-confirm-msg {
-  flex: 1;
-  color: rgba(17, 24, 39, 0.86);
-  font-size: 13.5px;
-  line-height: 1.35;
-  padding-right: 8px;
+:deep(.swal2-icon.ss-swal-icon) { margin: 8px auto 10px !important; }
+:deep(.swal2-icon.swal2-question.ss-swal-icon) {
+  width: 72px !important;
+  height: 72px !important;
+  border-width: 3px !important;
+  color: #9db5c2 !important;
+  border-color: #9db5c2 !important;
 }
-
-.ss-confirm-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 2px;
+:deep(.swal2-icon.swal2-success.ss-swal-icon) {
+  width: 72px !important;
+  height: 72px !important;
+  border-width: 3px !important;
+  border-color: #d8efcf !important;
+  color: #8fd16f !important;
 }
-
-.ss-confirm-btn {
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 10px;
-  border: 1px solid transparent;
-  cursor: pointer;
-  font-size: 12.5px;
-  font-weight: 700;
-  transition: 0.15s ease;
+:deep(.swal2-icon.swal2-success .swal2-success-ring) {
+  border-color: rgba(143, 209, 111, 0.22) !important;
 }
-.ss-confirm-btn:disabled { opacity: 0.7; cursor: not-allowed; }
-
-.ss-confirm-cancel {
-  background: #f3f4f6;
-  border-color: rgba(17, 24, 39, 0.12);
-  color: rgba(17, 24, 39, 0.82);
+:deep(.swal2-icon.swal2-success [class^="swal2-success-line"]) {
+  background-color: #8fd16f !important;
 }
-.ss-confirm-cancel:hover { background: #eef0f3; }
-
-.ss-confirm-ok {
-  background: #ff4d4f;
-  border-color: rgba(255, 77, 79, 0.35);
-  color: #fff;
-  box-shadow: 0 10px 18px rgba(255, 77, 79, 0.16);
+:deep(.swal2-title.ss-swal-title) {
+  font-size: 27px !important;
+  line-height: 1.2 !important;
+  font-weight: 400 !important;
+  color: #333 !important;
+  margin: 2px 0 10px !important;
+  padding: 0 !important;
 }
-.ss-confirm-ok:hover { filter: brightness(0.98); }
+:deep(.swal2-html-container.ss-swal-text) {
+  font-size: 15px !important;
+  line-height: 1.45 !important;
+  font-weight: 400 !important;
+  color: #666 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+:deep(.swal2-actions.ss-swal-actions) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  margin-top: 18px !important;
+  width: 100% !important;
+}
+:deep(.swal2-actions.ss-swal-actions-center) { justify-content: center !important; }
+:deep(.ss-swal-confirm-btn),
+:deep(.ss-swal-cancel-btn),
+:deep(.ss-swal-ok-btn) {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  min-width: 78px !important;
+  height: 38px !important;
+  padding: 0 18px !important;
+  border-radius: 3px !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 38px !important;
+  font-family: inherit !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: 0.15s ease !important;
+}
+:deep(.ss-swal-confirm-btn) { background: #27313b !important; color: #fff !important; }
+:deep(.ss-swal-confirm-btn:hover) { background: #1f2831 !important; }
+:deep(.ss-swal-cancel-btn) { background: #6c757d !important; color: #fff !important; }
+:deep(.ss-swal-cancel-btn:hover) { background: #5f6870 !important; }
+:deep(.ss-swal-ok-btn) { background: #8a3ffc !important; color: #fff !important; }
+:deep(.ss-swal-ok-btn:hover) { background: #7b32ed !important; }
+:deep(.ss-swal-confirm-btn:focus),
+:deep(.ss-swal-cancel-btn:focus),
+:deep(.ss-swal-ok-btn:focus) {
+  outline: none !important;
+  box-shadow: none !important;
+}
 
 @media (max-width: 900px){
   .search-input{ min-width: 260px; width: 100%; }

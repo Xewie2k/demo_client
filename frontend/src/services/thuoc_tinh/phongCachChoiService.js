@@ -1,45 +1,67 @@
-// File: src/services/thuoc_tinh/phongCachChoiService.js
-import apiClient from "../apiClient";
+import axios from "axios";
+import { getApiErrorMessage } from "@/services/apiError";
 
-const unwrapList = (res) => {
-  const d = res?.data ?? res;
-  if (Array.isArray(d)) return d;
-  if (Array.isArray(d?.data)) return d.data;
-  if (Array.isArray(d?.content)) return d.content;
-  return [];
-};
-
-// Payload “an toàn”: gửi nhiều key để BE map đúng field trong PhongCachChoiRequest
-const buildCreatePayload = (ten) => ({
-  ten,
-  tenPhongCachChoi: ten,
-  ten_phong_cach_choi: ten,
+const api = axios.create({
+  baseURL:
+    import.meta?.env?.VITE_API_URL ||
+    import.meta?.env?.VITE_API_BASE_URL ||
+    "http://localhost:8080",
+  withCredentials: true,
 });
 
-const base = "/api/admin/phong-cach-choi";
+const PATH = "/api/admin/phong-cach-choi";
+
+function unwrap(res) {
+  return res?.data ?? res;
+}
+
+function throwApiError(error, fallback) {
+  throw new Error(getApiErrorMessage(error, fallback));
+}
 
 export default {
   async getAll() {
-    return unwrapList(await apiClient.get(base));
+    try {
+      const res = await api.get(PATH);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Không tải được danh sách phong cách chơi.");
+    }
   },
 
-  getOne(id) {
-    return apiClient.get(`${base}/${id}`);
+  async getOne(id) {
+    try {
+      const res = await api.get(`${PATH}/${id}`);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Không tải được thông tin phong cách chơi.");
+    }
   },
 
-  create(payload) {
-    return apiClient.post(base, payload);
+  async create(payload) {
+    try {
+      const res = await api.post(PATH, payload);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Thêm phong cách chơi thất bại.");
+    }
   },
 
-  createQuick(ten) {
-    return apiClient.post(base, buildCreatePayload(String(ten || "").trim()));
+  async update(id, payload) {
+    try {
+      const res = await api.put(`${PATH}/${id}`, payload);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Cập nhật phong cách chơi thất bại.");
+    }
   },
 
-  update(id, payload) {
-    return apiClient.put(`${base}/${id}`, payload);
-  },
-
-  remove(id) {
-    return apiClient.delete(`${base}/${id}`);
+  async remove(id) {
+    try {
+      const res = await api.delete(`${PATH}/${id}`);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Xóa phong cách chơi thất bại.");
+    }
   },
 };

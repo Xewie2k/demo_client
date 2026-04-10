@@ -1,7 +1,6 @@
 <!-- File: src/pages/product/ProductManagePage.vue -->
 <template>
   <div class="ss-page ss-font">
-    <!-- TOAST -->
     <transition name="ss-toast-fade">
       <div
         v-if="toast.show"
@@ -25,7 +24,6 @@
       </div>
     </transition>
 
-    <!-- HEAD -->
     <div class="ss-head">
       <div class="ss-head-left">
         <div class="ss-title">Quản lý sản phẩm/ Danh sách sản phẩm</div>
@@ -38,16 +36,13 @@
       </div>
     </div>
 
-    <!-- FILTER -->
     <div class="ss-card ss-border ss-filter-card">
       <div class="ss-filter-head">
         <span class="material-icons-outlined ss-filter-icon">filter_alt</span>
         <div class="ss-filter-title">Bộ lọc tìm kiếm</div>
       </div>
 
-      <!-- Row 1 -->
       <div class="ss-filter-row1">
-        <!-- LEFT: Search + Status -->
         <div class="ss-field ss-field-left">
           <div class="ss-filter-label">Tìm kiếm</div>
           <div class="ss-search-wrap">
@@ -79,7 +74,6 @@
           </div>
         </div>
 
-        <!-- Combobox: Chất liệu -->
         <div class="ss-field ss-field-select">
           <div class="ss-filter-label">Chất liệu</div>
 
@@ -123,7 +117,6 @@
           </div>
         </div>
 
-        <!-- Combobox: Thương hiệu -->
         <div class="ss-field ss-field-select">
           <div class="ss-filter-label">Thương hiệu</div>
 
@@ -168,7 +161,6 @@
         </div>
       </div>
 
-      <!-- Row 2 -->
       <div class="ss-filter-row2">
         <div class="ss-filter-actions">
           <button class="btn ss-btn-outline" type="button" @click="exportExcel" :disabled="loading">
@@ -194,7 +186,6 @@
       </div>
     </div>
 
-    <!-- LIST -->
     <div class="ss-card ss-border ss-list-card">
       <div class="ss-list-title">Danh sách sản phẩm</div>
 
@@ -272,7 +263,6 @@
       </div>
     </div>
 
-    <!-- PAGINATION -->
     <div class="ss-pagination-bar">
       <div class="ss-pagination">
         <button class="ss-pagebtn" :disabled="page <= 1" @click="page--" title="Trang trước">‹</button>
@@ -294,57 +284,6 @@
       <div class="ss-pageinfo">Trang <span>{{ page }}</span> / <span>{{ totalPages }}</span></div>
     </div>
 
-    <!-- CONFIRM MODAL -->
-    <div v-if="confirmToggle.open" class="ss-overlay" @click.self="closeConfirmToggle">
-      <div class="ss-modal ss-confirm-modal">
-        <div class="ss-modal-header">
-          <div class="ss-modal-title">Xác nhận chuyển trạng thái</div>
-          <button
-            class="ss-modal-close"
-            type="button"
-            @click="closeConfirmToggle"
-            :disabled="confirmToggle.loading"
-          >
-            <span class="material-icons-outlined">close</span>
-          </button>
-        </div>
-
-        <div class="ss-modal-body">
-          <div class="ss-confirm-text">
-            Bạn có chắc muốn
-            <b>{{ confirmToggle.next ? "bật kinh doanh" : "ngừng kinh doanh" }}</b>
-            cho sản phẩm:
-          </div>
-
-          <div class="ss-confirm-box">
-            <div class="ss-confirm-name">{{ confirmProductTen }}</div>
-            <div class="ss-confirm-code">Mã sản phẩm: <b>{{ confirmProductMa }}</b></div>
-            <div class="ss-confirm-change">
-              Trạng thái sẽ đổi từ
-              <span class="from">{{ confirmToggle.fromLabel }}</span>
-              sang
-              <span class="to">{{ confirmToggle.toLabel }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="ss-modal-footer">
-          <button class="btn ss-btn-outline" type="button" @click="closeConfirmToggle" :disabled="confirmToggle.loading">
-            Hủy
-          </button>
-          <button
-            class="btn ss-btn-primary"
-            type="button"
-            @click="confirmToggleTrangThai"
-            :disabled="confirmToggle.loading"
-          >
-            {{ confirmToggle.loading ? "Đang xử lý..." : "Xác nhận" }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- QR MODAL -->
     <div v-if="qr.open" class="ss-overlay" @click.self="closeQr">
       <div class="ss-modal ss-qr-modal">
         <div class="ss-modal-header">
@@ -373,6 +312,7 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRouter } from "vue-router";
+import Swal from "sweetalert2";
 
 import productService from "@/services/productService";
 import productDetailService from "@/services/productDetailService";
@@ -415,7 +355,16 @@ const toast = reactive({
 });
 let toastTimer = 0;
 
-function showToast(message, type = "success", duration = 3200) {
+function getErrorMessage(error, fallback) {
+  const message =
+    error?.message ||
+    error?.response?.data?.message ||
+    error?.response?.data?.error ||
+    error?.response?.data?.detail;
+  return typeof message === "string" && message.trim() ? message.trim() : fallback;
+}
+
+function showToast(message, type = "success", duration = 2500) {
   clearTimeout(toastTimer);
   toast.show = true;
   toast.type = type;
@@ -430,84 +379,144 @@ function hideToast() {
   toast.show = false;
 }
 
-const confirmToggle = reactive({
-  open: false,
-  p: null,
-  next: true,
-  loading: false,
-});
+function applySwalButtonStyle(button, type = "confirm") {
+  if (!button) return;
 
-const confirmProductTen = computed(() => {
-  const p = confirmToggle.p;
-  const ten = p ? getTenSanPham(p) : "";
-  return ten || "—";
-});
+  button.style.appearance = "none";
+  button.style.webkitAppearance = "none";
+  button.style.border = "0";
+  button.style.outline = "none";
+  button.style.boxShadow = "none";
+  button.style.borderRadius = "3px";
+  button.style.minWidth = "78px";
+  button.style.height = "38px";
+  button.style.padding = "0 18px";
+  button.style.fontSize = "14px";
+  button.style.fontWeight = "400";
+  button.style.lineHeight = "38px";
+  button.style.fontFamily = "inherit";
+  button.style.display = "inline-flex";
+  button.style.alignItems = "center";
+  button.style.justifyContent = "center";
+  button.style.cursor = "pointer";
 
-const confirmProductMa = computed(() => {
-  const p = confirmToggle.p;
-  const ma = p ? getMaSanPham(p) : "";
-  return ma || "—";
-});
-
-const confirmToggleFrom = computed(() => {
-  const p = confirmToggle.p;
-  return p ? getTrangThaiKinhDoanh(p) : false;
-});
-
-const confirmToggleTo = computed(() => confirmToggle.next);
-
-const confirmToggleFromLabel = computed(() => getTrangThaiLabel(confirmToggleFrom.value));
-const confirmToggleToLabel = computed(() => getTrangThaiLabel(confirmToggleTo.value));
-
-Object.defineProperty(confirmToggle, "fromLabel", {
-  get() {
-    return confirmToggleFromLabel.value;
-  },
-});
-Object.defineProperty(confirmToggle, "toLabel", {
-  get() {
-    return confirmToggleToLabel.value;
-  },
-});
-
-function openConfirmToggle(p) {
-  const id = p?.id;
-  if (!id || switchLoadingIds.has(id)) return;
-
-  confirmToggle.p = p;
-  confirmToggle.next = !getTrangThaiKinhDoanh(p);
-  confirmToggle.open = true;
-  confirmToggle.loading = false;
-}
-
-function resetConfirmToggle() {
-  confirmToggle.open = false;
-  confirmToggle.p = null;
-  confirmToggle.next = true;
-  confirmToggle.loading = false;
-}
-
-function closeConfirmToggle() {
-  if (confirmToggle.loading) return;
-  resetConfirmToggle();
-}
-
-async function confirmToggleTrangThai() {
-  if (confirmToggle.loading) return;
-
-  const p = confirmToggle.p;
-  const id = p?.id;
-  if (!p || !id) return;
-
-  confirmToggle.loading = true;
-  try {
-    await toggleTrangThai(p, confirmToggle.next);
-    resetConfirmToggle();
-  } catch (e) {
-    console.error(e);
-  } finally {
-    confirmToggle.loading = false;
+  if (type === "confirm") {
+    button.style.background = "#27313b";
+    button.style.color = "#fff";
+  } else if (type === "cancel") {
+    button.style.background = "#6c757d";
+    button.style.color = "#fff";
+  } else if (type === "ok") {
+    button.style.background = "#8a3ffc";
+    button.style.color = "#fff";
   }
+}
+
+function getSwalBase(type = "confirm") {
+  return {
+    width: 500,
+    padding: "22px 20px 24px",
+    background: "#ffffff",
+    backdrop: "rgba(0,0,0,0.45)",
+    allowOutsideClick: false,
+    allowEscapeKey: true,
+    buttonsStyling: false,
+    reverseButtons: false,
+    focusConfirm: false,
+    customClass: {
+      popup: "ss-swal-popup",
+      icon: "ss-swal-icon",
+      title: "ss-swal-title",
+      htmlContainer: "ss-swal-text",
+      actions: type === "success" ? "ss-swal-actions ss-swal-actions-center" : "ss-swal-actions",
+      confirmButton: type === "success" ? "ss-swal-ok-btn" : "ss-swal-confirm-btn",
+      cancelButton: "ss-swal-cancel-btn",
+    },
+    didOpen: (popup) => {
+      const actions = popup.querySelector(".swal2-actions");
+      const confirmBtn = popup.querySelector(".swal2-confirm");
+      const cancelBtn = popup.querySelector(".swal2-cancel");
+      const title = popup.querySelector(".swal2-title");
+      const html = popup.querySelector(".swal2-html-container");
+      const icon = popup.querySelector(".swal2-icon");
+
+      popup.style.borderRadius = "6px";
+      popup.style.boxShadow = "0 18px 48px rgba(0, 0, 0, 0.22)";
+      popup.style.padding = "22px 20px 24px";
+
+      if (actions) {
+        actions.style.display = "flex";
+        actions.style.alignItems = "center";
+        actions.style.justifyContent = "center";
+        actions.style.gap = "10px";
+        actions.style.marginTop = "18px";
+        actions.style.width = "100%";
+      }
+
+      if (title) {
+        title.style.fontSize = "27px";
+        title.style.lineHeight = "1.2";
+        title.style.fontWeight = "400";
+        title.style.color = "#333";
+        title.style.margin = "2px 0 10px";
+        title.style.padding = "0";
+      }
+
+      if (html) {
+        html.style.fontSize = "15px";
+        html.style.lineHeight = "1.45";
+        html.style.fontWeight = "400";
+        html.style.color = "#666";
+        html.style.margin = "0";
+        html.style.padding = "0";
+      }
+
+      if (icon) {
+        icon.style.margin = "8px auto 10px";
+      }
+
+      if (type === "success") {
+        applySwalButtonStyle(confirmBtn, "ok");
+      } else {
+        applySwalButtonStyle(confirmBtn, "confirm");
+        applySwalButtonStyle(cancelBtn, "cancel");
+      }
+    },
+  };
+}
+
+function buildToggleConfirmHtml(p, next) {
+  const ten = getTenSanPham(p) || "—";
+  const ma = getMaSanPham(p) || "—";
+  const fromLabel = getTrangThaiLabel(getTrangThaiKinhDoanh(p));
+  const toLabel = getTrangThaiLabel(next);
+
+  return `
+    <div style="font-weight:400;color:#666;line-height:1.5;">
+      <div style="margin-bottom:10px;font-weight:400;">
+        Bạn có muốn chuyển trạng thái sản phẩm này không?
+      </div>
+      <div style="border:1px solid rgba(255,77,79,0.14);background:linear-gradient(180deg, rgba(255,77,79,0.04), rgba(17,24,39,0.02));border-radius:10px;padding:12px 14px;text-align:left;">
+        <div style="font-size:15px;color:#333;font-weight:400;margin-bottom:4px;">${escapeHtml(ten)}</div>
+        <div style="font-size:13px;color:#666;font-weight:400;margin-bottom:8px;">Mã sản phẩm: ${escapeHtml(ma)}</div>
+        <div style="font-size:13px;color:#666;font-weight:400;">
+          Trạng thái sẽ đổi từ
+          <span style="color:#b42324;font-weight:400;">${escapeHtml(fromLabel)}</span>
+          sang
+          <span style="color:#b42324;font-weight:400;">${escapeHtml(toLabel)}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
 }
 
 function unwrapList(v) {
@@ -955,6 +964,27 @@ async function loadRefOptions() {
   }
 }
 
+async function openConfirmToggle(p) {
+  const id = p?.id;
+  if (!id || switchLoadingIds.has(id)) return;
+
+  const next = !getTrangThaiKinhDoanh(p);
+
+  const result = await Swal.fire({
+    ...getSwalBase("confirm"),
+    icon: "question",
+    title: "Xác nhận?",
+    html: buildToggleConfirmHtml(p, next),
+    confirmButtonText: "Đồng ý",
+    cancelButtonText: "Hủy",
+    showCancelButton: true,
+  });
+
+  if (!result.isConfirmed) return;
+
+  await toggleTrangThai(p, next);
+}
+
 async function toggleTrangThai(p, forcedNext = null) {
   const id = p?.id;
   if (!id || switchLoadingIds.has(id)) return;
@@ -968,12 +998,7 @@ async function toggleTrangThai(p, forcedNext = null) {
     const payload = {
       ...p,
       trangThaiKinhDoanh: next,
-      trang_thai_kinh_doanh: next,
       trangThai: next,
-      trang_thai: next,
-      dangKinhDoanh: next,
-      kinhDoanh: next,
-      isActive: next,
     };
 
     await productService.update(id, payload);
@@ -989,20 +1014,33 @@ async function toggleTrangThai(p, forcedNext = null) {
       products.value[idx] = updatedProduct;
     }
 
-    if (confirmToggle.p && Number(confirmToggle.p.id) === Number(id)) {
-      confirmToggle.p = updatedProduct;
-    }
-
-    showToast(
-      `Đã thay đổi trạng thái sản phẩm "${getTenSanPham(updatedProduct) || getMaSanPham(updatedProduct)}" từ "${getTrangThaiLabel(current)}" sang "${getTrangThaiLabel(next)}".`,
-      "success"
-    );
+    await Swal.fire({
+      ...getSwalBase("success"),
+      icon: "success",
+      title: "Thành công!",
+      html: `
+        <div style="font-weight:400;color:#666;line-height:1.5;">
+          Đã chuyển trạng thái sản phẩm
+          <span style="font-weight:400;color:#333;">${escapeHtml(getTenSanPham(updatedProduct) || getMaSanPham(updatedProduct))}</span>
+          từ
+          <span style="font-weight:400;color:#b42324;">${escapeHtml(getTrangThaiLabel(current))}</span>
+          sang
+          <span style="font-weight:400;color:#b42324;">${escapeHtml(getTrangThaiLabel(next))}</span>.
+        </div>
+      `,
+      confirmButtonText: "OK",
+      showCancelButton: false,
+    });
   } catch (e) {
     console.error(e);
-    showToast(
-      `Không thể thay đổi trạng thái sản phẩm "${getTenSanPham(p) || getMaSanPham(p)}".`,
-      "error"
-    );
+    await Swal.fire({
+      ...getSwalBase("confirm"),
+      icon: "error",
+      title: "Thất bại!",
+      text: getErrorMessage(e, `Không thể thay đổi trạng thái sản phẩm "${getTenSanPham(p) || getMaSanPham(p)}".`),
+      confirmButtonText: "OK",
+      showCancelButton: false,
+    });
     throw e;
   } finally {
     switchLoadingIds.delete(id);
@@ -1188,7 +1226,6 @@ onMounted(async () => {
   color: rgba(17, 24, 39, 0.82);
 }
 
-/* theme */
 :root {
   --ss-brand-red: #ff4d4f;
   --ss-brand-red-dark: #e13c3f;
@@ -1200,7 +1237,6 @@ onMounted(async () => {
   --ss-text-muted: rgba(17, 24, 39, 0.55);
 }
 
-/* toast */
 .ss-toast {
   position: fixed;
   top: 20px;
@@ -1277,7 +1313,6 @@ onMounted(async () => {
   transform: translateY(-8px);
 }
 
-/* HEAD */
 .ss-head {
   display: flex;
   align-items: flex-end;
@@ -1300,7 +1335,6 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-/* Cards */
 .ss-card {
   background: #fff;
   border-radius: 14px;
@@ -1310,7 +1344,6 @@ onMounted(async () => {
   box-shadow: 0 10px 26px rgba(17, 24, 39, 0.06);
 }
 
-/* FILTER */
 .ss-filter-card {
   padding: 14px 16px;
   margin-bottom: 18px;
@@ -1340,7 +1373,6 @@ onMounted(async () => {
   margin-top: 10px;
 }
 
-/* Row 1 */
 .ss-filter-row1 {
   display: grid;
   grid-template-columns: 1.6fr 0.55fr 0.55fr;
@@ -1351,7 +1383,6 @@ onMounted(async () => {
   min-width: 320px;
 }
 
-/* Row 2 */
 .ss-filter-row2 {
   margin-top: 12px;
   display: flex;
@@ -1367,7 +1398,6 @@ onMounted(async () => {
   padding-bottom: 2px;
 }
 
-/* Search */
 .ss-search-wrap {
   position: relative;
   width: 100%;
@@ -1393,14 +1423,12 @@ onMounted(async () => {
   box-shadow: 0 0 0 4px rgba(255, 77, 79, 0.08);
 }
 
-/* Select */
 .ss-select {
   height: 40px;
   border-radius: 10px !important;
   border: 1px solid rgba(17, 24, 39, 0.14);
 }
 
-/* Combobox */
 .ss-combo {
   position: relative;
 }
@@ -1456,7 +1484,6 @@ onMounted(async () => {
   color: rgba(17, 24, 39, 0.55);
 }
 
-/* Radio */
 .ss-radio {
   display: inline-flex;
   align-items: center;
@@ -1476,7 +1503,6 @@ onMounted(async () => {
   transform: translateY(1px);
 }
 
-/* Buttons */
 .ss-btn-ic {
   font-size: 18px;
   margin-right: 8px;
@@ -1529,20 +1555,6 @@ onMounted(async () => {
   background: rgba(255, 77, 79, 0.15) !important;
 }
 
-.ss-btn-lite {
-  background: #fff !important;
-  color: #ff4d4f !important;
-  border: 1px solid rgba(255, 77, 79, 0.26) !important;
-}
-
-.ss-btn-warn,
-.ss-btn-dark {
-  background: #fff !important;
-  color: #ff4d4f !important;
-  border: 1px solid rgba(255, 77, 79, 0.26) !important;
-}
-
-/* LIST */
 .ss-list-card {
   padding: 0;
 }
@@ -1553,7 +1565,6 @@ onMounted(async () => {
   color: rgba(17, 24, 39, 0.82);
 }
 
-/* Table */
 .ss-table {
   width: 100%;
   table-layout: fixed;
@@ -1628,7 +1639,6 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-/* Badge */
 .ss-badge {
   display: inline-flex;
   align-items: center;
@@ -1650,7 +1660,6 @@ onMounted(async () => {
   border-color: rgba(17, 24, 39, 0.12);
 }
 
-/* actions */
 .ss-actions-inline {
   display: inline-flex;
   align-items: center;
@@ -1658,7 +1667,6 @@ onMounted(async () => {
   justify-content: center;
 }
 
-/* switch */
 .ss-switch {
   width: 44px;
   height: 24px;
@@ -1691,7 +1699,6 @@ onMounted(async () => {
   transform: translateX(20px);
 }
 
-/* view button */
 .ss-icon-btn-view {
   width: 36px;
   height: 36px;
@@ -1713,7 +1720,6 @@ onMounted(async () => {
   border-color: rgba(255, 77, 79, 0.3);
 }
 
-/* Pagination */
 .ss-pagination-bar {
   margin-top: 14px;
   display: flex;
@@ -1763,7 +1769,6 @@ onMounted(async () => {
   font-weight: 600;
 }
 
-/* overlay/modal */
 .ss-overlay {
   position: fixed;
   inset: 0;
@@ -1780,8 +1785,8 @@ onMounted(async () => {
   overflow: hidden;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
 }
-.ss-confirm-modal {
-  width: 520px;
+.ss-qr-modal {
+  width: 680px;
 }
 .ss-modal-header {
   padding: 14px 16px;
@@ -1829,44 +1834,6 @@ onMounted(async () => {
   border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.ss-confirm-text {
-  font-size: 13px;
-  color: rgba(17, 24, 39, 0.78);
-  line-height: 1.6;
-}
-.ss-confirm-text b {
-  color: rgba(17, 24, 39, 0.9);
-}
-.ss-confirm-box {
-  margin-top: 10px;
-  border: 1px solid rgba(255, 77, 79, 0.16);
-  background: linear-gradient(180deg, rgba(255, 77, 79, 0.04), rgba(17, 24, 39, 0.02));
-  border-radius: 12px;
-  padding: 12px 14px;
-}
-.ss-confirm-name {
-  font-size: 15px;
-  font-weight: 700;
-  color: rgba(17, 24, 39, 0.92);
-}
-.ss-confirm-code {
-  margin-top: 4px;
-  font-size: 13px;
-  color: rgba(17, 24, 39, 0.58);
-}
-.ss-confirm-change {
-  margin-top: 10px;
-  font-size: 13px;
-  color: rgba(17, 24, 39, 0.72);
-}
-.ss-confirm-change .from,
-.ss-confirm-change .to {
-  display: inline-block;
-  margin: 0 4px;
-  font-weight: 700;
-  color: rgba(180, 35, 36, 0.95);
-}
-
 .ss-qr-error {
   margin-bottom: 10px;
   padding: 10px 12px;
@@ -1890,7 +1857,131 @@ onMounted(async () => {
   font-size: 13px;
 }
 
-/* Responsive */
+:deep(.swal2-popup.ss-swal-popup) {
+  width: 500px !important;
+  max-width: 500px !important;
+  border-radius: 6px !important;
+  padding: 22px 20px 24px !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22) !important;
+  font-family: inherit !important;
+}
+
+:deep(.swal2-icon.ss-swal-icon) {
+  margin: 8px auto 10px !important;
+}
+
+:deep(.swal2-icon.swal2-question.ss-swal-icon) {
+  width: 72px !important;
+  height: 72px !important;
+  border-width: 3px !important;
+  color: #9db5c2 !important;
+  border-color: #9db5c2 !important;
+}
+
+:deep(.swal2-icon.swal2-success.ss-swal-icon) {
+  width: 72px !important;
+  height: 72px !important;
+  border-width: 3px !important;
+  border-color: #d8efcf !important;
+  color: #8fd16f !important;
+}
+
+:deep(.swal2-icon.swal2-success .swal2-success-ring) {
+  border-color: rgba(143, 209, 111, 0.22) !important;
+}
+
+:deep(.swal2-icon.swal2-success [class^="swal2-success-line"]) {
+  background-color: #8fd16f !important;
+}
+
+:deep(.swal2-title.ss-swal-title) {
+  font-size: 27px !important;
+  line-height: 1.2 !important;
+  font-weight: 400 !important;
+  color: #333 !important;
+  margin: 2px 0 10px !important;
+  padding: 0 !important;
+}
+
+:deep(.swal2-html-container.ss-swal-text) {
+  font-size: 15px !important;
+  line-height: 1.45 !important;
+  font-weight: 400 !important;
+  color: #666 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+:deep(.swal2-actions.ss-swal-actions) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  margin-top: 18px !important;
+  width: 100% !important;
+}
+
+:deep(.swal2-actions.ss-swal-actions-center) {
+  justify-content: center !important;
+}
+
+:deep(.ss-swal-confirm-btn),
+:deep(.ss-swal-cancel-btn),
+:deep(.ss-swal-ok-btn) {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  min-width: 78px !important;
+  height: 38px !important;
+  padding: 0 18px !important;
+  border-radius: 3px !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 38px !important;
+  font-family: inherit !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: 0.15s ease !important;
+}
+
+:deep(.ss-swal-confirm-btn) {
+  background: #27313b !important;
+  color: #fff !important;
+}
+
+:deep(.ss-swal-confirm-btn:hover) {
+  background: #1f2831 !important;
+}
+
+:deep(.ss-swal-cancel-btn) {
+  background: #6c757d !important;
+  color: #fff !important;
+}
+
+:deep(.ss-swal-cancel-btn:hover) {
+  background: #5f6870 !important;
+}
+
+:deep(.ss-swal-ok-btn) {
+  background: #8a3ffc !important;
+  color: #fff !important;
+}
+
+:deep(.ss-swal-ok-btn:hover) {
+  background: #7b32ed !important;
+}
+
+:deep(.ss-swal-confirm-btn:focus),
+:deep(.ss-swal-cancel-btn:focus),
+:deep(.ss-swal-ok-btn:focus) {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 @media (max-width: 1200px) {
   .ss-filter-row1 {
     grid-template-columns: 1fr 1fr;
@@ -1913,7 +2004,7 @@ onMounted(async () => {
   }
 
   .ss-modal,
-  .ss-confirm-modal {
+  .ss-qr-modal {
     width: calc(100vw - 24px);
   }
 }

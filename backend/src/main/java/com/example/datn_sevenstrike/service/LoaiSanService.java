@@ -23,12 +23,16 @@ public class LoaiSanService {
 
     public List<LoaiSanResponse> all() {
         return repo.findAllByXoaMemFalseOrderByIdDesc()
-                .stream().map(this::toResponse).toList();
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     public List<LoaiSanResponse> allActive() {
         return repo.findAllByXoaMemFalseAndTrangThaiTrueOrderByIdDesc()
-                .stream().map(this::toResponse).toList();
+                .stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     public LoaiSanResponse one(Integer id) {
@@ -39,32 +43,42 @@ public class LoaiSanService {
 
     @Transactional
     public LoaiSanResponse create(LoaiSanRequest req) {
-        if (req == null) throw new BadRequestEx("Thiếu dữ liệu tạo mới");
+        if (req == null) {
+            throw new BadRequestEx("Thiếu dữ liệu tạo mới");
+        }
 
         LoaiSan e = mapper.map(req, LoaiSan.class);
         e.setId(null);
 
         applyDefaults(e);
-        validate(e);
+        validateCreate(e);
 
         return toResponse(repo.save(e));
     }
 
     @Transactional
     public LoaiSanResponse update(Integer id, LoaiSanRequest req) {
-        if (req == null) throw new BadRequestEx("Thiếu dữ liệu cập nhật");
+        if (req == null) {
+            throw new BadRequestEx("Thiếu dữ liệu cập nhật");
+        }
 
         LoaiSan db = repo.findByIdAndXoaMemFalse(id)
                 .orElseThrow(() -> new NotFoundEx("Không tìm thấy LoaiSan id=" + id));
 
         boolean activeCu = isActive(db);
 
-        if (req.getTenLoaiSan() != null) db.setTenLoaiSan(req.getTenLoaiSan());
-        if (req.getTrangThai() != null) db.setTrangThai(req.getTrangThai());
-        if (req.getXoaMem() != null) db.setXoaMem(req.getXoaMem());
+        if (req.getTenLoaiSan() != null) {
+            db.setTenLoaiSan(req.getTenLoaiSan());
+        }
+        if (req.getTrangThai() != null) {
+            db.setTrangThai(req.getTrangThai());
+        }
+        if (req.getXoaMem() != null) {
+            db.setXoaMem(req.getXoaMem());
+        }
 
         applyDefaults(db);
-        validate(db);
+        validateUpdate(db);
 
         LoaiSan saved = repo.save(db);
         boolean activeMoi = isActive(saved);
@@ -77,6 +91,7 @@ public class LoaiSanService {
 
         return toResponse(saved);
     }
+
     @Transactional
     public void delete(Integer id) {
         LoaiSan db = repo.findByIdAndXoaMemFalse(id)
@@ -90,12 +105,32 @@ public class LoaiSanService {
     }
 
     private void applyDefaults(LoaiSan e) {
-        if (e.getXoaMem() == null) e.setXoaMem(false);
-        if (e.getTrangThai() == null) e.setTrangThai(true);
-        if (e.getTenLoaiSan() != null) e.setTenLoaiSan(e.getTenLoaiSan().trim());
+        if (e.getXoaMem() == null) {
+            e.setXoaMem(false);
+        }
+        if (e.getTrangThai() == null) {
+            e.setTrangThai(true);
+        }
+        if (e.getTenLoaiSan() != null) {
+            e.setTenLoaiSan(e.getTenLoaiSan().trim());
+        }
     }
 
-    private void validate(LoaiSan e) {
+    private void validateCreate(LoaiSan e) {
+        validateCommon(e);
+        if (repo.existsByTenLoaiSanIgnoreCaseAndXoaMemFalse(e.getTenLoaiSan())) {
+            throw new BadRequestEx("Tên loại sân đã tồn tại");
+        }
+    }
+
+    private void validateUpdate(LoaiSan e) {
+        validateCommon(e);
+        if (repo.existsByTenLoaiSanIgnoreCaseAndXoaMemFalseAndIdNot(e.getTenLoaiSan(), e.getId())) {
+            throw new BadRequestEx("Tên loại sân đã tồn tại");
+        }
+    }
+
+    private void validateCommon(LoaiSan e) {
         if (e.getTenLoaiSan() == null || e.getTenLoaiSan().isBlank()) {
             throw new BadRequestEx("Thiếu ten_loai_san");
         }

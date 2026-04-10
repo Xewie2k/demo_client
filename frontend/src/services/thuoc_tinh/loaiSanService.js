@@ -1,32 +1,67 @@
-// File: src/services/thuoc_tinh/loaiSanService.js
 import axios from "axios";
+import { getApiErrorMessage } from "@/services/apiError";
 
-const apiBase =
-  import.meta?.env?.VITE_API_URL ||
-  import.meta?.env?.VITE_API_BASE_URL ||
-  "http://localhost:8080";
-
-const http = axios.create({
-  baseURL: String(apiBase).replace(/\/+$/, ""),
+const api = axios.create({
+  baseURL:
+    import.meta?.env?.VITE_API_URL ||
+    import.meta?.env?.VITE_API_BASE_URL ||
+    "http://localhost:8080",
+  withCredentials: true,
 });
 
-// ✅ BE controller dự kiến: /api/admin/loai-san
-const base = "/api/admin/loai-san";
+const PATH = "/api/admin/loai-san";
+
+function unwrap(res) {
+  return res?.data ?? res;
+}
+
+function throwApiError(error, fallback) {
+  throw new Error(getApiErrorMessage(error, fallback));
+}
 
 export default {
-  getAll() {
-    return http.get(base);
+  async getAll() {
+    try {
+      const res = await api.get(PATH);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Không tải được danh sách loại sân.");
+    }
   },
-  getOne(id) {
-    return http.get(`${base}/${id}`);
+
+  async getOne(id) {
+    try {
+      const res = await api.get(`${PATH}/${id}`);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Không tải được thông tin loại sân.");
+    }
   },
-  create(payload) {
-    return http.post(base, payload);
+
+  async create(payload) {
+    try {
+      const res = await api.post(PATH, payload);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Thêm loại sân thất bại.");
+    }
   },
-  update(id, payload) {
-    return http.put(`${base}/${id}`, payload);
+
+  async update(id, payload) {
+    try {
+      const res = await api.put(`${PATH}/${id}`, payload);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Cập nhật loại sân thất bại.");
+    }
   },
-  remove(id) {
-    return http.delete(`${base}/${id}`);
+
+  async remove(id) {
+    try {
+      const res = await api.delete(`${PATH}/${id}`);
+      return unwrap(res);
+    } catch (error) {
+      throwApiError(error, "Xóa loại sân thất bại.");
+    }
   },
 };

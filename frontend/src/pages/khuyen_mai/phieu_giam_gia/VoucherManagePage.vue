@@ -3,7 +3,6 @@
   <div class="p-4 ss-page ss-font">
     <h2 class="h5 mb-4">Quản lý giảm giá/ Phiếu giảm giá</h2>
 
-    <!-- FILTER BOX -->
     <div class="ss-filter-container mb-4 p-4">
       <div class="ss-filter-top">
         <VoucherFilter v-model="filters" @reset="resetFilters" />
@@ -42,7 +41,6 @@
       </div>
     </div>
 
-    <!-- LIST BOX -->
     <section class="ss-custom-box p-4">
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h3 class="h6 m-0">Danh sách phiếu giảm giá</h3>
@@ -60,7 +58,6 @@
       />
     </section>
 
-    <!-- PAGINATION -->
     <div class="ss-pagination-wrap" v-if="totalPages > 0">
       <button
         class="ss-page-btn"
@@ -122,9 +119,7 @@ const filters = ref({
 const currentPage = ref(1);
 const pageSize = ref(10);
 
-// khóa theo id khi đang cập nhật
 const dangCapNhatTrangThai = ref(new Set());
-// lưu trạng thái gốc theo DB để revert khi cancel/lỗi
 const trangThaiGocMap = ref(new Map());
 
 let fetchTimer = null;
@@ -151,7 +146,6 @@ const parseApiDate = (value) => {
   const s = String(value).trim();
   if (!s) return null;
 
-  // yyyy-MM-dd
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) {
     const [yyyy, mm, dd] = s.split("-").map(Number);
     return new Date(yyyy, mm - 1, dd);
@@ -175,10 +169,8 @@ const normalizeDateForApi = (value) => {
   const s = String(value).trim();
   if (!s) return null;
 
-  // đã đúng format BE cần
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
-  // dd/MM/yyyy
   const m1 = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (m1) {
     const dd = String(Number(m1[1])).padStart(2, "0");
@@ -204,43 +196,112 @@ const buildServerParams = () => {
   return params;
 };
 
-const fetchData = async () => {
-  try {
-    const params = buildServerParams();
+function applySwalButtonStyle(button, type = "confirm") {
+  if (!button) return;
 
-    const res = await axios.get(API_URL, { params });
-    const arr = Array.isArray(res.data) ? res.data : res.data?.content || [];
+  button.style.appearance = "none";
+  button.style.webkitAppearance = "none";
+  button.style.border = "0";
+  button.style.outline = "none";
+  button.style.boxShadow = "none";
+  button.style.borderRadius = "3px";
+  button.style.minWidth = "78px";
+  button.style.height = "38px";
+  button.style.padding = "0 18px";
+  button.style.fontSize = "14px";
+  button.style.fontWeight = "400";
+  button.style.lineHeight = "38px";
+  button.style.fontFamily = "inherit";
+  button.style.display = "inline-flex";
+  button.style.alignItems = "center";
+  button.style.justifyContent = "center";
+  button.style.cursor = "pointer";
 
-    vouchers.value = arr;
-
-    const m = new Map();
-    for (const it of arr) {
-      if (it?.id != null) {
-        m.set(it.id, normalizeTrangThai(it.trangThai));
-      }
-    }
-    trangThaiGocMap.value = m;
-    lastShownFilterError = "";
-  } catch (e) {
-    console.error(e);
-
-    const msg = getErrorMessage(e);
-    const errorKey = `${filters.value.startDate}|${filters.value.endDate}|${msg}`;
-
-    if (lastShownFilterError !== errorKey) {
-      lastShownFilterError = errorKey;
-
-      await Swal.fire({
-        title: "Bộ lọc không hợp lệ",
-        text: msg,
-        icon: "warning",
-        confirmButtonText: "Đóng",
-      });
-    }
+  if (type === "confirm") {
+    button.style.background = "#27313b";
+    button.style.color = "#fff";
+  } else if (type === "cancel") {
+    button.style.background = "#6c757d";
+    button.style.color = "#fff";
+  } else if (type === "ok") {
+    button.style.background = "#8a3ffc";
+    button.style.color = "#fff";
   }
-};
+}
 
-// trangThai=false hoặc 0 => kết thúc
+function getSwalBase(type = "confirm") {
+  return {
+    width: 500,
+    padding: "22px 20px 24px",
+    background: "#ffffff",
+    backdrop: "rgba(0,0,0,0.45)",
+    allowOutsideClick: false,
+    allowEscapeKey: true,
+    buttonsStyling: false,
+    reverseButtons: false,
+    focusConfirm: false,
+    customClass: {
+      popup: "ss-swal-popup",
+      icon: "ss-swal-icon",
+      title: "ss-swal-title",
+      htmlContainer: "ss-swal-text",
+      actions: type === "success" ? "ss-swal-actions ss-swal-actions-center" : "ss-swal-actions",
+      confirmButton: type === "success" ? "ss-swal-ok-btn" : "ss-swal-confirm-btn",
+      cancelButton: "ss-swal-cancel-btn",
+    },
+    didOpen: (popup) => {
+      const actions = popup.querySelector(".swal2-actions");
+      const confirmBtn = popup.querySelector(".swal2-confirm");
+      const cancelBtn = popup.querySelector(".swal2-cancel");
+      const title = popup.querySelector(".swal2-title");
+      const html = popup.querySelector(".swal2-html-container");
+      const icon = popup.querySelector(".swal2-icon");
+
+      popup.style.borderRadius = "6px";
+      popup.style.boxShadow = "0 18px 48px rgba(0, 0, 0, 0.22)";
+      popup.style.padding = "22px 20px 24px";
+
+      if (actions) {
+        actions.style.display = "flex";
+        actions.style.alignItems = "center";
+        actions.style.justifyContent = "center";
+        actions.style.gap = "10px";
+        actions.style.marginTop = "18px";
+        actions.style.width = "100%";
+      }
+
+      if (title) {
+        title.style.fontSize = "27px";
+        title.style.lineHeight = "1.2";
+        title.style.fontWeight = "400";
+        title.style.color = "#333";
+        title.style.margin = "2px 0 10px";
+        title.style.padding = "0";
+      }
+
+      if (html) {
+        html.style.fontSize = "15px";
+        html.style.lineHeight = "1.45";
+        html.style.fontWeight = "400";
+        html.style.color = "#666";
+        html.style.margin = "0";
+        html.style.padding = "0";
+      }
+
+      if (icon) {
+        icon.style.margin = "8px auto 10px";
+      }
+
+      if (type === "success") {
+        applySwalButtonStyle(confirmBtn, "ok");
+      } else {
+        applySwalButtonStyle(confirmBtn, "confirm");
+        applySwalButtonStyle(cancelBtn, "cancel");
+      }
+    },
+  };
+}
+
 const isEndedByFlag = (p) => p?.trangThai === false || Number(p?.trangThai) === 0;
 
 const getStatusText = (p) => {
@@ -303,8 +364,44 @@ const formatDate = (d) => {
   return date ? date.toLocaleDateString("vi-VN") : "---";
 };
 
-// keyword + ngày đã lọc ở BE
-// status hiển thị vẫn lọc ở FE vì nó là trạng thái nghiệp vụ suy ra từ ngày + flag
+const fetchData = async () => {
+  try {
+    const params = buildServerParams();
+
+    const res = await axios.get(API_URL, { params });
+    const arr = Array.isArray(res.data) ? res.data : res.data?.content || [];
+
+    vouchers.value = arr;
+
+    const m = new Map();
+    for (const it of arr) {
+      if (it?.id != null) {
+        m.set(it.id, normalizeTrangThai(it.trangThai));
+      }
+    }
+    trangThaiGocMap.value = m;
+    lastShownFilterError = "";
+  } catch (e) {
+    console.error(e);
+
+    const msg = getErrorMessage(e);
+    const errorKey = `${filters.value.startDate}|${filters.value.endDate}|${msg}`;
+
+    if (lastShownFilterError !== errorKey) {
+      lastShownFilterError = errorKey;
+
+      await Swal.fire({
+        ...getSwalBase("confirm"),
+        icon: "warning",
+        title: "Bộ lọc không hợp lệ",
+        text: msg,
+        confirmButtonText: "OK",
+        showCancelButton: false,
+      });
+    }
+  }
+};
+
 const filteredVouchers = computed(() => {
   const statusFilter = (filters.value.status || "").trim();
 
@@ -398,6 +495,43 @@ const buildNewTrangThai = (p, oldValue, argChecked) => {
   return !oldValue;
 };
 
+const escapeHtml = (value) => {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+};
+
+const getTrangThaiPopupLabel = (value) => {
+  return value ? "Đang hoạt động" : "Đã kết thúc";
+};
+
+const buildToggleConfirmHtml = (p, oldValue, newValue) => {
+  return `
+    <div style="font-weight:400;color:#666;line-height:1.5;">
+      <div style="margin-bottom:10px;font-weight:400;">
+        Bạn có muốn chuyển trạng thái phiếu giảm giá này không?
+      </div>
+      <div style="border:1px solid rgba(255,77,79,0.14);background:linear-gradient(180deg, rgba(255,77,79,0.04), rgba(17,24,39,0.02));border-radius:10px;padding:12px 14px;text-align:left;">
+        <div style="font-size:15px;color:#333;font-weight:400;margin-bottom:4px;">
+          ${escapeHtml(p?.tenPhieuGiamGia || "—")}
+        </div>
+        <div style="font-size:13px;color:#666;font-weight:400;margin-bottom:8px;">
+          Mã phiếu: ${escapeHtml(p?.maPhieuGiamGia || "—")}
+        </div>
+        <div style="font-size:13px;color:#666;font-weight:400;">
+          Trạng thái sẽ đổi từ
+          <span style="color:#b42324;font-weight:400;">${escapeHtml(getTrangThaiPopupLabel(oldValue))}</span>
+          sang
+          <span style="color:#b42324;font-weight:400;">${escapeHtml(getTrangThaiPopupLabel(newValue))}</span>
+        </div>
+      </div>
+    </div>
+  `;
+};
+
 const toggleVoucherStatus = async (p, checked) => {
   const id = p?.id;
   if (!id) return;
@@ -412,11 +546,13 @@ const toggleVoucherStatus = async (p, checked) => {
   const newValue = buildNewTrangThai(p, oldValue, checked);
 
   const result = await Swal.fire({
-    title: "Xác nhận đổi trạng thái?",
-    icon: "info",
-    showCancelButton: true,
-    confirmButtonText: "Xác nhận",
+    ...getSwalBase("confirm"),
+    icon: "question",
+    title: "Xác nhận?",
+    html: buildToggleConfirmHtml(p, oldValue, newValue),
+    confirmButtonText: "Đồng ý",
     cancelButtonText: "Hủy",
+    showCancelButton: true,
   });
 
   if (!result.isConfirmed) {
@@ -436,15 +572,35 @@ const toggleVoucherStatus = async (p, checked) => {
     }
 
     await fetchData();
+
+    await Swal.fire({
+      ...getSwalBase("success"),
+      icon: "success",
+      title: "Thành công!",
+      html: `
+        <div style="font-weight:400;color:#666;line-height:1.5;">
+          Đã chuyển trạng thái phiếu giảm giá
+          <span style="font-weight:400;color:#333;">${escapeHtml(p?.tenPhieuGiamGia || p?.maPhieuGiamGia || "")}</span>
+          từ
+          <span style="font-weight:400;color:#b42324;">${escapeHtml(getTrangThaiPopupLabel(oldValue))}</span>
+          sang
+          <span style="font-weight:400;color:#b42324;">${escapeHtml(getTrangThaiPopupLabel(newValue))}</span>.
+        </div>
+      `,
+      confirmButtonText: "OK",
+      showCancelButton: false,
+    });
   } catch (e) {
     console.error(e);
     p.trangThai = oldValue;
 
     await Swal.fire({
-      title: "Không thể cập nhật trạng thái",
-      text: getErrorMessage(e),
+      ...getSwalBase("confirm"),
       icon: "error",
-      confirmButtonText: "Đóng",
+      title: "Thất bại!",
+      text: getErrorMessage(e),
+      confirmButtonText: "OK",
+      showCancelButton: false,
     });
   } finally {
     dangCapNhatTrangThai.value.delete(id);
@@ -603,5 +759,130 @@ h3.h6 {
 .ss-page-btn.disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+:deep(.swal2-popup.ss-swal-popup) {
+  width: 500px !important;
+  max-width: 500px !important;
+  border-radius: 6px !important;
+  padding: 22px 20px 24px !important;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22) !important;
+  font-family: inherit !important;
+}
+
+:deep(.swal2-icon.ss-swal-icon) {
+  margin: 8px auto 10px !important;
+}
+
+:deep(.swal2-icon.swal2-question.ss-swal-icon) {
+  width: 72px !important;
+  height: 72px !important;
+  border-width: 3px !important;
+  color: #9db5c2 !important;
+  border-color: #9db5c2 !important;
+}
+
+:deep(.swal2-icon.swal2-success.ss-swal-icon) {
+  width: 72px !important;
+  height: 72px !important;
+  border-width: 3px !important;
+  border-color: #d8efcf !important;
+  color: #8fd16f !important;
+}
+
+:deep(.swal2-icon.swal2-success .swal2-success-ring) {
+  border-color: rgba(143, 209, 111, 0.22) !important;
+}
+
+:deep(.swal2-icon.swal2-success [class^="swal2-success-line"]) {
+  background-color: #8fd16f !important;
+}
+
+:deep(.swal2-title.ss-swal-title) {
+  font-size: 27px !important;
+  line-height: 1.2 !important;
+  font-weight: 400 !important;
+  color: #333 !important;
+  margin: 2px 0 10px !important;
+  padding: 0 !important;
+}
+
+:deep(.swal2-html-container.ss-swal-text) {
+  font-size: 15px !important;
+  line-height: 1.45 !important;
+  font-weight: 400 !important;
+  color: #666 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+:deep(.swal2-actions.ss-swal-actions) {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  margin-top: 18px !important;
+  width: 100% !important;
+}
+
+:deep(.swal2-actions.ss-swal-actions-center) {
+  justify-content: center !important;
+}
+
+:deep(.ss-swal-confirm-btn),
+:deep(.ss-swal-cancel-btn),
+:deep(.ss-swal-ok-btn) {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+  min-width: 78px !important;
+  height: 38px !important;
+  padding: 0 18px !important;
+  border-radius: 3px !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  line-height: 38px !important;
+  font-family: inherit !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: 0.15s ease !important;
+}
+
+:deep(.ss-swal-confirm-btn) {
+  background: #27313b !important;
+  color: #fff !important;
+}
+
+:deep(.ss-swal-confirm-btn:hover) {
+  background: #1f2831 !important;
+}
+
+:deep(.ss-swal-cancel-btn) {
+  background: #6c757d !important;
+  color: #fff !important;
+}
+
+:deep(.ss-swal-cancel-btn:hover) {
+  background: #5f6870 !important;
+}
+
+:deep(.ss-swal-ok-btn) {
+  background: #8a3ffc !important;
+  color: #fff !important;
+}
+
+:deep(.ss-swal-ok-btn:hover) {
+  background: #7b32ed !important;
+}
+
+:deep(.ss-swal-confirm-btn:focus),
+:deep(.ss-swal-cancel-btn:focus),
+:deep(.ss-swal-ok-btn:focus) {
+  outline: none !important;
+  box-shadow: none !important;
 }
 </style>

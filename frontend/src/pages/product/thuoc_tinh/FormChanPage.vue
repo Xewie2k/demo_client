@@ -1,7 +1,6 @@
-<!-- File: src/pages/product/thuoc_tinh/FormChanPage.vue -->
+<!-- src/pages/product/thuoc_tinh/FormChanPage.vue -->
 <template>
   <div class="ss-page ss-font">
-    <!-- HEAD (nhỏ + chữ thường + không đậm) + tổng số ngoài bộ lọc -->
     <div class="ss-head">
       <div class="ss-head-left">
         <div class="ss-title">Quản lý Sản Phẩm/ Form Chân</div>
@@ -14,7 +13,6 @@
       </div>
     </div>
 
-    <!-- FILTER (tách khỏi list, không dính) -->
     <div class="ss-card ss-border ss-filter-card">
       <div class="ss-filter-head">
         <span class="material-icons-outlined ss-filter-icon">filter_alt</span>
@@ -49,7 +47,6 @@
       </div>
     </div>
 
-    <!-- LIST (tách riêng, có khoảng cách rõ) -->
     <div class="ss-card ss-border ss-list-card">
       <div class="ss-list-head">Danh sách form chân</div>
 
@@ -68,9 +65,7 @@
           <tbody v-if="!loading && pagedItems.length">
             <tr v-for="(row, idx) in pagedItems" :key="getId(row) ?? idx">
               <td class="ss-td col-stt">{{ (page - 1) * pageSize + idx + 1 }}</td>
-
               <td class="ss-td ss-td-strong col-ma">{{ getMa(row) }}</td>
-
               <td class="ss-td col-ten" :title="getTen(row)">{{ getTen(row) }}</td>
 
               <td class="text-center col-tt">
@@ -81,7 +76,6 @@
 
               <td class="text-center col-action">
                 <div class="ss-actions-inline">
-                  <!-- quick toggle -->
                   <button
                     class="ss-switch"
                     type="button"
@@ -95,8 +89,7 @@
                     <span class="ss-switch-knob"></span>
                   </button>
 
-                  <!-- view -->
-                  <button class="ss-icon-btn-view" type="button" @click="onView(row)" title="Xem">
+                  <button class="ss-icon-btn-view" type="button" @click="openEdit(row)" title="Chỉnh sửa">
                     <span class="material-icons-outlined">visibility</span>
                   </button>
                 </div>
@@ -115,7 +108,6 @@
       </div>
     </div>
 
-    <!-- PAGINATION (ngoài danh sách) -->
     <div class="ss-pagination-bar">
       <div class="ss-pagination">
         <button class="ss-pagebtn" :disabled="page <= 1" @click="page--" title="Trang trước">‹</button>
@@ -139,72 +131,93 @@
       </div>
     </div>
 
-    <!-- Modal create -->
     <div v-if="modal.open" class="ss-overlay">
       <div class="ss-modal">
         <div class="ss-modal-header">
-          <div class="ss-modal-title">Thêm form chân</div>
-          <button class="btn btn-sm btn-outline-secondary" @click="closeModal">X</button>
+          <div class="ss-modal-title">{{ modal.mode === 'create' ? 'Thêm form chân' : 'Chỉnh sửa form chân' }}</div>
+          <button class="btn btn-sm btn-outline-secondary" type="button" @click="closeModal">X</button>
         </div>
 
         <div class="ss-modal-body">
-          <label class="form-label ss-label">Tên form chân *</label>
-          <input v-model="form.tenFormChan" class="form-control" placeholder="Nhập tên..." />
+          <template v-if="modal.mode === 'edit'">
+            <label class="form-label ss-label">Mã form chân</label>
+            <input :value="form.maFormChan" class="form-control ss-input-readonly" readonly disabled />
+          </template>
+
+          <label class="form-label ss-label ss-label-gap">Tên form chân *</label>
+          <input
+            v-model="form.tenFormChan"
+            class="form-control"
+            placeholder="Nhập tên..."
+            @input="modal.error = ''"
+            @keyup.enter="save"
+          />
+
+          <template v-if="modal.mode === 'edit'">
+            <label class="form-label ss-label ss-label-gap">Trạng thái</label>
+            <select v-model="form.trangThai" class="form-select" @change="modal.error = ''">
+              <option :value="true">Đang hoạt động</option>
+              <option :value="false">Ngừng hoạt động</option>
+            </select>
+          </template>
+
+          <div v-if="modal.error" class="ss-form-error">{{ modal.error }}</div>
         </div>
 
         <div class="ss-modal-footer">
-          <button class="btn ss-btn-lite" @click="closeModal">Hủy</button>
-          <button class="btn ss-btn-primary" :disabled="saving" @click="save">
-            {{ saving ? "Đang lưu..." : "Lưu" }}
+          <button class="btn ss-btn-lite" type="button" @click="closeModal" :disabled="saving">Hủy</button>
+          <button class="btn ss-btn-primary" type="button" :disabled="saving" @click="save">
+            {{ saving ? "Đang lưu..." : modal.mode === 'create' ? "Lưu" : "Cập nhật" }}
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Success -->
-    <div v-if="success.open" class="ss-overlay">
-      <div class="ss-success">
-        <div class="ss-success-ring"></div>
-        <div class="ss-success-title">Thành công</div>
-        <div class="ss-muted">Thêm form chân thành công!</div>
-        <button class="btn ss-btn-primary mt-3 px-4" @click="success.open = false">OK</button>
+    <transition name="ss-toast-fade">
+      <div
+        v-if="toast.open"
+        class="ss-toast"
+        :class="toast.type === 'error' ? 'ss-toast-error' : 'ss-toast-success'"
+      >
+        <span class="material-icons-outlined ss-toast-icon">
+          {{ toast.type === "error" ? "error" : "check_circle" }}
+        </span>
+        <span class="ss-toast-text">{{ toast.message }}</span>
       </div>
-    </div>
+    </transition>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
+import Swal from "sweetalert2";
 import formChanService from "@/services/thuoc_tinh/formChanService.js";
 
 const loading = ref(false);
 const saving = ref(false);
-
 const items = ref([]);
 const keyword = ref("");
-
 const page = ref(1);
 const pageSize = ref(10);
-
 const togglingId = ref(-999);
 
+function getErrorMessage(error, fallback) {
+  const message = error?.message;
+  return typeof message === "string" && message.trim() ? message.trim() : fallback;
+}
+
 function getId(row) {
-  return (
-    row?.id ??
-    row?.idFormChan ??
-    row?.id_form_chan ??
-    row?.formChanId ??
-    row?.form_chan_id ??
-    null
-  );
+  return row?.id ?? row?.idFormChan ?? row?.id_form_chan ?? row?.formChanId ?? row?.form_chan_id ?? null;
 }
 
 function getMa(x) {
   return x?.ma_form_chan ?? x?.maFormChan ?? x?.ma ?? "--";
 }
+
 function getTen(x) {
   return x?.ten_form_chan ?? x?.tenFormChan ?? x?.ten ?? "";
 }
+
 function getTrangThai(row) {
   const v = row?.trangThai ?? row?.trang_thai ?? row?.status ?? row?.trangthai;
   if (v === 0 || v === "0" || String(v).toLowerCase() === "false") return false;
@@ -221,6 +234,137 @@ function unwrapList(res) {
   return [];
 }
 
+const toast = reactive({
+  open: false,
+  type: "success",
+  message: "",
+  timer: null,
+});
+
+function clearToastTimer() {
+  if (toast.timer) {
+    clearTimeout(toast.timer);
+    toast.timer = null;
+  }
+}
+
+function showToast(message, type = "success", duration = 2500) {
+  clearToastTimer();
+  toast.message = message;
+  toast.type = type;
+  toast.open = true;
+
+  toast.timer = setTimeout(() => {
+    toast.open = false;
+    toast.timer = null;
+  }, duration);
+}
+
+function applySwalButtonStyle(button, type = "confirm") {
+  if (!button) return;
+  button.style.appearance = "none";
+  button.style.webkitAppearance = "none";
+  button.style.border = "0";
+  button.style.outline = "none";
+  button.style.boxShadow = "none";
+  button.style.borderRadius = "3px";
+  button.style.minWidth = "78px";
+  button.style.height = "38px";
+  button.style.padding = "0 18px";
+  button.style.fontSize = "14px";
+  button.style.fontWeight = "400";
+  button.style.lineHeight = "38px";
+  button.style.fontFamily = "inherit";
+  button.style.display = "inline-flex";
+  button.style.alignItems = "center";
+  button.style.justifyContent = "center";
+  button.style.cursor = "pointer";
+
+  if (type === "confirm") {
+    button.style.background = "#27313b";
+    button.style.color = "#fff";
+  } else if (type === "cancel") {
+    button.style.background = "#6c757d";
+    button.style.color = "#fff";
+  } else if (type === "ok") {
+    button.style.background = "#8a3ffc";
+    button.style.color = "#fff";
+  }
+}
+
+function getSwalBase(type = "confirm") {
+  return {
+    width: 500,
+    padding: "22px 20px 24px",
+    background: "#ffffff",
+    backdrop: "rgba(0,0,0,0.45)",
+    allowOutsideClick: false,
+    allowEscapeKey: true,
+    buttonsStyling: false,
+    reverseButtons: false,
+    focusConfirm: false,
+    customClass: {
+      popup: "ss-swal-popup",
+      icon: "ss-swal-icon",
+      title: "ss-swal-title",
+      htmlContainer: "ss-swal-text",
+      actions: type === "success" ? "ss-swal-actions ss-swal-actions-center" : "ss-swal-actions",
+      confirmButton: type === "success" ? "ss-swal-ok-btn" : "ss-swal-confirm-btn",
+      cancelButton: "ss-swal-cancel-btn",
+    },
+    didOpen: (popup) => {
+      const actions = popup.querySelector(".swal2-actions");
+      const confirmBtn = popup.querySelector(".swal2-confirm");
+      const cancelBtn = popup.querySelector(".swal2-cancel");
+      const title = popup.querySelector(".swal2-title");
+      const html = popup.querySelector(".swal2-html-container");
+      const icon = popup.querySelector(".swal2-icon");
+
+      popup.style.borderRadius = "6px";
+      popup.style.boxShadow = "0 18px 48px rgba(0, 0, 0, 0.22)";
+      popup.style.padding = "22px 20px 24px";
+
+      if (actions) {
+        actions.style.display = "flex";
+        actions.style.alignItems = "center";
+        actions.style.justifyContent = "center";
+        actions.style.gap = "10px";
+        actions.style.marginTop = "18px";
+        actions.style.width = "100%";
+      }
+
+      if (title) {
+        title.style.fontSize = "27px";
+        title.style.lineHeight = "1.2";
+        title.style.fontWeight = "400";
+        title.style.color = "#333";
+        title.style.margin = "2px 0 10px";
+        title.style.padding = "0";
+      }
+
+      if (html) {
+        html.style.fontSize = "15px";
+        html.style.lineHeight = "1.45";
+        html.style.fontWeight = "400";
+        html.style.color = "#666";
+        html.style.margin = "0";
+        html.style.padding = "0";
+      }
+
+      if (icon) {
+        icon.style.margin = "8px auto 10px";
+      }
+
+      if (type === "success") {
+        applySwalButtonStyle(confirmBtn, "ok");
+      } else {
+        applySwalButtonStyle(confirmBtn, "confirm");
+        applySwalButtonStyle(cancelBtn, "cancel");
+      }
+    },
+  };
+}
+
 async function fetchAll() {
   loading.value = true;
   try {
@@ -231,7 +375,7 @@ async function fetchAll() {
     items.value = unwrapList(res);
   } catch (e) {
     console.error(e);
-    alert("Không tải được danh sách form chân.");
+    showToast(getErrorMessage(e, "Không tải được danh sách form chân."), "error");
   } finally {
     loading.value = false;
   }
@@ -249,7 +393,9 @@ const filteredItems = computed(() => {
   });
 });
 
-watch(keyword, () => (page.value = 1));
+watch(keyword, () => {
+  page.value = 1;
+});
 
 const totalPages = computed(() =>
   Math.max(1, Math.ceil((filteredItems.value.length || 0) / pageSize.value))
@@ -274,17 +420,13 @@ const pageButtons = computed(() => {
   if (tp <= 7) return Array.from({ length: tp }, (_, i) => i + 1);
 
   const arr = [];
-  const push = (x) => arr.push(x);
-
-  push(1);
-  if (p > 3) push("...");
-
+  arr.push(1);
+  if (p > 3) arr.push("...");
   const start = Math.max(2, p - 1);
   const end = Math.min(tp - 1, p + 1);
-  for (let i = start; i <= end; i++) push(i);
-
-  if (p < tp - 2) push("...");
-  push(tp);
+  for (let i = start; i <= end; i++) arr.push(i);
+  if (p < tp - 2) arr.push("...");
+  arr.push(tp);
 
   return arr;
 });
@@ -299,57 +441,31 @@ function resetFilters() {
   page.value = 1;
 }
 
-function onView(row) {
-  alert(
-    `Mã: ${getMa(row)}\nTên: ${getTen(row)}\nTrạng thái: ${
-      getTrangThai(row) ? "Đang hoạt động" : "Ngừng hoạt động"
-    }`
-  );
-}
-
-/**
- * ✅ FIX: BE hay validate tên NOT NULL khi update
- * => đổi trạng thái phải gửi kèm tên hiện tại.
- */
 async function callUpdateTrangThai(service, id, nextVal, row) {
   const ten = (getTen(row) || "").trim();
 
   if (typeof service.toggleStatus === "function") {
     try {
       return await service.toggleStatus(id, nextVal);
-    } catch (_) {
+    } catch {
       return await service.toggleStatus(id);
     }
   }
+
   if (typeof service.updateTrangThai === "function") {
-    try {
-      return await service.updateTrangThai(id, nextVal);
-    } catch (_) {
-      return await service.updateTrangThai(id, { trangThai: nextVal });
-    }
-  }
-  if (typeof service.updateStatus === "function") {
-    try {
-      return await service.updateStatus(id, nextVal);
-    } catch (_) {
-      return await service.updateStatus(id, { trangThai: nextVal });
-    }
+    return await service.updateTrangThai(id, nextVal);
   }
 
-  // fallback PUT/UPDATE: gửi kèm tên để BE không reject
-  if (typeof service.update === "function") {
-    try {
-      return await service.update(id, { tenFormChan: ten, trangThai: nextVal });
-    } catch (_) {
-      return await service.update(id, { ten_form_chan: ten, trang_thai: nextVal });
-    }
+  if (typeof service.updateStatus === "function") {
+    return await service.updateStatus(id, nextVal);
   }
+
+  if (typeof service.update === "function") {
+    return await service.update(id, { tenFormChan: ten, trangThai: nextVal });
+  }
+
   if (typeof service.put === "function") {
-    try {
-      return await service.put(id, { tenFormChan: ten, trangThai: nextVal });
-    } catch (_) {
-      return await service.put(id, { ten_form_chan: ten, trang_thai: nextVal });
-    }
+    return await service.put(id, { tenFormChan: ten, trangThai: nextVal });
   }
 
   throw new Error("Service chưa có hàm đổi trạng thái");
@@ -357,76 +473,164 @@ async function callUpdateTrangThai(service, id, nextVal, row) {
 
 async function onToggle(row) {
   const id = getId(row);
+
   if (id === undefined || id === null) {
-    alert("Không tìm thấy ID để đổi trạng thái (check API trả về id).");
+    await Swal.fire({
+      ...getSwalBase("confirm"),
+      icon: "error",
+      title: "Lỗi!",
+      text: "Không tìm thấy ID để đổi trạng thái.",
+      confirmButtonText: "OK",
+      showCancelButton: false,
+    });
     return;
   }
+
   if (togglingId.value !== -999) return;
 
   const nextVal = !getTrangThai(row);
-  const oldVal = getTrangThai(row);
 
-  // optimistic
-  row.trangThai = nextVal;
-  row.trang_thai = nextVal;
+  const confirmResult = await Swal.fire({
+    ...getSwalBase("confirm"),
+    icon: "question",
+    title: "Xác nhận?",
+    text: `Bạn có muốn ${nextVal ? "bật hoạt động" : "ngừng hoạt động"}?`,
+    confirmButtonText: "Đồng ý",
+    cancelButtonText: "Hủy",
+    showCancelButton: true,
+  });
+
+  if (!confirmResult.isConfirmed) return;
+
   togglingId.value = id;
 
   try {
     await callUpdateTrangThai(formChanService, id, nextVal, row);
     await fetchAll();
+
+    await Swal.fire({
+      ...getSwalBase("success"),
+      icon: "success",
+      title: "Thành công!",
+      text: "Đã cập nhật trạng thái form chân!",
+      confirmButtonText: "OK",
+      showCancelButton: false,
+    });
   } catch (e) {
     console.error(e);
-    row.trangThai = oldVal;
-    row.trang_thai = oldVal;
-    alert("Không đổi được trạng thái. Kiểm tra API/Service.");
+    await Swal.fire({
+      ...getSwalBase("confirm"),
+      icon: "error",
+      title: "Thất bại!",
+      text: getErrorMessage(e, "Không đổi được trạng thái form chân."),
+      confirmButtonText: "OK",
+      showCancelButton: false,
+    });
   } finally {
     togglingId.value = -999;
   }
 }
 
-const modal = reactive({ open: false });
-const success = reactive({ open: false });
-const form = reactive({ tenFormChan: "" });
+const modal = reactive({
+  open: false,
+  mode: "create",
+  error: "",
+  editingId: null,
+});
+
+const form = reactive({
+  maFormChan: "",
+  tenFormChan: "",
+  trangThai: true,
+});
 
 function openCreate() {
-  form.tenFormChan = "";
+  modal.mode = "create";
   modal.open = true;
+  modal.error = "";
+  modal.editingId = null;
+
+  form.maFormChan = "";
+  form.tenFormChan = "";
+  form.trangThai = true;
 }
+
+function openEdit(row) {
+  modal.mode = "edit";
+  modal.open = true;
+  modal.error = "";
+  modal.editingId = getId(row);
+
+  form.maFormChan = getMa(row);
+  form.tenFormChan = getTen(row);
+  form.trangThai = getTrangThai(row);
+}
+
 function closeModal() {
+  if (saving.value) return;
   modal.open = false;
+  modal.error = "";
+  modal.editingId = null;
 }
 
 async function save() {
   const ten = (form.tenFormChan || "").trim();
-  if (!ten) return alert("Vui lòng nhập tên form chân.");
+  modal.error = "";
 
-  const ok = confirm(`Bạn có chắc chắn muốn thêm form chân: "${ten}" không?`);
-  if (!ok) return;
+  if (!ten) {
+    modal.error = "Vui lòng nhập tên form chân.";
+    return;
+  }
 
   saving.value = true;
+
   try {
-    try {
-      await (formChanService.create?.({ tenFormChan: ten, trangThai: true, xoaMem: false }) ??
-        formChanService.add?.({ tenFormChan: ten, trangThai: true, xoaMem: false }));
-    } catch (_) {
-      await (formChanService.create?.({ ten_form_chan: ten, trang_thai: true, xoa_mem: false }) ??
-        formChanService.add?.({ ten_form_chan: ten, trang_thai: true, xoa_mem: false }));
+    if (modal.mode === "create") {
+      await formChanService.create({
+        tenFormChan: ten,
+        trangThai: true,
+        xoaMem: false,
+      });
+
+      modal.open = false;
+      await fetchAll();
+      showToast("Thêm form chân thành công!");
+      return;
+    }
+
+    if (modal.editingId === undefined || modal.editingId === null) {
+      modal.error = "Không tìm thấy ID form chân để cập nhật.";
+      return;
+    }
+
+    if (typeof formChanService.update === "function") {
+      await formChanService.update(modal.editingId, {
+        tenFormChan: ten,
+        trangThai: form.trangThai,
+      });
+    } else if (typeof formChanService.put === "function") {
+      await formChanService.put(modal.editingId, {
+        tenFormChan: ten,
+        trangThai: form.trangThai,
+      });
+    } else {
+      throw new Error("Service chưa có hàm cập nhật form chân");
     }
 
     modal.open = false;
-    success.open = true;
     await fetchAll();
+    showToast("Cập nhật form chân thành công!");
   } catch (e) {
     console.error(e);
-    alert("Thêm thất bại. Kiểm tra BE/log.");
+    modal.error = getErrorMessage(
+      e,
+      modal.mode === "create" ? "Thêm form chân thất bại." : "Cập nhật form chân thất bại."
+    );
   } finally {
     saving.value = false;
   }
 }
 
-/**
- * "Tải Excel": xuất CSV UTF-8 BOM để mở bằng Excel.
- */
 function exportExcel() {
   const rows = filteredItems.value || [];
   const header = ["STT", "Mã", "Tên form chân", "Trạng thái"];
@@ -467,403 +671,105 @@ function exportExcel() {
 }
 
 onMounted(fetchAll);
+onBeforeUnmount(() => {
+  clearToastTimer();
+});
 </script>
 
 <style scoped>
-/* Font đồng bộ, chữ bình thường */
-.ss-font {
-  font-family: inherit;
-  color: rgba(17, 24, 39, 0.82);
-}
-
-/* HEAD */
-.ss-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-bottom: 14px;
-  gap: 16px;
-}
-.ss-title {
-  font-size: 20px;
-  font-weight: 500;
-  letter-spacing: 0.2px;
-  color: rgba(17, 24, 39, 0.9);
-  text-transform: none;
-}
-.ss-count {
-  font-size: 13px;
-  color: rgba(17, 24, 39, 0.55);
-}
-.ss-count span {
-  color: rgba(17, 24, 39, 0.9);
-  font-weight: 600;
-}
-
-/* Cards */
-.ss-card {
-  background: #fff;
-  border-radius: 14px;
-}
-.ss-border {
-  border: 1px solid rgba(17, 24, 39, 0.08);
-  box-shadow: 0 10px 26px rgba(17, 24, 39, 0.06);
-}
-
-/* FILTER card - tách khỏi list */
-.ss-filter-card {
-  padding: 14px 16px;
-  margin-bottom: 18px;
-}
-.ss-filter-head {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.ss-filter-icon {
-  font-size: 18px;
-  color: rgba(17, 24, 39, 0.65);
-}
-.ss-filter-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(17, 24, 39, 0.82);
-}
-.ss-filter-body {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  flex-wrap: wrap;
-}
-.ss-filter-left {
-  min-width: 320px;
-  flex: 1;
-}
-.ss-filter-label {
-  font-size: 12px;
-  margin-bottom: 6px;
-  color: rgba(17, 24, 39, 0.55);
-  font-weight: 400;
-}
-
-/* Search */
-.ss-search-wrap {
-  position: relative;
-  width: min(520px, 100%);
-}
-.ss-search-icon {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 18px;
-  color: rgba(17, 24, 39, 0.45);
-  pointer-events: none;
-}
-.ss-search-input {
-  padding-left: 38px !important;
-  height: 40px;
-  border-radius: 10px !important;
-  border: 1px solid rgba(17, 24, 39, 0.14);
-}
-
-/* Buttons - nhỏ lại */
-.ss-filter-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-.ss-btn-ic {
-  font-size: 18px;
-  margin-right: 8px;
-}
-.btn {
-  border-radius: 10px;
-  padding: 8px 12px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  white-space: nowrap;
-}
-
-/* Tải Excel - nhạt */
-.ss-btn-lite {
-  background: #f3f4f6 !important;
-  color: rgba(17, 24, 39, 0.88) !important;
-  border: 1px solid rgba(17, 24, 39, 0.10) !important;
-}
-.ss-btn-lite:hover {
-  background: #eef0f3 !important;
-}
-
-/* Thêm form chân - gradient logo */
-.ss-btn-primary {
-  border: none !important;
-  background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%) !important;
-  color: #fff !important;
-  box-shadow: 0 10px 22px rgba(255, 77, 79, 0.16);
-}
-.ss-btn-primary:hover {
-  filter: brightness(0.98);
-}
-
-/* Đặt lại - đậm xám */
-.ss-btn-dark {
-  background: #4b5563 !important;
-  color: #fff !important;
-  border: none !important;
-}
-.ss-btn-dark:hover {
-  filter: brightness(0.98);
-}
-
-/* LIST card */
-.ss-list-card {
-  padding: 0;
-}
-.ss-list-head {
-  padding: 14px 16px;
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(17, 24, 39, 0.82);
-  border-bottom: 1px solid rgba(17, 24, 39, 0.08);
-}
-
-/* Table */
-.ss-table {
-  width: 100%;
-  table-layout: fixed;
-}
-.ss-table thead th {
-  font-size: 13px;
-  font-weight: 500;
-  color: rgba(17, 24, 39, 0.75);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-}
-.ss-table td,
-.ss-table th {
-  padding: 12px 14px;
-  vertical-align: middle;
-}
-.ss-table tbody tr:not(:last-child) td {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-}
-
-/* columns */
+.ss-font { font-family: inherit; color: rgba(17, 24, 39, 0.82); }
+.ss-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 14px; gap: 16px; }
+.ss-title { font-size: 20px; font-weight: 600; letter-spacing: 0.2px; color: rgba(17, 24, 39, 0.9); text-transform: none; }
+.ss-count { font-size: 13px; color: rgba(17, 24, 39, 0.55); }
+.ss-count span { color: rgba(17, 24, 39, 0.9); font-weight: 600; }
+.ss-card { background: #fff; border-radius: 14px; }
+.ss-border { border: 1px solid rgba(17, 24, 39, 0.08); box-shadow: 0 10px 26px rgba(17, 24, 39, 0.06); }
+.ss-filter-card { padding: 14px 16px; margin-bottom: 18px; }
+.ss-filter-head { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.ss-filter-icon { font-size: 18px; color: rgba(17, 24, 39, 0.65); }
+.ss-filter-title { font-size: 14px; font-weight: 600; color: rgba(17, 24, 39, 0.82); }
+.ss-filter-body { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.ss-filter-left { min-width: 320px; flex: 1; }
+.ss-filter-label { font-size: 12px; margin-bottom: 6px; color: rgba(17, 24, 39, 0.55); font-weight: 400; }
+.ss-search-wrap { position: relative; width: min(520px, 100%); }
+.ss-search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 18px; color: rgba(17, 24, 39, 0.45); pointer-events: none; }
+.ss-search-input { padding-left: 38px !important; height: 40px; border-radius: 10px !important; border: 1px solid rgba(17, 24, 39, 0.14); }
+.ss-filter-actions { display: inline-flex; align-items: center; gap: 10px; }
+.ss-btn-ic { font-size: 18px; margin-right: 8px; }
+.btn { border-radius: 10px; padding: 8px 12px; font-size: 13px; font-weight: 500; line-height: 1; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
+.ss-btn-lite { background: #f3f4f6 !important; color: rgba(17, 24, 39, 0.88) !important; border: 1px solid rgba(17, 24, 39, 0.10) !important; }
+.ss-btn-lite:hover { background: #eef0f3 !important; }
+.ss-btn-primary { border: none !important; background: linear-gradient(90deg, #ff4d4f 0%, #111827 100%) !important; color: #fff !important; box-shadow: 0 10px 22px rgba(255, 77, 79, 0.16); }
+.ss-btn-primary:hover { filter: brightness(0.98); }
+.ss-btn-dark { background: #4b5563 !important; color: #fff !important; border: none !important; }
+.ss-btn-dark:hover { filter: brightness(0.98); }
+.ss-list-card { padding: 0; }
+.ss-list-head { padding: 14px 16px; font-size: 14px; font-weight: 500; color: rgba(17, 24, 39, 0.82); border-bottom: 1px solid rgba(17, 24, 39, 0.08); }
+.ss-table { width: 100%; table-layout: fixed; }
+.ss-table thead th { font-size: 13px; font-weight: 600; color: rgba(17, 24, 39, 0.75); border-bottom: 1px solid rgba(0, 0, 0, 0.06); }
+.ss-table td, .ss-table th { padding: 12px 14px; vertical-align: middle; }
+.ss-table tbody tr:not(:last-child) td { border-bottom: 1px solid rgba(0, 0, 0, 0.04); }
 .col-stt { width: 14%; }
 .col-ma { width: 18%; }
 .col-ten { width: 30%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .col-tt { width: 20%; }
 .col-action { width: 18%; }
-
 .ss-td { color: rgba(17, 24, 39, 0.78); font-weight: 400; }
 .ss-td-strong { color: rgba(17, 24, 39, 0.88); font-weight: 600; }
 .ss-muted { color: rgba(17, 24, 39, 0.55); }
-
-/* Badge */
-.ss-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-  border: 1px solid rgba(17, 24, 39, 0.10);
-}
-.ss-badge-on {
-  color: rgba(17, 24, 39, 0.82);
-  background: rgba(255, 77, 79, 0.10);
-  border-color: rgba(255, 77, 79, 0.18);
-}
-.ss-badge-off {
-  color: rgba(17, 24, 39, 0.65);
-  background: rgba(17, 24, 39, 0.06);
-  border-color: rgba(17, 24, 39, 0.12);
-}
-
-/* actions */
-.ss-actions-inline {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  justify-content: center;
-}
-
-/* switch */
-.ss-switch {
-  width: 44px;
-  height: 24px;
-  border-radius: 999px;
-  border: 1px solid rgba(17, 24, 39, 0.14);
-  background: rgba(17, 24, 39, 0.12);
-  display: inline-flex;
-  align-items: center;
-  padding: 2px;
-  transition: 0.15s ease;
-}
-.ss-switch.on {
-  background: rgba(255, 77, 79, 0.92);
-  border-color: rgba(255, 77, 79, 0.25);
-}
-.ss-switch:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.ss-switch-knob {
-  width: 18px;
-  height: 18px;
-  border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
-  transform: translateX(0);
-  transition: 0.15s ease;
-}
-.ss-switch.on .ss-switch-knob {
-  transform: translateX(20px);
-}
-
-/* icon mắt chuẩn */
-.ss-icon-btn-view {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid rgba(17, 24, 39, 0.14);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-  transition: 0.15s ease;
-}
-.ss-icon-btn-view .material-icons-outlined {
-  font-size: 20px;
-  color: rgba(17, 24, 39, 0.88);
-}
-.ss-icon-btn-view:hover {
-  background: rgba(17, 24, 39, 0.04);
-  border-color: rgba(17, 24, 39, 0.22);
-}
-
-/* Pagination (ngoài list) */
-.ss-pagination-bar {
-  margin-top: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-}
-.ss-pagination {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.ss-pagebtn {
-  min-width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  border: 1px solid rgba(17, 24, 39, 0.12);
-  background: #fff;
-  color: rgba(17, 24, 39, 0.85);
-  font-size: 13px;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: 0.15s ease;
-}
-.ss-pagebtn:hover {
-  background: rgba(17, 24, 39, 0.04);
-}
-.ss-pagebtn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
-.ss-pagebtn.active {
-  border-color: rgba(255, 77, 79, 0.35);
-  background: rgba(255, 77, 79, 0.08);
-}
-.ss-pageinfo {
-  font-size: 13px;
-  color: rgba(17, 24, 39, 0.55);
-}
-.ss-pageinfo span {
-  color: rgba(17, 24, 39, 0.9);
-  font-weight: 600;
-}
-
-/* overlay/modal/success */
-.ss-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 3000;
-}
-.ss-modal {
-  width: 520px;
-  background: #fff;
-  border-radius: 14px;
-  overflow: hidden;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
-}
-.ss-modal-header {
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-.ss-modal-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: rgba(17, 24, 39, 0.88);
-}
-.ss-modal-body {
-  padding: 16px;
-}
-.ss-label {
-  font-size: 13px;
-  color: rgba(17, 24, 39, 0.75);
-  font-weight: 400;
-}
-.ss-modal-footer {
-  padding: 14px 16px;
-  display: flex;
-  justify-content: end;
-  gap: 10px;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-.ss-success {
-  width: 520px;
-  background: #fff;
-  border-radius: 12px;
-  text-align: center;
-  padding: 28px 20px 22px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
-}
-.ss-success-ring {
-  width: 80px;
-  height: 80px;
-  border-radius: 999px;
-  margin: 0 auto 14px;
-  border: 6px solid rgba(34, 197, 94, 0.25);
-  border-top-color: rgba(34, 197, 94, 0.75);
-  animation: spin 1s linear infinite;
-}
-.ss-success-title {
-  font-size: 26px;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: rgba(17, 24, 39, 0.92);
-}
-@keyframes spin { to { transform: rotate(360deg); } }
+.ss-badge { display: inline-flex; align-items: center; justify-content: center; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 500; border: 1px solid rgba(17, 24, 39, 0.10); }
+.ss-badge-on { color: rgba(17, 24, 39, 0.82); background: rgba(255, 77, 79, 0.10); border-color: rgba(255, 77, 79, 0.18); }
+.ss-badge-off { color: rgba(17, 24, 39, 0.65); background: rgba(17, 24, 39, 0.06); border-color: rgba(17, 24, 39, 0.12); }
+.ss-actions-inline { display: inline-flex; align-items: center; gap: 10px; justify-content: center; }
+.ss-switch { width: 44px; height: 24px; border-radius: 999px; border: 1px solid rgba(17, 24, 39, 0.14); background: rgba(17, 24, 39, 0.12); display: inline-flex; align-items: center; padding: 2px; transition: 0.15s ease; }
+.ss-switch.on { background: rgba(255, 77, 79, 0.92); border-color: rgba(255, 77, 79, 0.25); }
+.ss-switch:disabled { opacity: 0.55; cursor: not-allowed; }
+.ss-switch-knob { width: 18px; height: 18px; border-radius: 999px; background: #fff; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12); transform: translateX(0); transition: 0.15s ease; }
+.ss-switch.on .ss-switch-knob { transform: translateX(20px); }
+.ss-icon-btn-view { width: 36px; height: 36px; border-radius: 10px; background: #fff; border: 1px solid rgba(17, 24, 39, 0.14); display: inline-flex; align-items: center; justify-content: center; padding: 0; transition: 0.15s ease; }
+.ss-icon-btn-view .material-icons-outlined { font-size: 20px; color: rgba(17, 24, 39, 0.88); }
+.ss-icon-btn-view:hover { background: rgba(17, 24, 39, 0.04); border-color: rgba(17, 24, 39, 0.22); }
+.ss-pagination-bar { margin-top: 14px; display: flex; align-items: center; justify-content: center; gap: 14px; }
+.ss-pagination { display: inline-flex; align-items: center; gap: 8px; }
+.ss-pagebtn { min-width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(17, 24, 39, 0.12); background: #fff; color: rgba(17, 24, 39, 0.85); font-size: 13px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; transition: 0.15s ease; }
+.ss-pagebtn:hover { background: rgba(17, 24, 39, 0.04); }
+.ss-pagebtn:disabled { opacity: 0.55; cursor: not-allowed; }
+.ss-pagebtn.active { border-color: rgba(255, 77, 79, 0.35); background: rgba(255, 77, 79, 0.08); }
+.ss-pageinfo { font-size: 13px; color: rgba(17, 24, 39, 0.55); }
+.ss-pageinfo span { color: rgba(17, 24, 39, 0.9); font-weight: 600; }
+.ss-overlay { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.35); display: flex; align-items: center; justify-content: center; z-index: 3000; }
+.ss-modal { width: 520px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25); }
+.ss-modal-header { padding: 14px 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(0, 0, 0, 0.08); }
+.ss-modal-title { font-size: 14px; font-weight: 600; color: rgba(17, 24, 39, 0.88); }
+.ss-modal-body { padding: 16px; }
+.ss-label { font-size: 13px; color: rgba(17, 24, 39, 0.75); font-weight: 400; }
+.ss-label-gap { display: block; margin-top: 14px; }
+.ss-input-readonly { background: #f9fafb !important; color: rgba(17, 24, 39, 0.7) !important; cursor: not-allowed; }
+.ss-form-error { margin-top: 8px; font-size: 13px; color: #dc2626; font-weight: 500; }
+.ss-modal-footer { padding: 14px 16px; display: flex; justify-content: end; gap: 10px; border-top: 1px solid rgba(0, 0, 0, 0.08); }
+.ss-toast { position: fixed; top: 24px; right: 24px; z-index: 5000; min-width: 280px; max-width: 380px; padding: 12px 16px; border-radius: 12px; color: #fff; display: flex; align-items: center; gap: 10px; box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18); }
+.ss-toast-success { background: linear-gradient(90deg, #16a34a 0%, #22c55e 100%); }
+.ss-toast-error { background: linear-gradient(90deg, #dc2626 0%, #ef4444 100%); }
+.ss-toast-icon { font-size: 20px; flex-shrink: 0; }
+.ss-toast-text { font-size: 14px; font-weight: 500; line-height: 1.4; }
+.ss-toast-fade-enter-active, .ss-toast-fade-leave-active { transition: all 0.25s ease; }
+.ss-toast-fade-enter-from, .ss-toast-fade-leave-to { opacity: 0; transform: translateY(-8px); }
+:deep(.swal2-popup.ss-swal-popup) { width: 500px !important; max-width: 500px !important; border-radius: 6px !important; padding: 22px 20px 24px !important; box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22) !important; font-family: inherit !important; }
+:deep(.swal2-icon.ss-swal-icon) { margin: 8px auto 10px !important; }
+:deep(.swal2-icon.swal2-question.ss-swal-icon) { width: 72px !important; height: 72px !important; border-width: 3px !important; color: #9db5c2 !important; border-color: #9db5c2 !important; }
+:deep(.swal2-icon.swal2-success.ss-swal-icon) { width: 72px !important; height: 72px !important; border-width: 3px !important; border-color: #d8efcf !important; color: #8fd16f !important; }
+:deep(.swal2-icon.swal2-success .swal2-success-ring) { border-color: rgba(143, 209, 111, 0.22) !important; }
+:deep(.swal2-icon.swal2-success [class^="swal2-success-line"]) { background-color: #8fd16f !important; }
+:deep(.swal2-title.ss-swal-title) { font-size: 27px !important; line-height: 1.2 !important; font-weight: 400 !important; color: #333 !important; margin: 2px 0 10px !important; padding: 0 !important; }
+:deep(.swal2-html-container.ss-swal-text) { font-size: 15px !important; line-height: 1.45 !important; font-weight: 400 !important; color: #666 !important; margin: 0 !important; padding: 0 !important; }
+:deep(.swal2-actions.ss-swal-actions) { display: flex !important; align-items: center !important; justify-content: center !important; gap: 10px !important; margin-top: 18px !important; width: 100% !important; }
+:deep(.swal2-actions.ss-swal-actions-center) { justify-content: center !important; }
+:deep(.ss-swal-confirm-btn), :deep(.ss-swal-cancel-btn), :deep(.ss-swal-ok-btn) { appearance: none !important; -webkit-appearance: none !important; border: 0 !important; outline: 0 !important; box-shadow: none !important; min-width: 78px !important; height: 38px !important; padding: 0 18px !important; border-radius: 3px !important; font-size: 14px !important; font-weight: 400 !important; line-height: 38px !important; font-family: inherit !important; display: inline-flex !important; align-items: center !important; justify-content: center !important; cursor: pointer !important; transition: 0.15s ease !important; }
+:deep(.ss-swal-confirm-btn) { background: #27313b !important; color: #fff !important; }
+:deep(.ss-swal-confirm-btn:hover) { background: #1f2831 !important; }
+:deep(.ss-swal-cancel-btn) { background: #6c757d !important; color: #fff !important; }
+:deep(.ss-swal-cancel-btn:hover) { background: #5f6870 !important; }
+:deep(.ss-swal-ok-btn) { background: #8a3ffc !important; color: #fff !important; }
+:deep(.ss-swal-ok-btn:hover) { background: #7b32ed !important; }
+:deep(.ss-swal-confirm-btn:focus), :deep(.ss-swal-cancel-btn:focus), :deep(.ss-swal-ok-btn:focus) { outline: none !important; box-shadow: none !important; }
 </style>
