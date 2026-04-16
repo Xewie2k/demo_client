@@ -352,7 +352,16 @@ public class HoaDonService {
     @Transactional(readOnly = true)
     public List<LichSuThanhToanView> lichSuThanhToan(Integer idHoaDon) {
         if (idHoaDon == null) throw new BadRequestEx("Thiếu id hóa đơn");
+        HoaDon hd = repo.findByIdAndXoaMemFalse(idHoaDon).orElse(null);
+        if (hd == null) return new ArrayList<>();
 
+        Integer loaiDon = hd.getLoaiDon() == null ? LOAI_DON_TAI_QUAY : hd.getLoaiDon();
+        Integer trangThaiHienTai = hd.getTrangThaiHienTai() == null ? TrangThaiHoaDon.CHUA_XAC_NHAN.code : hd.getTrangThaiHienTai();
+        if (loaiDon == LOAI_DON_ONLINE) {
+            if (!Integer.valueOf(TrangThaiHoaDon.DA_HOAN_THANH.code).equals(trangThaiHienTai)) {
+                return new ArrayList<>();  // Return empty list nếu chưa hoàn thành
+            }
+        }
         String sql = """
                 select
                     gd.thoi_gian_tao,
@@ -371,6 +380,7 @@ public class HoaDonService {
                    and nv.xoa_mem = 0
                 where gd.xoa_mem = 0
                   and gd.id_hoa_don = :idHoaDon
+                  and gd.trang_thai = 'thanh_cong'
                 order by gd.thoi_gian_tao desc, gd.id desc
                 """;
 
@@ -1168,6 +1178,45 @@ public class HoaDonService {
             validateDanhSachHoaDonChiTietConBanDuoc(items);
             if (hd.getNgayThanhToan() == null) {
                 hd.setNgayThanhToan(LocalDateTime.now());
+            }
+
+            // 🔍 FIX: Tạo GiaoDichThanhToan cho COD online khi hoàn thành
+            if ((loaiDon == LOAI_DON_ONLINE || loaiDon == LOAI_DON_GIAO_HANG) && !daCoGiaoDichThanhToan(idHoaDon)) {
+                // Tạo giao dịch thanh toán COD nếu chưa có
+                PhuongThucThanhToan pttt = phuongThucThanhToanRepository
+                        .findFirstByTenPhuongThucThanhToanIgnoreCaseAndTrangThaiTrueAndXoaMemFalse("Tiền mặt")
+                        .orElse(null);
+
+                if (pttt == null) {
+                    List<PhuongThucThanhToan> list = phuongThucThanhToanRepository.findAll();
+                    for (PhuongThucThanhToan p : list) {
+                        if (Boolean.TRUE.equals(p.getXoaMem()) || !Boolean.TRUE.equals(p.getTrangThai())) continue;
+                        String name = p.getTenPhuongThucThanhToan().toUpperCase();
+                        if (name.contains("TIỀN MẶT") || name.contains("COD")) {
+                            pttt = p;
+                            break;
+                        }
+                    }
+                }
+
+                if (pttt != null) {
+                    BigDecimal tongPhaiTra = (hd.getTongTienSauGiam() != null ? hd.getTongTienSauGiam() : BigDecimal.ZERO)
+                            .add(hd.getPhiVanChuyen() != null ? hd.getPhiVanChuyen() : BigDecimal.ZERO);
+
+                    if (tongPhaiTra.signum() > 0) {
+                        GiaoDichThanhToan gd = new GiaoDichThanhToan();
+                        gd.setId(null);
+                        gd.setIdHoaDon(hd.getId());
+                        gd.setIdPhuongThucThanhToan(pttt.getId());
+                        gd.setSoTien(tongPhaiTra);
+                        gd.setTrangThai("thanh_cong");
+                        gd.setThoiGianCapNhat(LocalDateTime.now());
+                        gd.setXoaMem(false);
+                        gd.setGhiChu("Thanh toán COD khi nhận hàng");
+                        gd.setNguoiCapNhat(nguoiCapNhat);
+                        giaoDichThanhToanRepository.save(gd);
+                    }
+                }
             }
         }
 

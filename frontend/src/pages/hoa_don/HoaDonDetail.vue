@@ -903,8 +903,12 @@ const isTaiQuay = computed(() => {
 
 const anLichSuThanhToanCOD = computed(() => {
   const loaiTT = selectedHD.value?.loaiThanhToan;
+  const loaiDon = Number(selectedHD.value?.loaiDon ?? 1);
   const trangThai = Number(selectedHD.value?.trangThai ?? TRANG_THAI_HOA_DON.CHUA_XAC_NHAN);
+  // Only hide payment history for online orders (loaiDon=2) with COD (loaiThanhToan=0)
+  // Counter sales (loaiDon=0) always show payment history immediately since transaction is recorded at sale time
   return (
+    loaiDon === 2 &&
     loaiTT === 0 &&
     trangThai >= TRANG_THAI_HOA_DON.CHUA_XAC_NHAN &&
     trangThai <= TRANG_THAI_HOA_DON.DANG_GIAO
