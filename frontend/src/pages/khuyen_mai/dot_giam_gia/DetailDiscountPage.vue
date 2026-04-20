@@ -39,6 +39,7 @@
               placeholder="Nhập tên đợt..."
               :disabled="isEnded"
             />
+            <div class="hint" v-if="nameError">{{ nameError }}</div>
           </div>
 
           <div class="form-group row-group">
@@ -96,6 +97,7 @@
               :disabled="isEnded"
               @click="$event.target.showPicker()"
             />
+            <div class="hint" v-if="dateError">{{ dateError }}</div>
           </div>
 
           <div class="action-buttons mt-4">
@@ -400,6 +402,7 @@
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { discountService } from "@/services/khuyen_mai/dot_giam_gia/discountService.js";
+import Swal from "sweetalert2";
 
 const route = useRoute();
 const router = useRouter();
@@ -498,6 +501,7 @@ const itemsPerPage = 5;
 
 const rawVariants = ref([]);
 const selectedVariantIds = ref([]);
+const existingDiscounts = ref([]);
 const searchKeyword = ref("");
 
 const isLoading = ref(false);
@@ -596,6 +600,29 @@ const isEnded = computed(() => {
   const end = new Date(parts[0], parts[1] - 1, parts[2]);
   end.setHours(23, 59, 59, 999);
   return new Date() > end;
+});
+
+const dateError = computed(() => {
+  if (!formData.ngayBatDau || !formData.ngayKetThuc) return "";
+  const s = new Date(formData.ngayBatDau);
+  const e = new Date(formData.ngayKetThuc);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return "Ngày không hợp lệ.";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (s < today) return "Ngày bắt đầu không được là ngày trong quá khứ.";
+
+  if (s > e) return "Ngày bắt đầu không được lớn hơn ngày kết thúc.";
+  return "";
+});
+
+const nameError = computed(() => {
+  const name = (formData.tenDotGiamGia || "").trim();
+  if (!name) return "";
+  const exists = existingDiscounts.value.some(d => 
+    d.id != discountId && d.tenDotGiamGia && d.tenDotGiamGia.trim().toLowerCase() === name.toLowerCase()
+  );
+  return exists ? "Tên đợt giảm giá đã tồn tại." : "";
 });
 
 const allSelectedVariants = computed(() =>
@@ -772,10 +799,25 @@ const toggleAllVariants = (e) => {
   }
 };
 
-const removeAll = () => {
-  if (confirm("Bạn có chắc muốn bỏ chọn tất cả sản phẩm?")) {
+const removeAll = async () => {
+  const result = await Swal.fire({
+    icon: 'question',
+    title: 'Xác nhận',
+    text: 'Bạn có chắc muốn bỏ chọn tất cả sản phẩm?',
+    showCancelButton: true,
+    confirmButtonText: 'Xóa tất cả',
+    cancelButtonText: 'Hủy'
+  });
+
+  if (result.isConfirmed) {
     selectedVariantIds.value = [];
-    alert("Danh sách sản phẩm đã được làm trống.");
+    await Swal.fire({
+      icon: 'success',
+      title: 'Đã xóa',
+      text: 'Danh sách sản phẩm đã được làm trống.',
+      confirmButtonText: 'OK',
+      timer: 1500
+    });
   }
 };
 
@@ -784,13 +826,56 @@ const clearDetailFilters = () => {
 };
 
 const submitUpdate = async () => {
-  if (!formData.tenDotGiamGia || !formData.ngayBatDau || !formData.ngayKetThuc) {
-    alert("Vui lòng nhập đủ thông tin đợt giảm giá");
+  if (!formData.tenDotGiamGia?.trim()) {
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Thiếu thông tin',
+      text: 'Vui lòng nhập tên đợt giảm giá.',
+      confirmButtonText: 'Đã hiểu'
+    });
+    return;
+  }
+
+  if (nameError.value) {
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Tên không hợp lệ',
+      text: nameError.value,
+      confirmButtonText: 'Đã hiểu'
+    });
+    return;
+  }
+
+  if (!formData.ngayBatDau || !formData.ngayKetThuc) {
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Thiếu thông tin',
+      text: 'Vui lòng nhập đầy đủ ngày bắt đầu và ngày kết thúc.',
+      confirmButtonText: 'Đã hiểu'
+    });
+    return;
+  }
+
+  if (dateError.value) {
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Ngày không hợp lệ',
+      text: dateError.value,
+      confirmButtonText: 'Đã hiểu'
+    });
     return;
   }
 
   if (selectedVariantIds.value.length === 0) {
-    if (!confirm("Đợt giảm giá này chưa chọn sản phẩm nào. Bạn có chắc muốn lưu không?")) return;
+    const result = await Swal.fire({
+      icon: 'question',
+      title: 'Xác nhận',
+      text: 'Đợt giảm giá này chưa chọn sản phẩm nào. Bạn có chắc muốn lưu không?',
+      showCancelButton: true,
+      confirmButtonText: 'Tiếp tục',
+      cancelButtonText: 'Hủy'
+    });
+    if (!result.isConfirmed) return;
   }
 
   const payload = { ...formData, idChiTietSanPhams: selectedVariantIds.value };
@@ -798,25 +883,55 @@ const submitUpdate = async () => {
   try {
     isLoading.value = true;
     await discountService.update(discountId, payload);
-    alert("Cập nhật đợt giảm giá thành công!");
+    await Swal.fire({
+      icon: 'success',
+      title: 'Thành công!',
+      text: 'Cập nhật đợt giảm giá thành công!',
+      confirmButtonText: 'OK'
+    });
     goBack();
   } catch (e) {
-    alert("Lỗi cập nhật: " + (e.response?.data?.message || e.message));
+    await Swal.fire({
+      icon: 'error',
+      title: 'Lỗi',
+      text: 'Lỗi cập nhật: ' + (e.response?.data?.message || e.message),
+      confirmButtonText: 'Đã hiểu'
+    });
   } finally {
     isLoading.value = false;
   }
 };
 
 const softDelete = async () => {
-  if (!confirm("Bạn muốn xóa đợt giảm giá này? Hành động này không thể hoàn tác!")) return;
+  const result = await Swal.fire({
+    icon: 'warning',
+    title: 'Xác nhận xóa',
+    text: 'Bạn muốn xóa đợt giảm giá này? Hành động này không thể hoàn tác!',
+    showCancelButton: true,
+    confirmButtonText: 'Xóa',
+    cancelButtonText: 'Hủy',
+    confirmButtonColor: '#d33'
+  });
+
+  if (!result.isConfirmed) return;
 
   try {
     isLoading.value = true;
     await discountService.delete(discountId);
-    alert("Đợt giảm giá đã được xóa thành công.");
+    await Swal.fire({
+      icon: 'success',
+      title: 'Đã xóa',
+      text: 'Đợt giảm giá đã được xóa thành công.',
+      confirmButtonText: 'OK'
+    });
     goBack();
   } catch (e) {
-    alert("Lỗi xóa: " + (e.response?.data?.message || e.message));
+    await Swal.fire({
+      icon: 'error',
+      title: 'Lỗi',
+      text: 'Lỗi xóa: ' + (e.response?.data?.message || e.message),
+      confirmButtonText: 'Đã hiểu'
+    });
   } finally {
     isLoading.value = false;
   }
@@ -842,12 +957,14 @@ const mapColor = (colorName) => {
 const loadData = async () => {
   isLoading.value = true;
   try {
-    const [variants, discountInfo] = await Promise.all([
+    const [variants, discountInfo, allDiscounts] = await Promise.all([
       discountService.getAllProductDetails(),
       discountService.getOne(discountId),
+      discountService.getAll()
     ]);
 
     rawVariants.value = Array.isArray(variants) ? variants : [];
+    existingDiscounts.value = Array.isArray(allDiscounts) ? allDiscounts : [];
 
     if (discountInfo) {
       Object.assign(formData, discountInfo);
@@ -877,7 +994,12 @@ const loadData = async () => {
     }
   } catch (e) {
     console.error("Lỗi tải dữ liệu chi tiết: ", e);
-    alert("Lỗi: Không thể tải dữ liệu đợt giảm giá.");
+    await Swal.fire({
+      icon: 'error',
+      title: 'Lỗi',
+      text: 'Lỗi: Không thể tải dữ liệu đợt giảm giá.',
+      confirmButtonText: 'Đã hiểu'
+    });
   } finally {
     isLoading.value = false;
   }
@@ -1011,6 +1133,12 @@ onMounted(() => loadData());
 .form-control:focus {
   border-color: rgba(255, 77, 79, 0.45);
   box-shadow: 0 0 0 0.18rem var(--ss-focus);
+}
+
+.hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--ss-red);
 }
 
 .radio-group {
