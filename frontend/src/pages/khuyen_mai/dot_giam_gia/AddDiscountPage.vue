@@ -34,6 +34,7 @@
               placeholder="Nhập tên đợt..."
               :disabled="isLoading"
             />
+            <div class="hint" v-if="nameError">{{ nameError }}</div>
           </div>
 
           <!-- ✅ BỎ PHẦN CHỌN LOẠI GIẢM (mặc định giảm theo %) -->
@@ -676,6 +677,7 @@
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { discountService } from "@/services/khuyen_mai/dot_giam_gia/discountService";
 import { useRouter } from "vue-router";
+import Swal from "sweetalert2";
 
 const router = useRouter();
 
@@ -751,6 +753,7 @@ const mauGiamGiaClass = computed(() => {
 
 const rawVariants = ref([]);
 const selectedVariantIds = ref([]);
+const existingDiscounts = ref([]);
 
 const searchKeyword = ref("");
 const isLoading = ref(false);
@@ -1303,12 +1306,27 @@ const dateError = computed(() => {
   const s = normalizeDate(formData.ngayBatDau, false);
   const e = normalizeDate(formData.ngayKetThuc, true);
   if (!s || !e) return "Ngày không hợp lệ.";
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (s < today) return "Ngày bắt đầu không được là ngày trong quá khứ.";
+
   if (s > e) return "Ngày bắt đầu không được lớn hơn ngày kết thúc.";
   return "";
 });
 
+const nameError = computed(() => {
+  const name = (formData.tenDotGiamGia || "").trim();
+  if (!name) return "";
+  const exists = existingDiscounts.value.some(d => 
+    d.tenDotGiamGia && d.tenDotGiamGia.trim().toLowerCase() === name.toLowerCase()
+  );
+  return exists ? "Tên đợt giảm giá đã tồn tại." : "";
+});
+
 const canSubmit = computed(() => {
   if (!formData.tenDotGiamGia?.trim()) return false;
+  if (nameError.value) return false;
   if (!formData.ngayBatDau || !formData.ngayKetThuc) return false;
   if (dateError.value) return false;
   if (formData.giaTriGiamGia === null || formData.giaTriGiamGia === "") return false;
@@ -1319,12 +1337,33 @@ const canSubmit = computed(() => {
 
 const submitCreate = async () => {
   if (!canSubmit.value) {
-    alert("Vui lòng nhập đúng và đủ thông tin bắt buộc (tên, ngày, % giảm 1-100).");
+    let errorMessage = "Vui lòng nhập đúng và đủ thông tin bắt buộc";
+    if (nameError.value) errorMessage += `\n• ${nameError.value}`;
+    if (dateError.value) errorMessage += `\n• ${dateError.value}`;
+    if (formData.giaTriGiamGia === null || formData.giaTriGiamGia === "" || 
+        Number(formData.giaTriGiamGia) < 1 || Number(formData.giaTriGiamGia) > 100) {
+      errorMessage += "\n• Giá trị giảm phải nằm trong khoảng 1-100%";
+    }
+    
+    await Swal.fire({
+      icon: 'warning',
+      title: 'Thông tin không hợp lệ',
+      text: errorMessage,
+      confirmButtonText: 'Đã hiểu'
+    });
     return;
   }
 
   if (selectedVariantIds.value.length === 0) {
-    if (!confirm("Bạn chưa chọn sản phẩm nào. Tiếp tục tạo?")) return;
+    const result = await Swal.fire({
+      icon: 'question',
+      title: 'Xác nhận',
+      text: 'Bạn chưa chọn sản phẩm nào. Tiếp tục tạo?',
+      showCancelButton: true,
+      confirmButtonText: 'Tiếp tục',
+      cancelButtonText: 'Hủy'
+    });
+    if (!result.isConfirmed) return;
   }
 
   const payload = { ...formData, idChiTietSanPhams: selectedVariantIds.value };
@@ -1332,10 +1371,20 @@ const submitCreate = async () => {
   try {
     isLoading.value = true;
     await discountService.createDiscountComposite(payload);
-    alert("Tạo đợt giảm giá thành công!");
+    await Swal.fire({
+      icon: 'success',
+      title: 'Thành công!',
+      text: 'Tạo đợt giảm giá thành công!',
+      confirmButtonText: 'OK'
+    });
     router.push("/admin/giam-gia/dot");
   } catch (e) {
-    alert("Lỗi tạo mới: " + (e.response?.data?.message || e.message));
+    await Swal.fire({
+      icon: 'error',
+      title: 'Lỗi',
+      text: 'Lỗi tạo mới: ' + (e.response?.data?.message || e.message),
+      confirmButtonText: 'Đã hiểu'
+    });
   } finally {
     isLoading.value = false;
   }
@@ -1361,12 +1410,23 @@ const mapColor = (colorName) => {
 const loadData = async () => {
   isLoading.value = true;
   try {
-    const res = await discountService.getAllProductDetails();
-    const arr = Array.isArray(res) ? res : res?.content ?? [];
+    const [productRes, discountRes] = await Promise.all([
+      discountService.getAllProductDetails(),
+      discountService.getAll()
+    ]);
+    const arr = Array.isArray(productRes) ? productRes : productRes?.content ?? [];
     rawVariants.value = arr;
+    
+    const discountArr = Array.isArray(discountRes) ? discountRes : discountRes?.content ?? [];
+    existingDiscounts.value = discountArr;
   } catch (e) {
-    console.error("Lỗi tải dữ liệu sản phẩm: ", e);
-    alert("Lỗi: Không thể tải danh sách sản phẩm.");
+    console.error("Lỗi tải dữ liệu: ", e);
+    await Swal.fire({
+      icon: 'error',
+      title: 'Lỗi',
+      text: 'Lỗi tải dữ liệu sản phẩm.',
+      confirmButtonText: 'Đã hiểu'
+    });
   } finally {
     isLoading.value = false;
   }

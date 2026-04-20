@@ -237,7 +237,7 @@ const sortDiscountsForList = (arr) => {
     const sb = parseDateAny(b.ngayBatDau)?.getTime() ?? 0;
     if (sa !== sb) return sb - sa;
 
-    return Number(b.id ?? 0) - Number(a.id ?? 0);
+    return Number(a.id ?? 0) - Number(b.id ?? 0);
   });
 };
 
