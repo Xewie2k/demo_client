@@ -825,6 +825,139 @@ const clearDetailFilters = () => {
   Object.keys(detailFilters).forEach((k) => (detailFilters[k] = ""));
 };
 
+// Helper: Parse date string to Date object
+const parseDateString = (dateStr) => {
+  if (!dateStr) return null;
+  const [y, m, d] = dateStr.split("-").map(Number);
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+  return new Date(y, m - 1, d);
+};
+
+// Check if two date ranges overlap
+const doDateRangesOverlap = (start1, end1, start2, end2) => {
+  return start1 <= end2 && start2 <= end1;
+};
+
+// Escape HTML to prevent XSS
+const escapeHtml = (value) => {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+};
+
+// Build HTML for conflict alert
+const buildConflictHtml = (conflicts) => {
+  let html = `
+    <div style="text-align: left; font-weight: 400; color: #666; line-height: 1.5;">
+      <div style="margin-bottom: 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px; color: #856404;">
+        <strong>⚠️ Phát hiện các sản phẩm/biến thể đang trong đợt giảm giá khác!</strong>
+      </div>
+  `;
+
+  conflicts.forEach((conflict, idx) => {
+    html += `
+      <div style="margin-bottom: 12px; padding: 10px; background: #f8f9fa; border-left: 4px solid #ff4d4f; border-radius: 4px;">
+        <div style="font-weight: 600; color: #333; margin-bottom: 6px;">
+          📅 Đợt giảm: ${escapeHtml(conflict.discountName)}
+        </div>
+        <div style="font-size: 13px; color: #666; margin-bottom: 8px;">
+          Thời gian: ${conflict.discountStart} → ${conflict.discountEnd}
+        </div>
+        <div style="font-size: 13px; color: #666;">
+          ${conflict.conflictingVariants.length} sản phẩm/biến thể bị trùng:
+        </div>
+        <div style="margin-top: 6px; padding-left: 16px;">
+          ${conflict.conflictingVariants
+            .map(
+              v => `
+            <div style="font-size: 12px; color: #555; margin-bottom: 4px;">
+              • ${escapeHtml(v.maChiTietSanPham)} - ${escapeHtml(v.tenSanPham)} (${escapeHtml(v.tenMauSac)}, ${escapeHtml(v.tenKichThuoc)})
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+      </div>
+    `;
+  });
+
+  html += `
+    <div style="margin-top: 12px; padding: 10px; background: #e8f5e9; border-radius: 6px; color: #2e7d32; font-size: 13px;">
+      💎 Để tiếp tục, vui lòng chọn ngày áp dụng khác hoặc bỏ chọn các sản phẩm bị trùng.
+    </div>
+    </div>
+  `;
+
+  return html;
+};
+
+// Check for overlapping discounts
+const checkOverlappingDiscounts = async () => {
+  if (selectedVariantIds.value.length === 0) {
+    return { hasConflict: false, conflicts: [] };
+  }
+
+  const newStart = parseDateString(formData.ngayBatDau);
+  const newEnd = parseDateString(formData.ngayKetThuc);
+
+  if (!newStart || !newEnd) {
+    return { hasConflict: false, conflicts: [] };
+  }
+
+  const conflicts = [];
+
+  // Get all discount details from existing discounts (excluding the current one)
+  for (const discount of existingDiscounts.value) {
+    // Skip the current discount
+    if (discount.id === discountId) continue;
+
+    const discountStart = parseDateString(discount.ngayBatDau);
+    const discountEnd = parseDateString(discount.ngayKetThuc);
+
+    if (!discountStart || !discountEnd || !discount.trangThai) continue;
+
+    // Get details for this discount
+    const discountDetails = await discountService.getDiscountDetails(discount.id);
+    const discountedVariantIds = (discountDetails || []).map(
+      d => d.idChiTietSanPham || d.id_chi_tiet_san_pham
+    ).filter(Boolean);
+
+    // Check if any selected variant is in this discount and date ranges overlap
+    const conflictingVariants = selectedVariantIds.value.filter(
+      variantId => discountedVariantIds.includes(variantId)
+    );
+
+    if (conflictingVariants.length > 0 && doDateRangesOverlap(newStart, newEnd, discountStart, discountEnd)) {
+      // Get variant details for display
+      const conflictDetails = allSelectedVariants.value
+        .filter(v => conflictingVariants.includes(v.id))
+        .map(v => ({
+          id: v.id,
+          maChiTietSanPham: v.maChiTietSanPham,
+          tenSanPham: v.tenSanPham,
+          tenMauSac: v.tenMauSac,
+          tenKichThuoc: v.tenKichThuoc,
+        }));
+
+      conflicts.push({
+        discountId: discount.id,
+        discountName: discount.tenDotGiamGia,
+        discountStart: discountStart.toLocaleDateString("vi-VN"),
+        discountEnd: discountEnd.toLocaleDateString("vi-VN"),
+        conflictingVariants: conflictDetails,
+      });
+    }
+  }
+
+  return {
+    hasConflict: conflicts.length > 0,
+    conflicts: conflicts,
+  };
+};
+
 const submitUpdate = async () => {
   if (!formData.tenDotGiamGia?.trim()) {
     await Swal.fire({
@@ -878,10 +1011,38 @@ const submitUpdate = async () => {
     if (!result.isConfirmed) return;
   }
 
+  // ✅ CHECK FOR OVERLAPPING DISCOUNTS
+  isLoading.value = true;
+  try {
+    const { hasConflict, conflicts } = await checkOverlappingDiscounts();
+    
+    if (hasConflict) {
+      await Swal.fire({
+        icon: 'warning',
+        title: 'Phát hiện xung đột ngày giảm giá!',
+        html: buildConflictHtml(conflicts),
+        confirmButtonText: 'Đã hiểu',
+        width: 600,
+        allowOutsideClick: false,
+      });
+      isLoading.value = false;
+      return;
+    }
+  } catch (err) {
+    console.error("Lỗi khi kiểm tra xung đột:", err);
+    await Swal.fire({
+      icon: 'error',
+      title: 'Lỗi',
+      text: 'Lỗi kiểm tra dữ liệu. Vui lòng thử lại.',
+      confirmButtonText: 'Đã hiểu'
+    });
+    isLoading.value = false;
+    return;
+  }
+
   const payload = { ...formData, idChiTietSanPhams: selectedVariantIds.value };
 
   try {
-    isLoading.value = true;
     await discountService.update(discountId, payload);
     await Swal.fire({
       icon: 'success',
