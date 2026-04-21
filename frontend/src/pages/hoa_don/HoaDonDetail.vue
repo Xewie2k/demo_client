@@ -1786,7 +1786,7 @@ const hoaDon = computed(() => {
     tongTien: tongTienTuBe,
     giamGia,
     phiVanChuyen,
-    canThanhToan: Math.max(0, tongTienTuBe - giamGia),
+    canThanhToan: Math.max(0, tongTienTuBe - giamGia + phiVanChuyen),
   };
 });
 
