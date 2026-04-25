@@ -314,6 +314,8 @@ import { useRouter } from 'vue-router';
 import { useCart } from '@/services/cart';
 import { useClientAuth } from '@/services/authClient';
 import apiClient from '@/services/apiClient';
+import vnAddressService from '@/services/vnAddressService';
+import ghnAddressMappingService from '@/services/ghnAddressMappingService';
 import Swal from 'sweetalert2';
 import { Modal } from 'bootstrap';
 
@@ -362,30 +364,68 @@ const addressCodes = reactive({
 const normalizeName = (name) => {
     if (!name) return '';
     return name
-        .replace(/^(Tỉnh|Thành phố|Thành Phố|Quận|Huyện|Thị xã|Thị Xã|Thị trấn|Thị Trấn|Xã|Phường)\s+/i, '')
-        .trim().toLowerCase();
+        .toLowerCase()
+        .replace(/^(tỉnh|thành phố|quận|huyện|thị xã|thị trấn|xã|phường)\s+/i, '')
+        .trim();
 };
 
+/**
+ * Load provinces using vnAddressService for consistency across the app
+ */
 const loadProvinces = async () => {
     try {
-        const res = await apiClient.get('/api/client/ghn/tinh-thanh');
-        provinces.value = (res.data || []).map(p => ({ code: p.provinceId, name: p.provinceName }));
+        const vnProvinces = await vnAddressService.getProvinces();
+        provinces.value = vnProvinces.map(p => ({ 
+            code: p.code, 
+            name: p.name 
+        }));
     } catch (e) {
-        console.error("Lỗi tải tỉnh thành GHN", e);
+        console.error('Lỗi tải tỉnh thành:', e);
+        provinces.value = [];
     }
 };
 
-const updateShippingFee = async () => {
-    if (!addressCodes.district || !addressCodes.ward) return;
+/**
+ * Calculate shipping fee using GHN API with proper address mapping
+ * Supports both GHN codes (districtId, wardCode) and address names (for manual selection)
+ */
+const updateShippingFee = async (ghnDistrictId = null, ghnWardCode = null) => {
     try {
-        const res = await apiClient.post('/api/client/ghn/tinh-phi-van-chuyen', {
-            toDistrictId: addressCodes.district,
-            toWardCode: String(addressCodes.ward),
-            tongGiaTriHang: Math.round(itemsPrice.value)
-        });
-        shippingFee.value = res.data.total || res.data.phiVanChuyen || 0;
+        // Use provided GHN codes or try to map from current address names
+        let districtId = ghnDistrictId;
+        let wardCode = ghnWardCode;
+
+        if (!districtId || !wardCode) {
+            // Try to map from current address selection
+            if (address.city && address.district && address.ward) {
+                const mapping = await ghnAddressMappingService.mapVnAddressToGhn(
+                    address.city,
+                    address.district,
+                    address.ward
+                );
+                if (mapping) {
+                    districtId = mapping.districtId;
+                    wardCode = mapping.wardCode;
+                } else {
+                    shippingFee.value = 0;
+                    return;
+                }
+            } else {
+                shippingFee.value = 0;
+                return;
+            }
+        }
+
+        const feeData = await ghnAddressMappingService.calculateShippingFee(
+            districtId,
+            wardCode,
+            itemsPrice.value
+        );
+        
+        shippingFee.value = feeData.total || 0;
     } catch (e) {
-        shippingFee.value = 0; // fallback nếu GHN lỗi
+        console.error('Lỗi tính phí vận chuyển:', e);
+        shippingFee.value = 0;
     }
 };
 
@@ -403,10 +443,15 @@ const onCityChange = async () => {
 
     if (addressCodes.city) {
         try {
-            const res = await apiClient.get(`/api/client/ghn/quan-huyen/${addressCodes.city}`);
-            districts.value = (res.data || []).map(d => ({ code: d.districtId, name: d.districtName }));
+            // Load districts using vnAddressService
+            const vnDistricts = await vnAddressService.getDistricts(addressCodes.city);
+            districts.value = vnDistricts.map(d => ({ 
+                code: d.code, 
+                name: d.name 
+            }));
         } catch (e) {
-            console.error("Lỗi tải quận huyện GHN", e);
+            console.error("Lỗi tải quận huyện:", e);
+            districts.value = [];
         }
     }
 };
@@ -422,10 +467,15 @@ const onDistrictChange = async () => {
 
     if (addressCodes.district) {
         try {
-            const res = await apiClient.get(`/api/client/ghn/phuong-xa/${addressCodes.district}`);
-            wards.value = (res.data || []).map(w => ({ code: w.wardCode, name: w.wardName }));
+            // Load wards using vnAddressService
+            const vnWards = await vnAddressService.getWards(addressCodes.district);
+            wards.value = vnWards.map(w => ({ 
+                code: w.code, 
+                name: w.name 
+            }));
         } catch (e) {
-            console.error("Lỗi tải phường xã GHN", e);
+            console.error("Lỗi tải phường xã:", e);
+            wards.value = [];
         }
     }
 };
@@ -433,41 +483,63 @@ const onDistrictChange = async () => {
 const onWardChange = async () => {
     const w = wards.value.find(x => x.code == addressCodes.ward);
     address.ward = w ? w.name : "";
-    await updateShippingFee();
+    
+    // Now calculate shipping fee after address is fully selected
+    if (address.city && address.district && address.ward) {
+        await updateShippingFee();
+    }
 };
-// --- Saved Address Selection ---
+
+/**
+ * Fill address from saved address - now using vnAddressService for consistency
+ */
 const fillAddressFromSaved = async (addr) => {
     if (!addr) return;
+    
     form.diaChi = addr.diaChiCuThe || '';
 
-    // Match province by normalized name (handles "Thành phố Hà Nội" vs "Hà Nội")
-    const matchedProvince = provinces.value.find(p => normalizeName(p.name) === normalizeName(addr.thanhPho));
-    if (matchedProvince) {
-        addressCodes.city = matchedProvince.code;
-        address.city = matchedProvince.name;
-        try {
-            const res = await apiClient.get(`/api/client/ghn/quan-huyen/${matchedProvince.code}`);
-            districts.value = (res.data || []).map(d => ({ code: d.districtId, name: d.districtName }));
-        } catch (e) { districts.value = []; }
+    try {
+        // Use vnAddressService to load and match provinces
+        const vnProvinces = await vnAddressService.getProvinces();
+        const matchedProvince = vnProvinces.find(p => 
+            normalizeName(p.name) === normalizeName(addr.thanhPho)
+        );
 
-        // Match district by normalized name
-        const matchedDistrict = districts.value.find(d => normalizeName(d.name) === normalizeName(addr.quan));
-        if (matchedDistrict) {
-            addressCodes.district = matchedDistrict.code;
-            address.district = matchedDistrict.name;
-            try {
-                const res = await apiClient.get(`/api/client/ghn/phuong-xa/${matchedDistrict.code}`);
-                wards.value = (res.data || []).map(w => ({ code: w.wardCode, name: w.wardName }));
-            } catch (e) { wards.value = []; }
+        if (matchedProvince) {
+            addressCodes.city = matchedProvince.code;
+            address.city = matchedProvince.name;
 
-            // Match ward by normalized name
-            const matchedWard = wards.value.find(w => normalizeName(w.name) === normalizeName(addr.phuong));
-            if (matchedWard) {
-                addressCodes.ward = matchedWard.code;
-                address.ward = matchedWard.name;
-                await updateShippingFee();
+            // Load districts for the selected province
+            const vnDistricts = await vnAddressService.getDistricts(matchedProvince.code);
+            districts.value = vnDistricts;
+
+            const matchedDistrict = vnDistricts.find(d => 
+                normalizeName(d.name) === normalizeName(addr.quan)
+            );
+
+            if (matchedDistrict) {
+                addressCodes.district = matchedDistrict.code;
+                address.district = matchedDistrict.name;
+
+                // Load wards for the selected district
+                const vnWards = await vnAddressService.getWards(matchedDistrict.code);
+                wards.value = vnWards;
+
+                const matchedWard = vnWards.find(w => 
+                    normalizeName(w.name) === normalizeName(addr.phuong)
+                );
+
+                if (matchedWard) {
+                    addressCodes.ward = matchedWard.code;
+                    address.ward = matchedWard.name;
+
+                    // Calculate shipping fee for the restored address
+                    await updateShippingFee();
+                }
             }
         }
+    } catch (e) {
+        console.error('Lỗi khôi phục địa chỉ đã lưu:', e);
     }
 };
 

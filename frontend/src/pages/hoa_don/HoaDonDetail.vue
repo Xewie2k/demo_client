@@ -424,17 +424,29 @@
             <div class="row g-3">
               <div class="col-md-6">
                 <label class="form-label">Tên khách hàng</label>
-                <input class="form-control" v-model="form.tenKhachHang" />
+                <input 
+                  class="form-control" 
+                  v-model="form.tenKhachHang"
+                  :disabled="!canEditCustomerInfo"
+                />
               </div>
 
               <div class="col-md-6">
                 <label class="form-label">Số điện thoại</label>
-                <input class="form-control" v-model="form.sdt" />
+                <input 
+                  class="form-control" 
+                  v-model="form.sdt"
+                  :disabled="!canEditCustomerInfo"
+                />
               </div>
 
               <div class="col-md-12">
                 <label class="form-label">Email</label>
-                <input class="form-control" v-model="form.email" />
+                <input 
+                  class="form-control" 
+                  v-model="form.email"
+                  :disabled="!canEditCustomerInfo"
+                />
               </div>
             </div>
           </div>
@@ -447,12 +459,18 @@
                   class="form-control"
                   v-model="form.diaChiCuThe"
                   placeholder="Số nhà, ngõ, đường..."
+                  :disabled="!canEditCustomerInfo"
                 />
               </div>
 
               <div class="col-md-4">
                 <label class="form-label">Tỉnh/Thành phố</label>
-                <select class="form-select" v-model="addressCodes.city" @change="onCityChange">
+                <select 
+                  class="form-select" 
+                  v-model="addressCodes.city" 
+                  @change="onCityChange"
+                  :disabled="!canEditCustomerInfo"
+                >
                   <option value="">Chọn Tỉnh/Thành</option>
                   <option v-for="p in provinces" :key="p.code" :value="p.code">
                     {{ p.name }}
@@ -466,7 +484,7 @@
                   class="form-select"
                   v-model="addressCodes.district"
                   @change="onDistrictChange"
-                  :disabled="!addressCodes.city"
+                  :disabled="!addressCodes.city || !canEditCustomerInfo"
                 >
                   <option value="">Chọn Quận/Huyện</option>
                   <option v-for="d in districts" :key="d.code" :value="d.code">
@@ -481,7 +499,7 @@
                   class="form-select"
                   v-model="addressCodes.ward"
                   @change="onWardChange"
-                  :disabled="!addressCodes.district"
+                  :disabled="!addressCodes.district || !canEditCustomerInfo"
                 >
                   <option value="">Chọn Xã/Phường</option>
                   <option v-for="w in wards" :key="w.code" :value="w.code">
@@ -518,10 +536,28 @@
           </div>
         </div>
 
+        <div v-if="(tab === 'khachhang' || tab === 'giaohang') && !canEditCustomerInfo" class="alert alert-warning mb-3 mt-3">
+          <i class="bi bi-exclamation-triangle me-2"></i>
+          <strong>Không được phép sửa!</strong>
+          <div class="small mt-1">
+            <p v-if="selectedHD.loaiThanhToan !== 0" class="mb-1">
+              Đơn hàng thanh toán bằng <strong>{{ getLoaiThanhToanText() }}</strong> không được phép sửa thông tin này.
+            </p>
+            <p v-else class="mb-1">
+              Đơn hàng COD đã xác nhận không được phép sửa thông tin này.
+            </p>
+          </div>
+        </div>
+
         <div class="modal-footer">
           <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Hủy</button>
 
-          <button class="btn btn-success" type="button" @click="checkQuyenThaoTac(saveEditModal)">
+          <button 
+            class="btn btn-success" 
+            type="button" 
+            @click="checkQuyenThaoTac(saveEditModal)"
+            :disabled="(tab === 'khachhang' || tab === 'giaohang') && !canEditCustomerInfo"
+          >
             Lưu
           </button>
         </div>
@@ -978,6 +1014,37 @@ const danhSachTrangThaiHopLe = computed(() => {
         return false;
     }
   });
+});
+
+/**
+ * Kiểm tra quyền chỉnh sửa thông tin khách hàng và giao hàng
+ * 
+ * Quy tắc:
+ * 1. Đơn hàng online + COD hoặc VietQR: Khi trạng thái >= "Đã xác nhận" → KHÔNG được sửa
+ * 2. Đơn hàng online + Thanh toán thứ 3 (VNPAY, MOMO, ZALOPAY): Dù trạng thái nào → KHÔNG được sửa
+ * 3. Các trường hợp khác → được sửa bình thường
+ */
+const canEditCustomerInfo = computed(() => {
+  const loaiDon = Number(selectedHD.value?.loaiDon ?? 1);
+  const loaiThanhToan = Number(selectedHD.value?.loaiThanhToan ?? 0);
+  const trangThai = Number(selectedHD.value?.trangThai ?? TRANG_THAI_HOA_DON.CHUA_XAC_NHAN);
+
+  // Chỉ áp dụng giới hạn cho đơn hàng online (loaiDon = 2)
+  if (loaiDon !== 2) {
+    return true; // Tại quầy hoặc đơn hàng khác có thể sửa bình thường
+  }
+
+  // Case 1: Thanh toán thứ 3 (VNPAY=1, MOMO=2, ZALOPAY=3) → KHÔNG được sửa dù trạng thái nào
+  if (loaiThanhToan === 1 || loaiThanhToan === 2 || loaiThanhToan === 3) {
+    return false;
+  }
+
+  // Case 2: COD (loaiThanhToan=0) hoặc VietQR (loaiThanhToan=4) + trạng thái >= "Đã xác nhận" (2) → KHÔNG được sửa
+  if ((loaiThanhToan === 0 || loaiThanhToan === 4) && trangThai >= TRANG_THAI_HOA_DON.DA_XAC_NHAN) {
+    return false;
+  }
+
+  return true;
 });
 
 const base64UrlDecode = (str) => {
@@ -1963,6 +2030,18 @@ const getStepIcon = (st) => {
   }
 
   return st.icon;
+};
+
+const getLoaiThanhToanText = () => {
+  const loaiTT = Number(selectedHD.value?.loaiThanhToan ?? 0);
+  const map = {
+    0: "COD",
+    1: "VNPAY",
+    2: "MOMO",
+    3: "ZALOPAY",
+    4: "VietQR / Chuyển khoản",
+  };
+  return map[loaiTT] || "Thanh toán khác";
 };
 
 const xacNhanHuyTheoYeuCau = async () => {
