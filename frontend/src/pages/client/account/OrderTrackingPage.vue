@@ -98,7 +98,7 @@
             </div>
             <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
               <span class="text-muted">Giảm giá</span>
-              <span class="fw-bold text-success">- {{ formatCurrency(order.giamGia) }}</span>
+              <span class="fw-bold text-success">- {{ formatCurrency(calcDiscount(order)) }}</span>
             </div>
             <div class="d-flex justify-content-between align-items-center">
               <span class="fw-bold fs-5">Tổng cộng</span>
@@ -149,6 +149,29 @@ const formatDate = (value) => {
 const formatCurrency = (value) => {
   if (!value) return '0 đ';
   return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+};
+
+const calcDiscount = (o) => {
+  if (!o) return 0;
+
+  const tamTinh = Number(o.tamTinh);
+  const phiVanChuyen = Number(o.phiVanChuyen) || 0;
+  const tongTien = Number(o.tongTien);
+  if (Number.isFinite(tamTinh) && Number.isFinite(tongTien)) {
+    return Math.max(0, tamTinh + phiVanChuyen - tongTien);
+  }
+
+  const tongTienSauGiam = Number(
+    o.tongTienSauGiam != null ? o.tongTienSauGiam : o.tongTien
+  ) || 0;
+  if (Number.isFinite(tongTien) && o.tongTienSauGiam != null) {
+    return Math.max(0, tongTien + phiVanChuyen - tongTienSauGiam);
+  }
+
+  if (o.tongTienGiam != null) return Math.max(0, Number(o.tongTienGiam) || 0);
+  if (o.giamGia != null) return Math.max(0, Number(o.giamGia) || 0);
+
+  return Math.max(0, tongTien + phiVanChuyen - tongTienSauGiam);
 };
 
 onMounted(fetchOrderDetail);

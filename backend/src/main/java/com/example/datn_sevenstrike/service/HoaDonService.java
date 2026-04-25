@@ -809,8 +809,9 @@ public class HoaDonService {
         BigDecimal tongTienHang = tongTienHangTuChiTiet(items);
         BigDecimal tienGiam = tinhVaConsumeVoucherNeuCo(hd, tongTienHang);
 
-        BigDecimal tongTien = tongTienHang.add(hd.getPhiVanChuyen());
-        BigDecimal tongTienSauGiam = tongTien.subtract(tienGiam);
+        BigDecimal tongTien = tongTienHang;
+        BigDecimal tongTienMoi = tongTienHang.add(hd.getPhiVanChuyen());
+        BigDecimal tongTienSauGiam = tongTienMoi.subtract(tienGiam);
         if (tongTienSauGiam.signum() < 0) tongTienSauGiam = BigDecimal.ZERO;
 
         if (tongTienSauGiam.signum() <= 0) {
@@ -978,20 +979,29 @@ public class HoaDonService {
         if (!daThanhToanTruocDo) {
             BigDecimal tienGiam = tinhVaConsumeVoucherNeuCo(hd, tongTienHang);
 
-            tongTien = tongTienHang.add(hd.getPhiVanChuyen());
-            tongTienSauGiam = tongTien.subtract(tienGiam);
+            tongTien = tongTienHang;
+            BigDecimal tongTienMoi = tongTienHang.add(hd.getPhiVanChuyen());
+            tongTienSauGiam = tongTienMoi.subtract(tienGiam);
             if (tongTienSauGiam.signum() < 0) tongTienSauGiam = BigDecimal.ZERO;
 
             hd.setTongTien(tongTien);
             hd.setTongTienGiam(tienGiam);
             hd.setTongTienSauGiam(tongTienSauGiam);
         } else {
-            tongTien = hd.getTongTien() == null ? tongTienHang.add(hd.getPhiVanChuyen()) : hd.getTongTien();
-            tongTienSauGiam = hd.getTongTienSauGiam() == null ? tongTien : hd.getTongTienSauGiam();
+            tongTien = hd.getTongTien() == null ? tongTienHang : hd.getTongTien();
+            
+            if (hd.getTongTienSauGiam() == null) {
+                BigDecimal tongTienMoi = tongTienHang.add(hd.getPhiVanChuyen() == null ? BigDecimal.ZERO : hd.getPhiVanChuyen());
+                tongTienSauGiam = tongTienMoi;
+            } else {
+                tongTienSauGiam = hd.getTongTienSauGiam();
+            }
 
             hd.setTongTien(tongTien);
             if (hd.getTongTienGiam() == null) {
-                BigDecimal giam = tongTien.subtract(tongTienSauGiam);
+                // Tính lại giảm giá từ (tiền hàng + phí) - tiền sau giảm
+                BigDecimal tongTienMoi = tongTienHang.add(hd.getPhiVanChuyen() == null ? BigDecimal.ZERO : hd.getPhiVanChuyen());
+                BigDecimal giam = tongTienMoi.subtract(tongTienSauGiam);
                 if (giam.signum() < 0) giam = BigDecimal.ZERO;
                 hd.setTongTienGiam(giam);
             }
@@ -2262,14 +2272,14 @@ public class HoaDonService {
         if (tongTienGiam == null) {
             BigDecimal tongTienCu = hd.getTongTien() == null ? BigDecimal.ZERO : hd.getTongTien();
             BigDecimal tongTienSauGiamCu = hd.getTongTienSauGiam() == null ? BigDecimal.ZERO : hd.getTongTienSauGiam();
-            tongTienGiam = tongTienCu.subtract(tongTienSauGiamCu);
+            tongTienGiam = tongTienCu.add(phiVanChuyen).subtract(tongTienSauGiamCu);
             if (tongTienGiam.signum() < 0) tongTienGiam = BigDecimal.ZERO;
         }
 
         if (tongTienGiam.compareTo(tongTienMoi) > 0) tongTienGiam = tongTienMoi;
         if (tongTienGiam.signum() < 0) tongTienGiam = BigDecimal.ZERO;
 
-        hd.setTongTien(tongTienMoi);
+        hd.setTongTien(tongTienHang);
         hd.setTongTienGiam(tongTienGiam);
         hd.setTongTienSauGiam(tongTienMoi.subtract(tongTienGiam));
     }

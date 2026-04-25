@@ -214,7 +214,13 @@ public class ClientOrderService {
                     return dg.multiply(BigDecimal.valueOf(sl));
                 })
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal giamGiaReal = tamTinhReal.subtract(hd.getTongTienSauGiam()).max(BigDecimal.ZERO);
+        BigDecimal phiVanChuyen = hd.getPhiVanChuyen() != null ? hd.getPhiVanChuyen() : BigDecimal.ZERO;
+        BigDecimal tongTienSauGiam = hd.getTongTienSauGiam() != null
+                ? hd.getTongTienSauGiam()
+                : tamTinhReal.add(phiVanChuyen);
+        BigDecimal giamGiaReal = hd.getTongTienGiam() != null
+                ? hd.getTongTienGiam()
+                : tamTinhReal.add(phiVanChuyen).subtract(tongTienSauGiam).max(BigDecimal.ZERO);
 
         return ClientOrderDetailDTO.builder()
                 .id(hd.getId())
@@ -226,9 +232,9 @@ public class ClientOrderService {
                 .soDienThoai(hd.getSoDienThoaiKhachHang())
                 .diaChi(hd.getDiaChiKhachHang())
                 .tamTinh(tamTinhReal)
-                .phiVanChuyen(hd.getPhiVanChuyen())
+                .phiVanChuyen(phiVanChuyen)
                 .giamGia(giamGiaReal)
-                .tongTien(hd.getTongTienSauGiam().add(hd.getPhiVanChuyen() != null ? hd.getPhiVanChuyen() : BigDecimal.ZERO))
+                .tongTien(tongTienSauGiam)
                 .items(items)
                 .timeline(timeline)
                 .daThanhToan(hd.getNgayThanhToan() != null)
@@ -260,6 +266,13 @@ public class ClientOrderService {
         }
 
         TrangThaiHoaDon status = TrangThaiHoaDon.fromCode(hd.getTrangThaiHienTai());
+        BigDecimal phiVanChuyen = hd.getPhiVanChuyen() != null ? hd.getPhiVanChuyen() : BigDecimal.ZERO;
+        BigDecimal tongTienSauGiam = hd.getTongTienSauGiam() != null
+                ? hd.getTongTienSauGiam()
+                : (hd.getTongTien() != null ? hd.getTongTien() : BigDecimal.ZERO)
+                        .add(phiVanChuyen)
+                        .subtract(hd.getTongTienGiam() != null ? hd.getTongTienGiam() : BigDecimal.ZERO);
+        if (tongTienSauGiam.signum() < 0) tongTienSauGiam = BigDecimal.ZERO;
 
         return ClientOrderHistoryDTO.builder()
                 .id(hd.getId())
@@ -267,7 +280,7 @@ public class ClientOrderService {
                 .ngayTao(hd.getNgayTao())
                 .trangThai(status != null ? status.label : "")
                 .trangThaiHienTai(hd.getTrangThaiHienTai())
-                .tongTien(hd.getTongTienSauGiam().add(hd.getPhiVanChuyen() != null ? hd.getPhiVanChuyen() : BigDecimal.ZERO))
+                .tongTien(tongTienSauGiam)
                 .soLuongSanPham(details.size())
                 .sanPhamDaiDien(firstProductName)
                 .anhDaiDien(thumb)
@@ -449,7 +462,11 @@ public class ClientOrderService {
         } else {
             phiVanChuyen = new BigDecimal("40000");
         }
-        BigDecimal tongTienMoi = tongTien.add(phiVanChuyen);
+        
+        // ✅ FIX BUG: Tính tổng tiền chính xác
+        // tongTien ở đây là giá hàng, không bao gồm phí
+        BigDecimal tongTienHang = tongTien; // Lưu giá hàng ban đầu
+        BigDecimal tongTienMoi = tongTienHang.add(phiVanChuyen);
         BigDecimal thanhTien = tongTienMoi.subtract(tienGiam);
 
         HoaDon hd = HoaDon.builder()
@@ -460,7 +477,8 @@ public class ClientOrderService {
                 .emailKhachHang(req.getEmail())
                 .ghiChu(req.getGhiChu())
                 .idPhieuGiamGia(voucher != null ? voucher.getId() : null)
-                .tongTien(tongTienMoi)
+                .tongTien(tongTienHang)
+                .tongTienGiam(tienGiam)
                 .tongTienSauGiam(thanhTien)
                 .phiVanChuyen(phiVanChuyen)
                 .loaiDon(2)

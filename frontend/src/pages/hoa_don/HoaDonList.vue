@@ -514,8 +514,9 @@ const loadHoaDon = async () => {
         const tongHang = Number(hd.tongTien ?? 0);
         const giamGia = Number(hd.tongTienGiam ?? 0);
         const phiShip = Number(hd.phiVanChuyen ?? 0);
-
-        const tongThanhToan = tongHang - giamGia + phiShip;
+        const tongThanhToan = hd.tongTienSauGiam != null
+          ? Number(hd.tongTienSauGiam)
+          : Math.max(0, tongHang + phiShip - giamGia);
         const loaiDonCode = Number(hd.loaiDon ?? 0);
         const ngayTaoRaw = hd.ngayTao ?? "";
 

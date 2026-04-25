@@ -173,7 +173,7 @@
                     </div>
                     <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
                       <span class="text-muted">Giảm giá</span>
-                      <span class="fw-bold text-success">- {{ formatCurrency(selectedOrder.tongTienGiam ?? selectedOrder.giamGia ?? ((selectedOrder.tongTien || 0) - (selectedOrder.tongTienSauGiam || selectedOrder.tongTien || 0))) }}</span>
+                      <span class="fw-bold text-success">- {{ formatCurrency(calcDiscount(selectedOrder)) }}</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
                       <span class="fw-bold fs-5">Tổng cộng</span>
@@ -375,7 +375,7 @@
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                       <span>Giảm giá</span>
-                      <span class="text-success">-{{ formatCurrency(trackedOrder.tongTienGiam ?? trackedOrder.giamGia ?? ((trackedOrder.tongTien || 0) - (trackedOrder.tongTienSauGiam || trackedOrder.tongTien || 0))) }}</span>
+                      <span class="text-success">-{{ formatCurrency(calcDiscount(trackedOrder)) }}</span>
                     </div>
                     <div class="d-flex justify-content-between border-top pt-2 mt-2">
                       <span class="fw-bold fs-5">Tổng cộng</span>
@@ -534,7 +534,7 @@
               </div>
               <div class="d-flex justify-content-between mb-2">
                 <span>Giảm giá</span>
-                <span class="text-success">-{{ formatCurrency(order.tongTienGiam ?? order.giamGia ?? ((order.tongTien || 0) - (order.tongTienSauGiam || order.tongTien || 0))) }}</span>
+                <span class="text-success">-{{ formatCurrency(calcDiscount(order)) }}</span>
               </div>
               <div class="d-flex justify-content-between border-top pt-2 mt-2">
                 <span class="fw-bold fs-5">Tổng cộng</span>
@@ -830,6 +830,29 @@ const calcChiTietTamTinh = (items) =>
   (items || []).reduce((s, i) => s + (Number(i.thanhTien) || 0), 0);
 
 // Tính tạm tính từ ClientOrderDetailDTO.items
+const calcDiscount = (o) => {
+  if (!o) return 0;
+
+  const tamTinh = Number(o.tamTinh);
+  const phiVanChuyen = Number(o.phiVanChuyen) || 0;
+  const tongTien = Number(o.tongTien);
+  if (Number.isFinite(tamTinh) && Number.isFinite(tongTien)) {
+    return Math.max(0, tamTinh + phiVanChuyen - tongTien);
+  }
+
+  const tongTienSauGiam = Number(
+    o.tongTienSauGiam != null ? o.tongTienSauGiam : o.tongTien
+  ) || 0;
+  if (Number.isFinite(tongTien) && o.tongTienSauGiam != null) {
+    return Math.max(0, tongTien + phiVanChuyen - tongTienSauGiam);
+  }
+
+  if (o.tongTienGiam != null) return Math.max(0, Number(o.tongTienGiam) || 0);
+  if (o.giamGia != null) return Math.max(0, Number(o.giamGia) || 0);
+
+  return Math.max(0, tongTien + phiVanChuyen - tongTienSauGiam);
+};
+
 const calcSelectedTamTinh = computed(() =>
   (selectedOrder.value?.items || []).reduce((s, i) => s + (i.donGia || 0) * (i.soLuong || 0), 0)
 );
