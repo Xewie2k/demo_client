@@ -1025,22 +1025,20 @@ const danhSachTrangThaiHopLe = computed(() => {
  * 3. Các trường hợp khác → được sửa bình thường
  */
 const canEditCustomerInfo = computed(() => {
-  const loaiDon = Number(selectedHD.value?.loaiDon ?? 1);
+  if (isTaiQuay.value) {
+    return true; // Tại quầy có thể sửa bình thường
+  }
+
   const loaiThanhToan = Number(selectedHD.value?.loaiThanhToan ?? 0);
   const trangThai = Number(selectedHD.value?.trangThai ?? TRANG_THAI_HOA_DON.CHUA_XAC_NHAN);
 
-  // Chỉ áp dụng giới hạn cho đơn hàng online (loaiDon = 2)
-  if (loaiDon !== 2) {
-    return true; // Tại quầy hoặc đơn hàng khác có thể sửa bình thường
-  }
-
-  // Case 1: Thanh toán thứ 3 (VNPAY=1, MOMO=2, ZALOPAY=3) → KHÔNG được sửa dù trạng thái nào
-  if (loaiThanhToan === 1 || loaiThanhToan === 2 || loaiThanhToan === 3) {
+  // Case 1: Thanh toán thứ 3 (VNPAY=1, MOMO=2, ZALOPAY=3, VIETQR=4) → KHÔNG được sửa dù trạng thái nào
+  if (loaiThanhToan === 1 || loaiThanhToan === 2 || loaiThanhToan === 3 || loaiThanhToan === 4) {
     return false;
   }
 
-  // Case 2: COD (loaiThanhToan=0) hoặc VietQR (loaiThanhToan=4) + trạng thái >= "Đã xác nhận" (2) → KHÔNG được sửa
-  if ((loaiThanhToan === 0 || loaiThanhToan === 4) && trangThai >= TRANG_THAI_HOA_DON.DA_XAC_NHAN) {
+  // Case 2: COD (loaiThanhToan=0) + trạng thái >= "Đã xác nhận" (2) → KHÔNG được sửa
+  if (loaiThanhToan === 0 && trangThai >= TRANG_THAI_HOA_DON.DA_XAC_NHAN) {
     return false;
   }
 
@@ -1853,7 +1851,7 @@ const hoaDon = computed(() => {
     tongTien: tongTienTuBe,
     giamGia,
     phiVanChuyen,
-    canThanhToan: Math.max(0, tongTienTuBe - giamGia + phiVanChuyen),
+    canThanhToan: Number(selectedHD.value.tongTienSauGiam ?? Math.max(0, tongTienTuBe - giamGia)),
   };
 });
 

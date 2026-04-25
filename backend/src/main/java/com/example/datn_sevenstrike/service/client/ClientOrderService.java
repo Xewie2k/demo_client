@@ -449,7 +449,8 @@ public class ClientOrderService {
         } else {
             phiVanChuyen = new BigDecimal("40000");
         }
-        BigDecimal thanhTien = tongTien.subtract(tienGiam);
+        BigDecimal tongTienMoi = tongTien.add(phiVanChuyen);
+        BigDecimal thanhTien = tongTienMoi.subtract(tienGiam);
 
         HoaDon hd = HoaDon.builder()
                 .idKhachHang(req.getIdKhachHang())
@@ -459,7 +460,7 @@ public class ClientOrderService {
                 .emailKhachHang(req.getEmail())
                 .ghiChu(req.getGhiChu())
                 .idPhieuGiamGia(voucher != null ? voucher.getId() : null)
-                .tongTien(tongTien)
+                .tongTien(tongTienMoi)
                 .tongTienSauGiam(thanhTien)
                 .phiVanChuyen(phiVanChuyen)
                 .loaiDon(2)

@@ -293,7 +293,7 @@ public class HoaDonService {
                 })
                 .toList();
 
-        res.setLoaiThanhToan(isDonChuyenKhoan(id) ? 1 : 0);
+        res.setLoaiThanhToan(getLoaiThanhToanEnum(id));
         res.setChiTietHoaDon(chiTietList);
         return res;
     }
@@ -1200,8 +1200,7 @@ public class HoaDonService {
                 }
 
                 if (pttt != null) {
-                    BigDecimal tongPhaiTra = (hd.getTongTienSauGiam() != null ? hd.getTongTienSauGiam() : BigDecimal.ZERO)
-                            .add(hd.getPhiVanChuyen() != null ? hd.getPhiVanChuyen() : BigDecimal.ZERO);
+                    BigDecimal tongPhaiTra = hd.getTongTienSauGiam() != null ? hd.getTongTienSauGiam() : BigDecimal.ZERO;
 
                     if (tongPhaiTra.signum() > 0) {
                         GiaoDichThanhToan gd = new GiaoDichThanhToan();
@@ -2127,7 +2126,7 @@ public class HoaDonService {
         return res;
     }
 
-    private boolean isDonChuyenKhoan(Integer hoaDonId) {
+    private Integer getLoaiThanhToanEnum(Integer hoaDonId) {
         List<GiaoDichThanhToan> gds = giaoDichThanhToanRepository.findAllByIdHoaDon(hoaDonId);
         for (GiaoDichThanhToan gd : gds) {
             if (gd.getIdPhuongThucThanhToan() == null) continue;
@@ -2137,11 +2136,21 @@ public class HoaDonService {
             if (pt == null || pt.getTenPhuongThucThanhToan() == null) continue;
 
             String name = pt.getTenPhuongThucThanhToan().trim().toLowerCase();
-            if (name.contains("chuyển khoản") || name.contains("vnpay") || name.contains("banking")) {
-                return true;
+            if (name.contains("vnpay") || name.contains("banking") || name.contains("chuyển khoản")) {
+                return 1; // VNPAY/Chuyển khoản
+            } else if (name.contains("momo")) {
+                return 2; // MOMO
+            } else if (name.contains("zalopay")) {
+                return 3; // ZALOPAY
+            } else if (name.contains("vietqr")) {
+                return 4; // VIETQR
             }
         }
-        return false;
+        return 0; // COD hoặc mặc định
+    }
+
+    private boolean isDonChuyenKhoan(Integer hoaDonId) {
+        return getLoaiThanhToanEnum(hoaDonId) > 0;
     }
 
     private Map<Integer, Integer> sumQtyByCtsp(List<HoaDonChiTiet> items) {

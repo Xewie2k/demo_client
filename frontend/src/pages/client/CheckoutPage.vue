@@ -385,6 +385,11 @@ const loadProvinces = async () => {
     }
 };
 
+const ghnCodes = reactive({
+    districtId: null,
+    wardCode: null
+});
+
 /**
  * Calculate shipping fee using GHN API with proper address mapping
  * Supports both GHN codes (districtId, wardCode) and address names (for manual selection)
@@ -408,13 +413,20 @@ const updateShippingFee = async (ghnDistrictId = null, ghnWardCode = null) => {
                     wardCode = mapping.wardCode;
                 } else {
                     shippingFee.value = 0;
+                    ghnCodes.districtId = null;
+                    ghnCodes.wardCode = null;
                     return;
                 }
             } else {
                 shippingFee.value = 0;
+                ghnCodes.districtId = null;
+                ghnCodes.wardCode = null;
                 return;
             }
         }
+
+        ghnCodes.districtId = districtId;
+        ghnCodes.wardCode = wardCode;
 
         const feeData = await ghnAddressMappingService.calculateShippingFee(
             districtId,
@@ -714,8 +726,8 @@ const submitOrder = async () => {
                 soLuong: item.quantity
             })),
             loaiThanhToan,
-            ghnToDistrictId: addressCodes.district || null,
-            ghnToWardCode: addressCodes.ward ? String(addressCodes.ward) : null
+            ghnToDistrictId: ghnCodes.districtId || null,
+            ghnToWardCode: ghnCodes.wardCode ? String(ghnCodes.wardCode) : null
         };
 
         const res = await apiClient.post('/api/client/orders', payload);

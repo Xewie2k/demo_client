@@ -173,11 +173,11 @@
                     </div>
                     <div class="d-flex justify-content-between mb-3 border-bottom pb-2">
                       <span class="text-muted">Giảm giá</span>
-                      <span class="fw-bold text-success">- {{ formatCurrency(selectedOrder.giamGia) }}</span>
+                      <span class="fw-bold text-success">- {{ formatCurrency(selectedOrder.tongTienGiam ?? selectedOrder.giamGia ?? ((selectedOrder.tongTien || 0) - (selectedOrder.tongTienSauGiam || selectedOrder.tongTien || 0))) }}</span>
                     </div>
                     <div class="d-flex justify-content-between align-items-center">
                       <span class="fw-bold fs-5">Tổng cộng</span>
-                      <span class="fw-bold fs-4" style="color: var(--ss-accent);">{{ formatCurrency(selectedOrder.tongTien) }}</span>
+                      <span class="fw-bold fs-4" style="color: var(--ss-accent);">{{ formatCurrency(selectedOrder.tongTienSauGiam ?? selectedOrder.tongTien) }}</span>
                     </div>
                   </div>
                 </div>
@@ -211,7 +211,7 @@
                 </div>
                 <div class="text-end ms-3 flex-shrink-0">
                   <div class="text-muted small mb-1">Tổng tiền</div>
-                  <div class="fw-bold fs-6" style="color: var(--ss-accent);">{{ formatCurrency(order.tongTien) }}</div>
+                  <div class="fw-bold fs-6" style="color: var(--ss-accent);">{{ formatCurrency(order.tongTienSauGiam ?? order.tongTien) }}</div>
                 </div>
               </div>
             </div>
@@ -375,11 +375,11 @@
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                       <span>Giảm giá</span>
-                      <span class="text-success">-{{ formatCurrency(trackedOrder.tongTien - trackedOrder.tongTienSauGiam) }}</span>
+                      <span class="text-success">-{{ formatCurrency(trackedOrder.tongTienGiam ?? trackedOrder.giamGia ?? ((trackedOrder.tongTien || 0) - (trackedOrder.tongTienSauGiam || trackedOrder.tongTien || 0))) }}</span>
                     </div>
                     <div class="d-flex justify-content-between border-top pt-2 mt-2">
                       <span class="fw-bold fs-5">Tổng cộng</span>
-                      <span class="fw-bold fs-5" style="color: var(--ss-accent);">{{ formatCurrency(trackedOrder.tongTienSauGiam + (trackedOrder.phiVanChuyen || 0)) }}</span>
+                      <span class="fw-bold fs-5" style="color: var(--ss-accent);">{{ formatCurrency(trackedOrder.tongTienSauGiam ?? trackedOrder.tongTien) }}</span>
                     </div>
                   </div>
                 </div>
@@ -534,11 +534,11 @@
               </div>
               <div class="d-flex justify-content-between mb-2">
                 <span>Giảm giá</span>
-                <span class="text-success">-{{ formatCurrency(order.tongTien - order.tongTienSauGiam) }}</span>
+                <span class="text-success">-{{ formatCurrency(order.tongTienGiam ?? order.giamGia ?? ((order.tongTien || 0) - (order.tongTienSauGiam || order.tongTien || 0))) }}</span>
               </div>
               <div class="d-flex justify-content-between border-top pt-2 mt-2">
                 <span class="fw-bold fs-5">Tổng cộng</span>
-                <span class="fw-bold fs-5" style="color: var(--ss-accent);">{{ formatCurrency(order.tongTienSauGiam + (order.phiVanChuyen || 0)) }}</span>
+                <span class="fw-bold fs-5" style="color: var(--ss-accent);">{{ formatCurrency(order.tongTienSauGiam ?? order.tongTien) }}</span>
               </div>
             </div>
           </div>
