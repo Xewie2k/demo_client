@@ -1836,8 +1836,8 @@ const updateThongTinKhachHangVaGiaoHang = async () => {
 
 const hoaDon = computed(() => {
   const tongTienTuBe = Number(selectedHD.value.tongTien ?? 0);
-  const giamGia = Number(selectedHD.value.giamGia ?? 0);
   const phiVanChuyen = Number(selectedHD.value.phiVanChuyen ?? 0);
+  const tongTienSauGiamBe = Number(selectedHD.value.tongTienSauGiam);
 
   const tongTienHang = Array.isArray(selectedHD.value.sanPham)
     ? selectedHD.value.sanPham.reduce(
@@ -1846,12 +1846,21 @@ const hoaDon = computed(() => {
       )
     : 0;
 
+  const canThanhToan = Number.isFinite(tongTienSauGiamBe)
+    ? Math.max(0, tongTienSauGiamBe)
+    : Math.max(
+        0,
+        tongTienTuBe + phiVanChuyen - Number(selectedHD.value.giamGia ?? 0)
+      );
+
+  const giamGia = Math.max(0, tongTienHang + phiVanChuyen - canThanhToan);
+
   return {
     tongTienHang,
     tongTien: tongTienTuBe,
     giamGia,
     phiVanChuyen,
-    canThanhToan: Number(selectedHD.value.tongTienSauGiam ?? Math.max(0, tongTienTuBe - giamGia)),
+    canThanhToan,
   };
 });
 
@@ -2203,7 +2212,9 @@ const loadChiTiet = async (id) => {
     loaiThanhToan: data.loaiThanhToan ?? null,
 
     tongTien: Number(data.tongTien ?? 0),
-    giamGia: Number(data.tongTienGiam ?? 0),
+    giamGia: data.tongTienGiam != null ? Number(data.tongTienGiam) : null,
+    tongTienSauGiam:
+      data.tongTienSauGiam != null ? Number(data.tongTienSauGiam) : null,
     phiVanChuyen: Number(data.phiVanChuyen ?? 0),
 
     trangThai: Number(
