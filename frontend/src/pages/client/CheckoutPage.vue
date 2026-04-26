@@ -6,7 +6,7 @@
         <div class="bg-white p-4 rounded-3 shadow-sm mb-4">
             <h5 class="fw-bold mb-4" style="color: var(--ss-accent);">THÔNG TIN THANH TOÁN</h5>
 
-            <form @submit.prevent="submitOrder">
+            <form @submit.prevent="confirmSubmitOrder">
               <div class="row g-3">
                   <div class="col-md-6">
                     <label class="form-label fw-bold text-secondary small">Họ và tên <span class="text-danger">*</span></label>
@@ -109,7 +109,7 @@
              
              <button class="btn btn-danger w-100 py-3 fw-bold rounded-1 mt-4 shadow-sm text-uppercase" 
                      style="background-color: var(--ss-accent); border: none;"
-                     @click="submitOrder" 
+                     @click="confirmSubmitOrder" 
                      :disabled="loading"
              >
                 <span v-if="loading" class="spinner-border spinner-border-sm me-2"></span>
@@ -812,6 +812,27 @@ const submitOrder = async () => {
         Swal.fire('Lỗi', 'Có lỗi xảy ra: ' + (err.userMessage || err.message), 'error');
     } finally {
         loading.value = false;
+    }
+};
+
+const confirmSubmitOrder = async () => {
+    if (loading.value) return;
+    const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--ss-accent').trim() || '#dc3545';
+
+    const result = await Swal.fire({
+        title: 'Xác nhận đặt hàng?',
+        text: 'Bạn có chắc chắn muốn hoàn thành đơn hàng này không?',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: accentColor,
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Đặt hàng',
+        cancelButtonText: 'Hủy',
+        reverseButtons: true
+    });
+
+    if (result.isConfirmed) {
+        await submitOrder();
     }
 };
 
